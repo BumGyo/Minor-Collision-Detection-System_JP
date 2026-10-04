@@ -1,23 +1,23 @@
 # SIOT - Minor Collision Detection System
 
-����� CCTV ������顢ڪ����ͺ??��Ա��������������?��� AI ��?򱪷��η���������㪹�٪����������?�૷���ƫ�Ǫ���
+駐車場 CCTV 映像から、物損事故・当て逃げの疑いがある区間を AI で検知し、管理者が確認すべき映像を絞り込むシステムです。
 
-## ϰ��
+## 構成
 
-- `ui/`: React + Vite ��������?? Web UI
-- `backend/`: FastAPI API���??򱡢��ఫ���� API
-- `model/`: ��ͺ��ఫ�ǫ�����嫳?��
-- `weights/`: ?�?�� X3D ��ǫ����
-- `docker-compose.yml`: MySQL 8 �� Redis
+- `ui/`: React + Vite の日本語対応 Web UI
+- `backend/`: FastAPI API、車両検知、分析ジョブ API
+- `model/`: 事故分析モデルと推論コード
+- `weights/`: 学習済み X3D モデル重み
+- `docker-compose.yml`: MySQL 8 と Redis
 
-## �������
+## 必要環境
 
 - macOS / Linux / WSL2
 - Python 3.11
-- Node.js �� npm
+- Node.js と npm
 - Docker Desktop
 
-## ����۰��
+## 起動方法
 
 ```bash
 docker compose up -d db redis
@@ -29,7 +29,7 @@ cd backend
 ../venv311/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-ܬ�Ϋ�?�߫ʫ�ǫի���ȫ���ɪ����Ѫ��ު���
+別のターミナルでフロントエンドを起動します。
 
 ```bash
 cd ui
@@ -37,14 +37,14 @@ npm install
 npm run dev -- --host 0.0.0.0
 ```
 
-�֫髦��: `http://localhost:5173/login`
+ブラウザ: `http://localhost:5173/login`
 
-## ��ǫ�˪Ī���
+## モデルについて
 
-- ��ͺ����Ī� X3D ��ߪ� `weights/` ���ߪު�ƪ��ު���
-- �??��Ī� `yolo11x.pt` �� GitHub �Ϋի����뫵������ڪ������몿���ݫ��ȫ�˪��ߪ�ƪ��ު���`ultralytics` �����ު��??��������ѫ������?�ɪ��ު���
-- `storage/`, `outputs/`, `venv311/`, `ui/node_modules/` ��?��������������몿�� Git η��?����Ǫ���
+- 事故分析用の X3D 重みは `weights/` に含まれています。
+- 車両検知用の `yolo11x.pt` は GitHub のファイルサイズ制限を避けるためリポジトリには含めていません。`ultralytics` が初回の車両検知時に自動ダウンロードします。
+- `storage/`, `outputs/`, `venv311/`, `ui/node_modules/` は実行時に生成されるため Git 管理対象外です。
 
-## ��?����?��
+## データベース
 
-MySQL �� Redis �� `docker-compose.yml` �����Ѫ��ު������׫꫱?��������?���Ҫ� `backend/app/settings.py` ��?�Ϊ��ƪ���������
+MySQL と Redis は `docker-compose.yml` で起動します。アプリケーションの接続設定は `backend/app/settings.py` を参照してください。
