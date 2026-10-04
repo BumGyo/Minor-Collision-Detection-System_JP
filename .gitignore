@@ -27,6 +27,8 @@ outputs/
 
 # Model weights (대용량 바이너리 — git에서 제외)
 weights/
+!weights/
+!weights/*.pth
 
 # YOLO / torch 체크포인트 (대용량 — 첫 실행 시 자동 다운로드)
 *.pt

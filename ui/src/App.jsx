@@ -19,7 +19,7 @@ function AppLoadingScreen() {
       </div>
       <div className="app-splash-content">
         <img className="app-splash-logo" src="/siot-logo-loading.svg" alt="SIOT" />
-        <p className="app-splash-subtitle">주차 사고 이벤트 감지 시스템</p>
+        <p className="app-splash-subtitle">駐車事故イベント検知システム</p>
         <div className="app-splash-spinner-ring" />
       </div>
     </div>
@@ -64,20 +64,20 @@ function LoginPage({ onLogin }) {
         <section className="public-hero">
           <div className="public-hero-copy">
             <p className="public-kicker">CCTV EVENT REVIEW / 01</p>
-            <h1>관리자가 모든 영상을<br /><em>보지 않아도, AI가 먼저 찾습니다.</em></h1>
+            <h1>管理者がすべての映像を<br /><em>確認しなくても、AIが先に見つけます。</em></h1>
             <p className="public-hero-description">
-              물피도주 의심 장면을 영상 속에서 찾아내고, 날짜와 이벤트 단위로 정리합니다.
-              흩어진 CCTV 기록을 확인 가능한 사고 데이터로 바꾸는 모니터링 시스템입니다.
+              当て逃げの疑いがある場面を映像から見つけ、日付とイベント単位で整理します。
+              分散したCCTV記録を、確認できる事故データに変えるモニタリングシステムです。
             </p>
             <div className="public-hero-actions">
               <button className="public-primary-btn" onClick={() => setIsLoginOpen(true)}>
-                대시보드 열기 <span aria-hidden="true">→</span>
+                ダッシュボードを開く <span aria-hidden="true">→</span>
               </button>
-              <a className="public-text-link" href="#why-siot">왜 필요한가 <span aria-hidden="true">↓</span></a>
+              <a className="public-text-link" href="#why-siot">必要な理由 <span aria-hidden="true">↓</span></a>
             </div>
           </div>
 
-          <div className="public-hero-panel" aria-label="SIOT 분석 흐름">
+          <div className="public-hero-panel" aria-label="SIOTの分析フロー">
             <div className="public-panel-topline">
               <span>LIVE REVIEW SYSTEM</span>
               <span className="public-live-dot">● ONLINE</span>
@@ -94,26 +94,26 @@ function LoginPage({ onLogin }) {
               <div className="public-scan-caption">FRAME 004281 / CAMERA C1</div>
             </div>
             <div className="public-panel-footer">
-              <span>의심 구간 감지</span>
-              <strong>→ 날짜별 이벤트로 정리</strong>
+              <span>疑わしい区間を検知</span>
+              <strong>→ 日付別イベントに整理</strong>
             </div>
           </div>
         </section>
 
-        <section className="public-proof-strip" aria-label="SIOT 핵심 기능">
-          <div><strong>01</strong><span>영상 업로드</span></div>
-          <div><strong>02</strong><span>의심 장면 분석</span></div>
-          <div><strong>03</strong><span>사건별 확인</span></div>
-          <p>AI가 영상을 먼저 훑고, 관리자는 필요한 장면에 집중합니다.</p>
+        <section className="public-proof-strip" aria-label="SIOTの主な機能">
+          <div><strong>01</strong><span>映像をアップロード</span></div>
+          <div><strong>02</strong><span>疑わしい場面を分析</span></div>
+          <div><strong>03</strong><span>案件ごとに確認</span></div>
+          <p>AIが映像を先に確認し、管理者は必要な場面に集中できます。</p>
         </section>
 
         <section className="public-insight-section" id="why-siot">
           <div className="public-section-heading">
             <p className="public-kicker">RECENT HIT-AND-RUN TREND</p>
-            <h2>반복되는 물피도주,<br /><em>AI 선별이 필요한 이유</em></h2>
+            <h2>繰り返される当て逃げ、<br /><em>AIによる選別が必要な理由</em></h2>
             <p>
-              공개된 지역 경찰 통계와 최근 보도에서 확인되는 흐름을 한눈에 정리했습니다.
-              SIOT는 수많은 CCTV 영상 중 확인이 필요한 순간을 먼저 좁혀 관리자의 시간을 줄입니다.
+              公開された警察統計と最近の報道から確認できる傾向をまとめました。
+              SIOTは膨大なCCTV映像から確認が必要な瞬間を先に絞り、管理者の時間を減らします。
             </p>
           </div>
           <div className="public-trend-table-wrap">
@@ -121,21 +121,21 @@ function LoginPage({ onLogin }) {
               <span>INDICATOR</span><span>OBSERVED DATA</span><span>WHAT IT MEANS</span>
             </div>
             <div className="public-trend-row highlight">
-              <strong>전국 / 2024</strong>
-              <b>약 7만 건</b>
-              <span>경찰청 교통 단속 통계를 인용한 2024년 연간 신고 접수 규모</span>
+              <strong>全国 / 2024</strong>
+              <b>約7万件</b>
+              <span>警察庁の交通取締統計を引用した、2024年の年間届出件数</span>
             </div>
             <div className="public-trend-row">
-              <strong>광주 / 2021</strong>
-              <b>약 9,600건</b>
-              <span>지역 경찰 집계 기준 하루 약 25건꼴로 발생한 사고 후 미조치</span>
+              <strong>光州 / 2021</strong>
+              <b>約9,600件</b>
+              <span>地域警察の集計で、事故後の措置を取らず立ち去った事案が1日約25件</span>
             </div>
             <div className="public-trend-row">
-              <strong>확보 시간</strong>
-              <b>2~4주</b>
-              <span>주차장 CCTV는 덮어쓰기 전에 필요한 구간을 먼저 확보해야 함</span>
+              <strong>映像確保の期限</strong>
+              <b>2〜4週間</b>
+              <span>駐車場CCTVは上書きされる前に必要な区間を確保する必要があります</span>
             </div>
-            <small className="public-trend-source">출처: 2026.06.18 로톡뉴스의 경찰청 교통 단속 통계 2024 인용 보도, 2022.10.24 광주방송의 광주경찰 집계 보도. CCTV 보존 기간은 로톡뉴스 안내를 참고했습니다.</small>
+            <small className="public-trend-source">出典：2026年6月18日ロトクニュースによる警察庁交通取締統計2024の引用、2022年10月24日光州放送による光州警察集計。CCTV保存期間はロトクニュースの案内を参照。</small>
           </div>
         </section>
       </main>
@@ -143,15 +143,15 @@ function LoginPage({ onLogin }) {
       {isLoginOpen && (
         <div className="login-modal-overlay" onClick={() => setIsLoginOpen(false)}>
           <div className="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-modal-title" onClick={(e) => e.stopPropagation()}>
-            <button className="login-modal-close" onClick={() => setIsLoginOpen(false)} aria-label="로그인 창 닫기">×</button>
+            <button className="login-modal-close" onClick={() => setIsLoginOpen(false)} aria-label="ログイン画面を閉じる">×</button>
             <p className="public-kicker">SECURE ACCESS</p>
-            <h2 id="login-modal-title">대시보드 로그인</h2>
-            <p className="login-modal-description">분석된 영상과 사고 의심 이벤트를 확인하세요.</p>
+            <h2 id="login-modal-title">ダッシュボードにログイン</h2>
+            <p className="login-modal-description">分析済みの映像と事故の疑いがあるイベントを確認します。</p>
 
             <div className="input-group">
               <input
                 type="text"
-                placeholder="아이디"
+                placeholder="ユーザーID"
                 value={id}
                 onChange={(e) => setId(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleLogin()}
@@ -162,7 +162,7 @@ function LoginPage({ onLogin }) {
             <div className="input-group">
               <input
                 type="password"
-                placeholder="비밀번호"
+                placeholder="パスワード"
                 value={pw}
                 onChange={(e) => setPw(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleLogin()}
@@ -173,12 +173,12 @@ function LoginPage({ onLogin }) {
 
             <div className="login-options">
               <label className="remember-me">
-                <input type="checkbox" /> Remember me
+                <input type="checkbox" /> ログイン状態を保持
               </label>
               <a href="#none" className="support-link">Support</a>
             </div>
 
-            <button className="login-submit-btn" onClick={handleLogin}>로그인</button>
+            <button className="login-submit-btn" onClick={handleLogin}>ログイン</button>
             <button
               className="login-signup-btn"
               onClick={() => {
@@ -186,7 +186,7 @@ function LoginPage({ onLogin }) {
                 setIsSignupOpen(true);
               }}
             >
-              회원가입
+              アカウント登録
             </button>
           </div>
         </div>
@@ -217,11 +217,11 @@ function SignupModal({ onClose, onBackToLogin }) {
   const handleSignup = async () => {
     setError("");
     if (!form.username || !form.name || !form.password) {
-      setError("아이디, 이름, 비밀번호는 필수입니다.");
+      setError("ユーザーID、氏名、パスワードは必須です。");
       return;
     }
     if (form.password !== form.passwordConfirm) {
-      setError("비밀번호가 일치하지 않습니다.");
+      setError("パスワードが一致しません。");
       return;
     }
     try {
@@ -240,54 +240,54 @@ function SignupModal({ onClose, onBackToLogin }) {
   return (
     <div className="login-modal-overlay" onClick={onClose}>
       <div className="login-modal signup-modal" role="dialog" aria-modal="true" aria-labelledby="signup-modal-title" onClick={(e) => e.stopPropagation()}>
-        <button className="login-modal-close" onClick={onClose} aria-label="회원가입 창 닫기">×</button>
+        <button className="login-modal-close" onClick={onClose} aria-label="登録画面を閉じる">×</button>
         <p className="public-kicker">CREATE ACCOUNT</p>
-        <h2 id="signup-modal-title">회원가입</h2>
-        <p className="login-modal-description">SIOT 영상 분석 대시보드 계정을 생성합니다.</p>
+        <h2 id="signup-modal-title">アカウント登録</h2>
+        <p className="login-modal-description">SIOT映像分析ダッシュボードのアカウントを作成します。</p>
 
         {done ? (
           <div className="signup-complete-state">
-            <strong>가입이 완료되었습니다.</strong>
-            <span>이제 로그인하여 대시보드를 확인할 수 있습니다.</span>
-            <button className="login-submit-btn" onClick={onBackToLogin}>로그인하러 가기</button>
+            <strong>登録が完了しました。</strong>
+            <span>ログインしてダッシュボードを確認できます。</span>
+            <button className="login-submit-btn" onClick={onBackToLogin}>ログインする</button>
           </div>
         ) : (
           <>
             <div className="signup-modal-grid">
               <div className="signup-field">
-                <label className="signup-field-label" htmlFor="signup-name">이름 <span>*</span></label>
+                <label className="signup-field-label" htmlFor="signup-name">氏名 <span>*</span></label>
                 <div className="input-group">
-                  <input id="signup-name" type="text" placeholder="이름을 입력하세요" value={form.name} onChange={update("name")} autoFocus />
+                  <input id="signup-name" type="text" placeholder="氏名を入力してください" value={form.name} onChange={update("name")} autoFocus />
                 </div>
               </div>
               <div className="signup-field">
-                <label className="signup-field-label" htmlFor="signup-email">이메일</label>
+                <label className="signup-field-label" htmlFor="signup-email">メールアドレス</label>
                 <div className="input-group">
-                  <input id="signup-email" type="email" placeholder="이메일을 입력하세요" value={form.email} onChange={update("email")} autoCapitalize="off" autoCorrect="off" />
+                  <input id="signup-email" type="email" placeholder="メールアドレスを入力してください" value={form.email} onChange={update("email")} autoCapitalize="off" autoCorrect="off" />
                 </div>
               </div>
               <div className="signup-field">
-                <label className="signup-field-label" htmlFor="signup-username">아이디 <span>*</span></label>
+                <label className="signup-field-label" htmlFor="signup-username">ユーザーID <span>*</span></label>
                 <div className="input-group">
-                  <input id="signup-username" type="text" placeholder="로그인에 사용할 아이디" value={form.username} onChange={update("username")} autoCapitalize="off" autoCorrect="off" />
+                  <input id="signup-username" type="text" placeholder="ログインに使用するID" value={form.username} onChange={update("username")} autoCapitalize="off" autoCorrect="off" />
                 </div>
               </div>
               <div className="signup-field">
-                <label className="signup-field-label" htmlFor="signup-password">비밀번호 <span>*</span></label>
+                <label className="signup-field-label" htmlFor="signup-password">パスワード <span>*</span></label>
                 <div className="input-group">
-                  <input id="signup-password" type="password" placeholder="비밀번호를 입력하세요" value={form.password} onChange={update("password")} />
+                  <input id="signup-password" type="password" placeholder="パスワードを入力してください" value={form.password} onChange={update("password")} />
                 </div>
               </div>
               <div className="signup-field">
-                <label className="signup-field-label" htmlFor="signup-password-confirm">비밀번호 확인 <span>*</span></label>
+                <label className="signup-field-label" htmlFor="signup-password-confirm">パスワード確認 <span>*</span></label>
                 <div className="input-group">
-                  <input id="signup-password-confirm" type="password" placeholder="비밀번호를 한 번 더 입력하세요" value={form.passwordConfirm} onChange={update("passwordConfirm")} />
+                  <input id="signup-password-confirm" type="password" placeholder="パスワードをもう一度入力してください" value={form.passwordConfirm} onChange={update("passwordConfirm")} />
                 </div>
               </div>
             </div>
             {error && <p className="login-error-text">{error}</p>}
-            <button className="login-submit-btn" onClick={handleSignup}>가입하기</button>
-            <button className="login-signup-btn" onClick={onBackToLogin}>로그인으로 돌아가기</button>
+            <button className="login-submit-btn" onClick={handleSignup}>登録する</button>
+            <button className="login-signup-btn" onClick={onBackToLogin}>ログインに戻る</button>
           </>
         )}
       </div>
@@ -313,11 +313,11 @@ function SignupPage() {
   const handleSignup = async () => {
     setError("");
     if (!form.username || !form.name || !form.password) {
-      setError("아이디, 이름, 비밀번호는 필수입니다.");
+      setError("ユーザーID、氏名、パスワードは必須です。");
       return;
     }
     if (form.password !== form.passwordConfirm) {
-      setError("비밀번호가 일치하지 않습니다.");
+      setError("パスワードが一致しません。");
       return;
     }
     try {
@@ -339,43 +339,43 @@ function SignupPage() {
       <div className="login-left-panel">
         <div className="brand-content">
           <div className="brand-badge">Parking Scratch Detection</div>
-          <h1>회원가입</h1>
-          <p>관리자 계정을 생성하여 시스템에 접속하세요.</p>
+          <h1>アカウント登録</h1>
+          <p>管理者アカウントを作成してシステムにアクセスしてください。</p>
         </div>
       </div>
 
       <div className="login-right-panel">
         <div className="login-form-wrapper">
-          <h2>회원가입</h2>
-          <p className="login-subtitle">새 계정을 만듭니다.</p>
+          <h2>アカウント登録</h2>
+          <p className="login-subtitle">新しいアカウントを作成します。</p>
 
           <div className="input-group">
-            <input type="text" placeholder="이름 *" value={form.name} onChange={update("name")}
+            <input type="text" placeholder="氏名 *" value={form.name} onChange={update("name")}
               lang="ko" style={{ imeMode: "active" }} />
           </div>
           <div className="input-group">
-            <input type="text" placeholder="아이디 *" value={form.username} onChange={update("username")}
+            <input type="text" placeholder="ユーザーID *" value={form.username} onChange={update("username")}
               lang="en" style={{ imeMode: "inactive" }} autoCapitalize="off" autoCorrect="off" />
           </div>
           <div className="input-group">
-            <input type="email" placeholder="이메일" value={form.email} onChange={update("email")}
+            <input type="email" placeholder="メールアドレス" value={form.email} onChange={update("email")}
               lang="en" style={{ imeMode: "inactive" }} autoCapitalize="off" autoCorrect="off" />
           </div>
           <div className="input-group">
-            <input type="password" placeholder="비밀번호 *" value={form.password} onChange={update("password")}
+            <input type="password" placeholder="パスワード *" value={form.password} onChange={update("password")}
               lang="en" style={{ imeMode: "inactive" }} />
           </div>
           <div className="input-group">
-            <input type="password" placeholder="비밀번호 확인 *" value={form.passwordConfirm} onChange={update("passwordConfirm")}
+            <input type="password" placeholder="パスワード確認 *" value={form.passwordConfirm} onChange={update("passwordConfirm")}
               lang="en" style={{ imeMode: "inactive" }} />
           </div>
 
           {error && <p className="login-error-text">{error}</p>}
-          {done && <p className="login-success-text">가입 완료! 로그인 화면으로 이동합니다.</p>}
+          {done && <p className="login-success-text">登録完了。ログイン画面へ移動します。</p>}
 
-          <button className="login-submit-btn" onClick={handleSignup}>가입하기</button>
+          <button className="login-submit-btn" onClick={handleSignup}>登録する</button>
           <button className="login-signup-btn" onClick={() => navigate("/login")}>
-            로그인으로 돌아가기
+            ログインに戻る
           </button>
         </div>
       </div>
@@ -410,7 +410,7 @@ function formatActualTime(dateText, startTime, seconds) {
   const date = new Date(`${dateText}T00:00:00`);
   date.setHours(hours, minutes, seconds, 0);
 
-  return date.toLocaleTimeString("ko-KR", {
+  return date.toLocaleTimeString("ja-JP", {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
@@ -425,13 +425,13 @@ function getVideoDisplayTitle(video, allVideos) {
     const sorted = [...sameDateVideos].sort((a, b) => a.id - b.id);
     const index = sorted.findIndex((v) => v.id === video.id);
     const num = index >= 0 ? index + 1 : 1;
-    return `${video.date} ${video.camera} 녹화본 #${num}`;
+    return `${video.date} ${video.camera} 録画 #${num}`;
   }
-  return `${video.date} ${video.camera} 녹화본`;
+  return `${video.date} ${video.camera} 録画`;
 }
 
 function formatMonthLabel(date) {
-  return `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
+  return `${date.getFullYear()}年${date.getMonth() + 1}月`;
 }
 
 function getCalendarDays(monthDate) {
@@ -481,8 +481,8 @@ function AnalyticsView({ filteredVideos, filterDays, setFilterDays }) {
         totalEvents += 1;
 
         // Status counts
-        if (event.status === "확인 필요") pendingCount++;
-        else if (event.status === "분석 완료") resolvedCount++;
+        if (event.status === "確認が必要") pendingCount++;
+        else if (event.status === "分析完了") resolvedCount++;
 
         // Date grouping
         dateCounts[video.date] = (dateCounts[video.date] || 0) + 1;
@@ -491,11 +491,11 @@ function AnalyticsView({ filteredVideos, filterDays, setFilterDays }) {
         cameraCounts[video.camera] = (cameraCounts[video.camera] || 0) + 1;
 
         // Type grouping
-        let type = "기타";
-        if (event.title.includes("스크래치") || event.title.includes("긁힘")) type = "스크래치 의심";
-        else if (event.title.includes("문콕")) type = "문콕 접촉 의심";
-        else if (event.title.includes("충돌") || event.title.includes("접촉")) type = "차량 충돌 의심";
-        else if (event.title.includes("접근") || event.title.includes("감지")) type = "인물 접근 감지";
+        let type = "その他";
+        if (event.title.includes("スクラッチ") || event.title.includes("擦り傷")) type = "擦り傷の疑い";
+        else if (event.title.includes("ドアパンチ")) type = "ドアパンチの疑い";
+        else if (event.title.includes("衝突") || event.title.includes("接触")) type = "車両衝突の疑い";
+        else if (event.title.includes("接近") || event.title.includes("検知")) type = "人物接近を検知";
 
         eventTypeCounts[type] = (eventTypeCounts[type] || 0) + 1;
 
@@ -526,10 +526,10 @@ function AnalyticsView({ filteredVideos, filterDays, setFilterDays }) {
 
     // Hourly grouped brackets
     const hourlyGroups = [
-      { name: "새벽 (00-06)", count: 0 },
-      { name: "오전 (06-12)", count: 0 },
-      { name: "오후 (12-18)", count: 0 },
-      { name: "야간 (18-24)", count: 0 }
+      { name: "深夜 (00-06)", count: 0 },
+      { name: "午前 (06-12)", count: 0 },
+      { name: "午後 (12-18)", count: 0 },
+      { name: "夜間 (18-24)", count: 0 }
     ];
     for (let h = 0; h < 24; h++) {
       const count = hourCounts[h];
@@ -669,7 +669,7 @@ function AnalyticsView({ filteredVideos, filterDays, setFilterDays }) {
               {total}
             </text>
             <text x="100" y="115" textAnchor="middle" className="donut-label" fill="var(--chart-text)" style={{ fontSize: "12px", fontWeight: "600" }}>
-              총 감지 건수
+              検知件数
             </text>
           </g>
         </svg>
@@ -679,7 +679,7 @@ function AnalyticsView({ filteredVideos, filterDays, setFilterDays }) {
             <div key={idx} className="legend-item">
               <span className="legend-badge" style={{ backgroundColor: seg.color }} />
               <span className="legend-name">{seg.name}</span>
-              <span className="legend-count">{seg.count}건 ({seg.percentage}%)</span>
+              <span className="legend-count">{seg.count}件（{seg.percentage}%）</span>
             </div>
           ))}
         </div>
@@ -754,7 +754,7 @@ function AnalyticsView({ filteredVideos, filterDays, setFilterDays }) {
               <div className="camera-bar-wrapper">
                 <div className="camera-bar-fill" style={{ width: `${pct}%` }} />
               </div>
-              <div className="camera-count">{cam.count}건</div>
+              <div className="camera-count">{cam.count}件</div>
             </div>
           );
         })}
@@ -765,65 +765,65 @@ function AnalyticsView({ filteredVideos, filterDays, setFilterDays }) {
   return (
     <div className="analytics-view">
       <div className="analytics-header">
-        <h2>📊 AI 감지 이벤트 통계 분석</h2>
-        <p>CCTV 녹화본에서 감지된 차량 사고 및 접촉 의심 이벤트 통계 요약입니다.</p>
+        <h2>📊 AI検知イベント統計分析</h2>
+        <p>CCTV映像から検知した車両事故・接触疑いイベントの統計概要です。</p>
       </div>
 
       {/* 기간 필터 */}
       <div className="filter-pills" style={{ marginBottom: "24px" }}>
-        <button className={filterDays === 9999 ? "active" : ""} onClick={() => setFilterDays(9999)}>전체</button>
-        <button className={filterDays === 7 ? "active" : ""} onClick={() => setFilterDays(7)}>1주일</button>
-        <button className={filterDays === 14 ? "active" : ""} onClick={() => setFilterDays(14)}>2주일</button>
-        <button className={filterDays === 30 ? "active" : ""} onClick={() => setFilterDays(30)}>1개월</button>
-        <button className={filterDays === 90 ? "active" : ""} onClick={() => setFilterDays(90)}>3개월</button>
+        <button className={filterDays === 9999 ? "active" : ""} onClick={() => setFilterDays(9999)}>全期間</button>
+        <button className={filterDays === 7 ? "active" : ""} onClick={() => setFilterDays(7)}>1週間</button>
+        <button className={filterDays === 14 ? "active" : ""} onClick={() => setFilterDays(14)}>2週間</button>
+        <button className={filterDays === 30 ? "active" : ""} onClick={() => setFilterDays(30)}>1か月</button>
+        <button className={filterDays === 90 ? "active" : ""} onClick={() => setFilterDays(90)}>3か月</button>
       </div>
 
       {stats.totalEvents === 0 ? (
-        <div className="empty-state" style={{ padding: "80px 20px" }}>선택한 기간에 감지된 이벤트 통계 데이터가 없습니다.</div>
+        <div className="empty-state" style={{ padding: "80px 20px" }}>選択した期間のイベント統計データはありません。</div>
       ) : (
         <>
           <div className="analytics-summary-cards">
             <div className="summary-card">
               <div className="card-icon">🎥</div>
               <div className="card-data">
-                <span className="card-label">분석된 총 영상</span>
-                <span className="card-value">{stats.totalVideos}개</span>
+                <span className="card-label">分析した映像</span>
+                <span className="card-value">{stats.totalVideos}本</span>
               </div>
             </div>
             <div className="summary-card">
               <div className="card-icon">🚨</div>
               <div className="card-data">
-                <span className="card-label">누적 감지 이벤트</span>
-                <span className="card-value">{stats.totalEvents}건</span>
+                <span className="card-label">累計検知イベント</span>
+                <span className="card-value">{stats.totalEvents}件</span>
               </div>
             </div>
             <div className="summary-card warning">
               <div className="card-icon">⚠️</div>
               <div className="card-data">
-                <span className="card-label">확인 필요 이벤트</span>
-                <span className="card-value">{stats.pendingCount}건</span>
+                <span className="card-label">確認が必要なイベント</span>
+                <span className="card-value">{stats.pendingCount}件</span>
               </div>
             </div>
           </div>
 
           <div className="analytics-grid">
             <div className="analytics-chart-card">
-              <h3> 날짜별 감지 이벤트 추이</h3>
+              <h3> 日付別の検知イベント推移</h3>
               <div className="chart-wrapper">{dailyTrendChart}</div>
             </div>
 
             <div className="analytics-chart-card">
-              <h3> 이벤트 유형별 비율</h3>
+              <h3> イベント種別の割合</h3>
               <div className="chart-wrapper donut-wrapper">{donutChart}</div>
             </div>
 
             <div className="analytics-chart-card">
-              <h3> 시간대별 발생 빈도</h3>
+              <h3> 時間帯別の発生頻度</h3>
               <div className="chart-wrapper">{hourlyChartSvg}</div>
             </div>
 
             <div className="analytics-chart-card">
-              <h3> 카메라별 감지 현황</h3>
+              <h3> カメラ別の検知状況</h3>
               <div className="chart-wrapper">{cameraStats}</div>
             </div>
           </div>
@@ -909,19 +909,19 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
 
   const handleDeleteSelected = async () => {
     if (selectedForDelete.length === 0) {
-      showToast("삭제할 영상을 선택해 주세요.", "warning");
+      showToast("削除する映像を選択してください。", "warning");
       return;
     }
-    if (!window.confirm(`선택한 ${selectedForDelete.length}개 영상을 삭제하시겠습니까? 되돌릴 수 없습니다.`)) {
+    if (!window.confirm(`選択した${selectedForDelete.length}本の映像を削除しますか？元に戻せません。`)) {
       return;
     }
     try {
       await Promise.all(selectedForDelete.map((id) => api.deleteVideo(id)));
-      showToast(`${selectedForDelete.length}개 영상을 삭제했습니다.`, "success");
+      showToast(`${selectedForDelete.length}本の映像を削除しました。`, "success");
       exitDeleteMode();
       await loadVideos();
     } catch (e) {
-      showToast(`삭제 실패: ${e.message}`, "error");
+      showToast(`削除に失敗しました：${e.message}`, "error");
     }
   };
 
@@ -949,9 +949,9 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     }
   }, [currentUser]);
 
-  const displayName = currentUser?.name || currentUser?.username || "사용자";
+  const displayName = currentUser?.name || currentUser?.username || "ユーザー";
   const avatarInitial = (displayName[0] || currentUsername[0] || "U").toUpperCase();
-  const roleLabel = currentUser?.role === "ADMIN" ? "시스템 관리자" : "일반 사용자";
+  const roleLabel = currentUser?.role === "ADMIN" ? "システム管理者" : "一般ユーザー";
 
   // 비밀번호 변경 필드
   const [currentPassword, setCurrentPassword] = useState("");
@@ -977,7 +977,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
       setVideos(list);
       return list;
     } catch (e) {
-      showToast(`영상 목록을 불러오지 못했습니다: ${e.message}`, "error");
+      showToast(`映像一覧を読み込めませんでした：${e.message}`, "error");
       return [];
     }
   };
@@ -1028,7 +1028,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
           setSelectedCalendarDate(v.date);
         }
       } catch (e) {
-        showToast(`영상을 불러오지 못했습니다: ${e.message}`, "error");
+        showToast(`映像を読み込めませんでした：${e.message}`, "error");
         navigate("/videos");
       }
     })();
@@ -1171,16 +1171,16 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
       if (currentEventId === eventId) {
         setCurrentEventId(null);
       }
-      showToast("감지 이벤트가 삭제되었습니다.", "info");
+      showToast("検知イベントを削除しました。", "info");
     } catch (err) {
-      showToast(`이벤트 삭제 실패: ${err.message}`, "error");
+      showToast(`イベントの削除に失敗しました：${err.message}`, "error");
     }
   };
 
   // 영상의 모든 사고 이벤트 전체 삭제
   const handleClearAllEvents = async () => {
     if (!selectedVideo || selectedVideo.events.length === 0) return;
-    if (!window.confirm("이 영상에서 감지된 모든 사고 이벤트를 삭제하시겠습니까?")) return;
+    if (!window.confirm("この映像で検知されたすべての事故イベントを削除しますか？")) return;
     try {
       await api.clearEvents(selectedVideo.id);
       setSelectedVideo((prev) => (prev ? { ...prev, events: [] } : null));
@@ -1188,9 +1188,9 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
         prev.map((v) => (v.id === selectedVideo.id ? { ...v, events: [] } : v))
       );
       setCurrentEventId(null);
-      showToast("모든 감지 이벤트가 삭제되었습니다.", "info");
+      showToast("すべての検知イベントを削除しました。", "info");
     } catch (err) {
-      showToast(`이벤트 전체 삭제 실패: ${err.message}`, "error");
+      showToast(`イベント全体の削除に失敗しました：${err.message}`, "error");
     }
   };
 
@@ -1201,7 +1201,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     setIsBBoxMode(true);
     setHoveredDetectedBox(null);
     setShowBBoxPanel(true);
-    showToast("🖱️ 수동 차량 지정 모드: 마우스로 드래그하여 사고 차량을 직접 지정해 주세요.", "info");
+    showToast("🖱️ 手動車両指定モード：マウスでドラッグして事故車両を指定してください。", "info");
   };
 
   // 탐지/지정 모드 해제
@@ -1221,7 +1221,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     }
     setIsDetectingVehicles(false);
     setSelectionMode("none");
-    showToast("차량 탐지가 취소되었습니다.", "info");
+    showToast("車両検知をキャンセルしました。", "info");
   };
 
   // YOLO 차량 탐지 실행 (영상 pause → 백엔드 탐지 → Hover 선택 활성화)
@@ -1233,7 +1233,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     }
     setSelectionMode("auto");
     setIsDetectingVehicles(true);
-    showToast("YOLO 모델로 차량을 탐지 중입니다...", "info");
+    showToast("YOLOモデルで車両を検知しています…", "info");
 
     const controller = new AbortController();
     detectAbortControllerRef.current = controller;
@@ -1245,15 +1245,15 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
       setIsBBoxMode(true);
       setShowBBoxPanel(true);
       if (list.length === 0) {
-        showToast("탐지된 차량이 없습니다. 수동 차량 지정을 이용해 주세요.", "warning");
+        showToast("検知された車両がありません。手動車両指定を利用してください。", "warning");
       } else {
-        showToast(`${list.length}대의 차량이 탐지되었습니다! 마우스를 올리면 탐지된 차량이 표시되며 클릭 시 선택됩니다.`, "success");
+        showToast(`${list.length}台の車両を検知しました。マウスを乗せると車両が表示され、クリックで選択できます。`, "success");
       }
     } catch (err) {
       if (err.name === "AbortError") {
         return;
       }
-      showToast(`차량 탐지 실패: ${err.message}`, "error");
+      showToast(`車両検知に失敗しました：${err.message}`, "error");
     } finally {
       setIsDetectingVehicles(false);
       detectAbortControllerRef.current = null;
@@ -1265,7 +1265,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
   // '사고감지 실행' 클릭 → bbox 없으면 경고, 있으면 확인 팝오버
   const handleDetectClick = () => {
     if (bboxList.length === 0) {
-      showToast("사고를 감지할 차량을 드래그하여 주십시오.", "warning");
+      showToast("事故を検知する車両をドラッグで指定してください。", "warning");
       return;
     }
     setShowDetectConfirm(true);
@@ -1281,13 +1281,13 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
       try {
         await api.cancelTask(taskId);
         removeJob(taskId);
-        showToast("사고 감지 분석 작업을 취소했습니다.", "info");
+        showToast("事故検知分析をキャンセルしました。", "info");
         loadVideos();
       } catch (e) {
-        showToast(`분석 취소 실패: ${e.message}`, "error");
+        showToast(`分析のキャンセルに失敗しました：${e.message}`, "error");
       }
     } else {
-      showToast("분석 요청이 취소되었습니다.", "info");
+      showToast("分析リクエストをキャンセルしました。", "info");
     }
   };
 
@@ -1301,7 +1301,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
         const status = await api.taskStatus(taskId);
         if (status.status === "SUCCESS") {
           removeJob(taskId);
-          showToast(`분석 완료: 사고 의심 구간 ${status.events.length}건`, "success");
+          showToast(`分析完了：事故の疑いがある区間${status.events.length}件`, "success");
           // 분석한 영상을 아직 보고 있을 때만 화면 갱신 (다른 영상으로 이동했으면 덮어쓰지 않음)
           if (selectedVideoIdRef.current === analyzedId) {
             const v = await api.getVideo(analyzedId);
@@ -1312,12 +1312,12 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
         }
         if (status.status === "FAILURE") {
           removeJob(taskId);
-          showToast(`분석 실패: ${status.error_message || "오류"}`, "error");
+          showToast(`分析に失敗しました：${status.error_message || "エラー"}`, "error");
           return;
         }
         if (status.status === "CANCELLED") {
           removeJob(taskId);
-          showToast("사고 감지 분석이 취소되었습니다.", "info");
+          showToast("事故検知分析をキャンセルしました。", "info");
           return;
         }
         // 백엔드가 실제 추론 진행도(%)를 주면 해당 job에 반영
@@ -1329,7 +1329,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
         setTimeout(poll, 2000); // PENDING/PROCESSING → 재시도
       } catch (e) {
         removeJob(taskId);
-        showToast(`상태 조회 실패: ${e.message}`, "error");
+        showToast(`ステータスの取得に失敗しました：${e.message}`, "error");
       }
     };
     poll();
@@ -1387,7 +1387,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
       if (e.name === "AbortError") {
         return;
       }
-      showToast(`분석 요청 실패: ${e.message}`, "error");
+      showToast(`分析リクエストに失敗しました：${e.message}`, "error");
     } finally {
       analyzeAbortControllerRef.current = null;
     }
@@ -1500,14 +1500,14 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
       {/* 상단 네비게이션 바 */}
       <header className="top-navbar">
         <div className="nav-section nav-left">
-          <button className="nav-logo nav-home-btn" onClick={handleBackToHome} aria-label="SIOT 홈으로 이동">
+          <button className="nav-logo nav-home-btn" onClick={handleBackToHome} aria-label="SIOTホームへ移動">
             <img src="/siot-logo.svg" alt="SIOT" />
           </button>
           <div className="nav-search-bar">
             <span className="search-icon">🔍</span>
             <input
               type="text"
-              placeholder="날짜, 카메라, 이벤트 검색..."
+              placeholder="日付、カメラ、イベントを検索…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -1522,7 +1522,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
         <div className="nav-section nav-center">
           {analyzingJobs.length === 0 ? (
             <div className="analysis-status-box analysis-status-idle">
-              <span className="analysis-idle-text">현재 분석 중인 영상이 없습니다</span>
+              <span className="analysis-idle-text">現在分析中の映像はありません</span>
             </div>
           ) : (() => {
             const lead = analyzingJobs[0];
@@ -1532,9 +1532,9 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                 <div className="analysis-status-main">
                   <div className="analysis-status-info">
                     <span className="analysis-status-label">
-                      🔍 {lead.dateLabel} 분석 중
+                      🔍 {lead.dateLabel} 分析中
                     </span>
-                    <span className="analysis-status-eta">약 {remain}초 남음</span>
+                    <span className="analysis-status-eta">残り約{remain}秒</span>
                   </div>
                   <div className="analysis-progress-track">
                     <div
@@ -1549,7 +1549,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                   onClick={() => setShowJobsDropdown((v) => !v)}
                   title="분석 중인 영상 목록"
                 >
-                  {analyzingJobs.length}개 ▾
+                  {analyzingJobs.length}件 ▾
                 </button>
 
                 {showJobsDropdown && (
@@ -1560,7 +1560,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                     />
                     <div className="analysis-jobs-dropdown">
                       <div className="analysis-jobs-dropdown-title">
-                        분석 중인 영상 ({analyzingJobs.length})
+                        分析中の映像（{analyzingJobs.length}件）
                       </div>
                       {analyzingJobs.map((job) => {
                         const p = jobProgress(job);
@@ -1577,7 +1577,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                                   onClick={() => handleCancelAnalysis(job.taskId)}
                                   title="분석 취소"
                                 >
-                                  🛑 취소
+                                  🛑 キャンセル
                                 </button>
                               </div>
                             </div>
@@ -1587,7 +1587,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                                 style={{ width: `${p.pct}%` }}
                               />
                             </div>
-                            <span className="analysis-job-eta">약 {p.remain}초 남음</span>
+                            <span className="analysis-job-eta">残り約{p.remain}秒</span>
                           </div>
                         );
                       })}
@@ -1603,7 +1603,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
             <button
               className="profile-trigger-btn simple-avatar-trigger"
               onClick={() => setIsProfileOpen(!isProfileOpen)}
-              aria-label="프로필 메뉴 열기"
+              aria-label="プロフィールメニューを開く"
             >
               <div className="profile-avatar">
                 <span>{avatarInitial}</span>
@@ -1626,7 +1626,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                   <div className="dropdown-divider" />
 
                   {/* 내 정보 설정 (Account Settings) */}
-                  <div className="dropdown-section-title">내 정보 설정</div>
+                  <div className="dropdown-section-title">個人情報設定</div>
                   <button
                     className="dropdown-item"
                     onClick={() => {
@@ -1635,7 +1635,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                       setActiveSettingsTab("account");
                     }}
                   >
-                    👤 {currentUser?.role === "ADMIN" ? "관리자 정보 수정" : "내 정보 수정"}
+                    👤 {currentUser?.role === "ADMIN" ? "管理者情報を編集" : "個人情報を編集"}
                   </button>
                   <button
                     className="dropdown-item"
@@ -1645,13 +1645,13 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                       setActiveSettingsTab("security");
                     }}
                   >
-                    🔑 비밀번호 변경
+                    🔑 パスワード変更
                   </button>
 
                   <div className="dropdown-divider" />
 
                   {/* 화면 이동 */}
-                  <div className="dropdown-section-title">화면 이동</div>
+                  <div className="dropdown-section-title">画面移動</div>
                   <button
                     className={`dropdown-item ${currentView === "analytics" ? "active-menu-item" : ""}`}
                     onClick={() => {
@@ -1659,15 +1659,15 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                       navigate("/analytics");
                     }}
                   >
-                    📊 이벤트 통계 그래프
+                    📊 イベント統計グラフ
                   </button>
 
                   <div className="dropdown-divider" />
 
                   {/* 테마 설정 (Appearance) */}
-                  <div className="dropdown-section-title">테마 설정</div>
+                  <div className="dropdown-section-title">テーマ設定</div>
                   <div className="dropdown-item-toggle">
-                    <span>🌙 다크 모드</span>
+                    <span>🌙 ダークモード</span>
                     <label className="switch-mini">
                       <input
                         type="checkbox"
@@ -1688,7 +1688,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                       onLogout();
                     }}
                   >
-                    🚪 로그아웃
+                    🚪 ログアウト
                   </button>
                 </div>
               </>
@@ -1709,11 +1709,11 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
           {/* 기간 필터 및 영상 관리 툴바 */}
           <div className="home-toolbar">
             <div className="filter-pills">
-              <button className={filterDays === 9999 ? "active" : ""} onClick={() => setFilterDays(9999)}>전체</button>
-              <button className={filterDays === 7 ? "active" : ""} onClick={() => setFilterDays(7)}>1주일</button>
-              <button className={filterDays === 14 ? "active" : ""} onClick={() => setFilterDays(14)}>2주일</button>
-              <button className={filterDays === 30 ? "active" : ""} onClick={() => setFilterDays(30)}>1개월</button>
-              <button className={filterDays === 90 ? "active" : ""} onClick={() => setFilterDays(90)}>3개월</button>
+              <button className={filterDays === 9999 ? "active" : ""} onClick={() => setFilterDays(9999)}>全期間</button>
+              <button className={filterDays === 7 ? "active" : ""} onClick={() => setFilterDays(7)}>1週間</button>
+              <button className={filterDays === 14 ? "active" : ""} onClick={() => setFilterDays(14)}>2週間</button>
+              <button className={filterDays === 30 ? "active" : ""} onClick={() => setFilterDays(30)}>1か月</button>
+              <button className={filterDays === 90 ? "active" : ""} onClick={() => setFilterDays(90)}>3か月</button>
             </div>
 
             <div className="home-toolbar-actions">
@@ -1730,23 +1730,23 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                     }}
                   >
                     {selectedForDelete.length === filteredVideos.length && filteredVideos.length > 0
-                      ? "☑ 전체 해제"
-                      : "☐ 전체 선택"}
+                      ? "☑ すべて解除"
+                      : "☐ すべて選択"}
                   </button>
                   <button className="delete-cancel-btn" onClick={exitDeleteMode}>
-                    취소
+                    キャンセル
                   </button>
                   <button className="delete-confirm-btn" onClick={handleDeleteSelected}>
-                    🗑 선택 삭제 ({selectedForDelete.length})
+                    🗑 選択項目を削除 ({selectedForDelete.length})
                   </button>
                 </>
               ) : (
                 <>
                   <button className="toolbar-upload-btn" onClick={() => setShowUpload(true)}>
-                    ⬆ 영상 업로드
+                    ⬆ 映像をアップロード
                   </button>
                   <button className="toolbar-delete-btn" onClick={() => setDeleteMode(true)}>
-                    🗑 영상 삭제
+                    🗑 映像を削除
                   </button>
                 </>
               )}
@@ -1757,7 +1757,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
           {/* 영상 썸네일 그리드 */}
           <div className="video-grid">
             {filteredVideos.length === 0 ? (
-              <div className="empty-state">선택한 기간에 해당하는 영상이 없습니다.</div>
+              <div className="empty-state">選択した期間の映像はありません。</div>
             ) : (
               paginatedVideos.map((video) => {
                 const isSelected = selectedForDelete.includes(video.id);
@@ -1774,11 +1774,11 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                       <img
                         className="video-thumbnail-img"
                         src={api.thumbnailUrl(video.id)}
-                        alt={`${video.date} ${video.camera} 썸네일`}
+                        alt={`${video.date} ${video.camera} サムネイル`}
                         loading="lazy"
                         onError={(e) => { e.currentTarget.style.display = "none"; }}
                       />
-                      <span className="event-count-badge">이벤트 {video.events.length}건</span>
+                      <span className="event-count-badge">イベント {video.events.length}件</span>
                       {deleteMode && (
                         <span className={`delete-check ${isSelected ? "checked" : ""}`}>
                           {isSelected ? "✓" : ""}
@@ -1787,7 +1787,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                     </div>
                     <div className="video-info">
                       <h3>{getVideoDisplayTitle(video, videos)}</h3>
-                      <p>영상 길이: {formatTime(video.duration)}</p>
+                      <p>映像の長さ：{formatTime(video.duration)}</p>
                     </div>
                   </div>
                 );
@@ -1802,7 +1802,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                 className="pagination-btn pagination-nav"
                 onClick={() => handlePageChange(1)}
                 disabled={currentPage === 1}
-                title="첫 페이지"
+                title="最初のページ"
               >
                 «
               </button>
@@ -1810,7 +1810,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                 className="pagination-btn pagination-nav"
                 onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
-                title="이전 페이지"
+                title="前のページ"
               >
                 ‹
               </button>
@@ -1831,7 +1831,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                 className="pagination-btn pagination-nav"
                 onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
-                title="다음 페이지"
+                title="次のページ"
               >
                 ›
               </button>
@@ -1839,13 +1839,13 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                 className="pagination-btn pagination-nav"
                 onClick={() => handlePageChange(totalPages)}
                 disabled={currentPage === totalPages}
-                title="마지막 페이지"
+                title="最後のページ"
               >
                 »
               </button>
 
               <span className="pagination-info">
-                {currentPage} / {totalPages} 페이지 (총 {filteredVideos.length}개)
+                {currentPage} / {totalPages}ページ（全{filteredVideos.length}件）
               </span>
             </div>
           )}
@@ -1854,7 +1854,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
         <main className={`watch-view ${isTheaterMode ? "theater-view" : ""}`}>
           <div className="watch-header">
             <button className="back-btn" onClick={handleBackToHome}>
-              ← 목록으로 돌아가기
+              ← 一覧に戻る
             </button>
 
             {/* 영상(player) 컬럼에 맞춰 정렬되는 오른쪽 영역 */}
@@ -1865,9 +1865,9 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                   className={`auto-detect-btn ${selectionMode === "auto" ? "active" : ""} ${isDetectingVehicles ? "detecting" : ""}`}
                   disabled={isAnalyzing}
                   onClick={isDetectingVehicles ? handleCancelDetectVehicles : handleAutoDetectVehicles}
-                  title={isDetectingVehicles ? "진행 중인 차량 탐지를 취소합니다" : "YOLO 알고리즘으로 현재 정지 화면의 차량을 자동 탐지하여 선택합니다"}
+                  title={isDetectingVehicles ? "実行中の車両検知をキャンセル" : "YOLOで現在のフレームから車両を自動検知して選択"}
                 >
-                  {isDetectingVehicles ? "🛑 탐지 취소" : "🔍 탐지하기"}
+                  {isDetectingVehicles ? "🛑 検知をキャンセル" : "🔍 車両を検知"}
                 </button>
 
                 <button
@@ -1880,18 +1880,18 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                       handleStartManualDesignate();
                     }
                   }}
-                  title={isAnalyzing ? "분석 중에는 지정할 수 없습니다" : (selectionMode === "manual" ? "수동 지정 모드 종료" : "직접 드래그하여 차량 지정")}
+                  title={isAnalyzing ? "分析中は指定できません" : (selectionMode === "manual" ? "手動指定モードを終了" : "ドラッグして車両を指定")}
                 >
-                  {selectionMode === "manual" ? "수동 지정 종료" : "수동 차량 지정"}
+                  {selectionMode === "manual" ? "手動指定を終了" : "車両を手動指定"}
                 </button>
 
                 {selectionMode !== "none" && (
                   <button
                     className="mode-exit-btn"
                     onClick={handleEndDesignateMode}
-                    title="모든 지정 모드 해제"
+                    title="すべての指定モードを解除"
                   >
-                    ✕ 모드 해제
+                    ✕ モードを解除
                   </button>
                 )}
 
@@ -1906,17 +1906,17 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                         const currentJob = analyzingJobs.find((j) => j.videoId === selectedVideo?.id);
                         handleCancelAnalysis(currentJob?.taskId);
                       }}
-                      title="진행 중인 사고 감지 분석을 취소합니다"
+                      title="実行中の事故検知分析をキャンセル"
                     >
-                      🛑 사고감지 취소
+                      🛑 事故検知をキャンセル
                     </button>
                   ) : (
                     <button
                       className="detect-run-btn"
                       onClick={handleDetectClick}
-                      title="선택한 차량의 사고예상 구간 탐지"
+                      title="選択した車両の事故予測区間を検知"
                     >
-                      사고감지 실행
+                      事故検知を実行
                     </button>
                   )}
 
@@ -1928,17 +1928,17 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                       />
                       <div className="detect-popover">
                         <p className="detect-popover-text">
-                          현재 선택하신 차량의 사고예상 구간을 탐지하시겠습니까?
+                          選択した車両の事故予測区間を検知しますか？
                         </p>
                         <div className="detect-popover-actions">
                           <button className="detect-popover-run" onClick={runDetection}>
-                            실행
+                            実行
                           </button>
                           <button
                             className="detect-popover-cancel"
                             onClick={() => setShowDetectConfirm(false)}
                           >
-                            뒤로가기
+                            戻る
                           </button>
                         </div>
                       </div>
@@ -1948,9 +1948,9 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
               </div>
 
               <div className="watch-header-metadata">
-                <span className="metadata-item"><strong>카메라:</strong> {selectedVideo.camera}</span>
-                <span className="metadata-item"><strong>녹화 영상:</strong> {getVideoDisplayTitle(selectedVideo, videos)} ({selectedVideo.startTime})</span>
-                <span className="metadata-item"><strong>총 이벤트:</strong> {selectedVideo.events.length}건 감지됨</span>
+                <span className="metadata-item"><strong>カメラ：</strong> {selectedVideo.camera}</span>
+                <span className="metadata-item"><strong>録画映像：</strong> {getVideoDisplayTitle(selectedVideo, videos)} ({selectedVideo.startTime})</span>
+                <span className="metadata-item"><strong>イベント合計：</strong> {selectedVideo.events.length}件検知</span>
               </div>
             </div>
           </div>
@@ -1961,17 +1961,17 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                 <>
                   <div className="event-sidebar-header">
                     <div>
-                      <h3>감지된 이벤트 목록</h3>
-                      <p className="event-summary">총 {selectedVideo.events.length}건의 이벤트가 있습니다.</p>
+                      <h3>検知イベント一覧</h3>
+                      <p className="event-summary">合計{selectedVideo.events.length}件のイベントがあります。</p>
                     </div>
                     <div className="event-header-actions">
                       {selectedVideo.events.length > 0 && (
                         <button
                           className="event-clear-all-btn"
                           onClick={handleClearAllEvents}
-                          title="이 영상의 모든 감지 이벤트 삭제"
+                          title="この映像のすべての検知イベントを削除"
                         >
-                          🗑 전체 삭제
+                          🗑 すべて削除
                         </button>
                       )}
                       <button
@@ -1986,7 +1986,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
 
                   <div className="event-list">
                     {selectedVideo.events.length === 0 ? (
-                      <div className="event-empty-hint">감지된 이벤트가 없습니다.</div>
+                      <div className="event-empty-hint">検知されたイベントはありません。</div>
                     ) : (
                       selectedVideo.events.map((event) => (
                         <div
@@ -2008,18 +2008,18 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                                   if (event.hasClip) {
                                     setClipEvent(event);
                                   } else {
-                                    showToast("이 이벤트의 CAM 클립이 아직 없습니다.", "warning");
+                                    showToast("このイベントのCAMクリップはまだありません。", "warning");
                                   }
                                 }}
-                                aria-label={`${formatTime(event.timestamp)} 사고구간 CAM 클립 재생`}
-                                title="사고구간 CAM 클립 보기"
+                                aria-label={`${formatTime(event.timestamp)} 事故区間CAMクリップを再生`}
+                                title="事故区間CAMクリップを見る"
                               >
                                 ▶
                               </button>
                               <button
                                 className="event-delete-item-btn"
                                 onClick={(e) => handleDeleteEvent(event.id, e)}
-                                title="이벤트 삭제"
+                                title="イベントを削除"
                               >
                                 🗑
                               </button>
@@ -2038,17 +2038,17 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                   <div className="sidebar-calendar-container">
                     <section className="event-calendar-panel" style={{ background: "transparent", padding: 0 }}>
                       <div className="calendar-header">
-                        <button className="calendar-nav-btn" onClick={() => moveCalendarMonth(-1)} aria-label="이전 달">
+                        <button className="calendar-nav-btn" onClick={() => moveCalendarMonth(-1)} aria-label="前月">
                           ‹
                         </button>
                         <h2>{formatMonthLabel(calendarMonth)}</h2>
-                        <button className="calendar-nav-btn" onClick={() => moveCalendarMonth(1)} aria-label="다음 달">
+                        <button className="calendar-nav-btn" onClick={() => moveCalendarMonth(1)} aria-label="翌月">
                           ›
                         </button>
                       </div>
 
                       <div className="calendar-weekdays">
-                        {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
+                        {["日", "月", "火", "水", "木", "金", "土"].map((day) => (
                           <span key={day}>{day}</span>
                         ))}
                       </div>
@@ -2077,12 +2077,12 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                               key={dateText}
                               className={`calendar-day ${hasVideo ? `has-video ${intensityClass}` : ""} ${isSelectedDate ? "selected" : ""}`}
                               onClick={() => handleCalendarDateClick(date)}
-                              title={hasVideo ? `총 ${videos.length}개 영상 / ${totalEvents}건의 이벤트` : "영상 없음"}
+                              title={hasVideo ? `映像${videos.length}本 / イベント${totalEvents}件` : "映像なし"}
                             >
                               <span className="calendar-date-number">{date.getDate()}</span>
                               {videos.length > 1 && (
-                                <span className="calendar-multi-count-badge" title={`영상 ${videos.length}개`}>
-                                  {videos.length}개
+                                <span className="calendar-multi-count-badge" title={`映像${videos.length}本`}>
+                                  {videos.length}本
                                 </span>
                               )}
                             </button>
@@ -2097,13 +2097,13 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                   className="sidebar-open-btn"
                   onClick={() => setIsSidebarOpen(true)}
                 >
-                  이벤트 목록 열기
+                  イベント一覧を開く
                 </button>
               )}
 
               {!isSidebarOpen && nextVideos.length > 0 && (
                 <section className="next-video-section">
-                  <h3>다음 영상</h3>
+                  <h3>次の映像</h3>
                   <div className="next-video-list">
                     {nextVideos.map((video) => (
                       <button
@@ -2113,7 +2113,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                       >
                         <strong>{video.date}</strong>
                         <span>{video.camera}</span>
-                        <small>{video.startTime} · 이벤트 {video.events.length}건 · {formatTime(video.duration)}</small>
+                        <small>{video.startTime} · イベント {video.events.length}件 · {formatTime(video.duration)}</small>
                       </button>
                     ))}
                   </div>
@@ -2129,8 +2129,8 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                   <span className="bbox-guide-icon">{selectionMode === "auto" ? "🔍" : "🖱️"}</span>
                   <span>
                     {selectionMode === "auto"
-                      ? "YOLO 자동 탐지 모드: 마우스를 올리면 탐지된 차량이 표시되며 클릭 시 선택됩니다."
-                      : "수동 차량 지정 모드: 마우스로 드래그하여 사고 차량을 직접 지정해 주세요."}
+                      ? "YOLO自動検知モード：マウスを乗せると検知車両が表示され、クリックで選択できます。"
+                      : "手動車両指定モード：マウスでドラッグして事故車両を指定してください。"}
                   </span>
                 </div>
               )}
@@ -2157,7 +2157,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                       const dispY2 = Math.round(offsetY + y2 * scale);
 
                       setBboxList([{ id: Date.now(), xmin: dispX1, ymin: dispY1, xmax: dispX2, ymax: dispY2 }]);
-                      showToast(`${hoveredDetectedBox.class_name} (#${hoveredDetectedBox.id + 1}) 차량이 선택되었습니다.`, "success");
+                      showToast(`${hoveredDetectedBox.class_name}（#${hoveredDetectedBox.id + 1}）の車両を選択しました。`, "success");
                       return;
                     }
                     if (selectionMode === "manual") {
@@ -2358,7 +2358,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                         }}
                       >
                         <span className="bbox-hover-label">
-                          🚗 {hoveredDetectedBox.class_name} (#{hoveredDetectedBox.id + 1}) — 클릭하여 선택
+                          🚗 {hoveredDetectedBox.class_name}（#{hoveredDetectedBox.id + 1}）— クリックして選択
                         </span>
                       </div>
                     );
@@ -2437,14 +2437,14 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                       <button
                         className={`control-btn theater-btn ${isTheaterMode ? "active" : ""}`}
                         onClick={() => setIsTheaterMode((enabled) => !enabled)}
-                        aria-label="영화관 모드"
+                        aria-label="シアターモード"
                       >
                         ▭
                       </button>
                       <button
                         className="control-btn fullscreen-btn"
                         onClick={handleToggleFullscreen}
-                        aria-label="전체화면"
+                        aria-label="全画面"
                       >
                         ⛶
                       </button>
@@ -2459,22 +2459,22 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                   <div className="bbox-panel-header">
                     <div className="bbox-panel-title">
                       <span className="bbox-panel-icon">📦</span>
-                      <span>사고 차량 바운딩박스 좌표</span>
+                      <span>事故車両のバウンディングボックス座標</span>
                     </div>
                     <div className="bbox-panel-actions">
                       {bboxList.length > 0 && (
                         <button
                           className="bbox-clear-btn"
                           onClick={() => setBboxList([])}
-                          title="전체 박스 초기화"
+                          title="すべてのボックスを初期化"
                         >
-                          초기화
+                          初期化
                         </button>
                       )}
                       <button
                         className="bbox-panel-close-btn"
                         onClick={() => setShowBBoxPanel(false)}
-                        title="패널 닫기"
+                        title="パネルを閉じる"
                       >
                         ✕
                       </button>
@@ -2484,7 +2484,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                   {bboxList.length === 0 ? (
                     <div className="bbox-empty-hint">
                       <span>🖱️</span>
-                      <span>영상 화면에서 드래그하여 박스를 그려보세요.</span>
+                      <span>映像上をドラッグしてボックスを描画してください。</span>
                     </div>
                   ) : (
                     <div className="bbox-coord-list">
@@ -2497,7 +2497,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                           <button
                             className="bbox-row-delete-btn"
                             onClick={() => setBboxList((prev) => prev.filter((b) => b.id !== box.id))}
-                            title="삭제"
+                            title="削除"
                           >
                             ✕
                           </button>
@@ -2514,11 +2514,11 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                           .map((box, idx) => `(car, ${idx}, ${box.xmin}, ${box.ymin}, ${box.xmax}, ${box.ymax})`)
                           .join("\n");
                         navigator.clipboard.writeText(text).then(() => {
-                          alert("좌표가 클립보드에 복사되었습니다!");
+                          alert("座標をクリップボードにコピーしました！");
                         });
                       }}
                     >
-                      📋 좌표 전체 복사
+                      📋 座標をすべてコピー
                     </button>
                   )}
                 </div>
@@ -2533,69 +2533,69 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
         <div className="settings-modal-overlay" onClick={() => setIsSettingsOpen(false)}>
           <div className="settings-modal-container" onClick={(e) => e.stopPropagation()}>
             <div className="settings-modal-sidebar">
-              <h3>설정</h3>
+              <h3>設定</h3>
               <button
                 className={`settings-tab-btn ${activeSettingsTab === "account" ? "active" : ""}`}
                 onClick={() => setActiveSettingsTab("account")}
               >
-                👤 내 정보 설정
+                👤 個人情報設定
               </button>
               <button
                 className={`settings-tab-btn ${activeSettingsTab === "security" ? "active" : ""}`}
                 onClick={() => setActiveSettingsTab("security")}
               >
-                🔑 비밀번호 변경
+                🔑 パスワード変更
               </button>
               <button
                 className="settings-modal-close-btn"
                 onClick={() => setIsSettingsOpen(false)}
               >
-                닫기
+                閉じる
               </button>
             </div>
 
             <div className="settings-modal-content">
               {activeSettingsTab === "account" && (
                 <div className="settings-tab-content">
-                  <h2>{currentUser?.role === "ADMIN" ? "관리자 정보 설정" : "내 정보 설정"}</h2>
+                  <h2>{currentUser?.role === "ADMIN" ? "管理者情報設定" : "個人情報設定"}</h2>
                   <p className="tab-description">
                     {currentUser?.role === "ADMIN"
-                      ? "관리자 기본 정보를 확인 및 수정할 수 있습니다."
-                      : "회원 기본 정보를 확인 및 수정할 수 있습니다."}
+                      ? "管理者の基本情報を確認・編集できます。"
+                      : "会員の基本情報を確認・編集できます。"}
                   </p>
 
                   <div className="settings-form-group">
-                    <label>계정 아이디</label>
+                    <label>アカウントID</label>
                     <input type="text" value={currentUsername} disabled className="disabled-input" />
                   </div>
 
                   <div className="settings-form-group">
-                    <label>이름</label>
+                    <label>氏名</label>
                     <input
                       type="text"
                       value={adminRealName}
                       onChange={(e) => setAdminRealName(e.target.value)}
-                      placeholder="이름 입력"
+                      placeholder="氏名を入力"
                     />
                   </div>
 
                   <div className="settings-form-group">
-                    <label>연락처</label>
+                    <label>連絡先</label>
                     <input
                       type="text"
                       value={adminPhone}
                       onChange={(e) => setAdminPhone(e.target.value)}
-                      placeholder="연락처 입력 (예: 010-1234-5678)"
+                      placeholder="連絡先を入力（例：010-1234-5678）"
                     />
                   </div>
 
                   <div className="settings-form-group">
-                    <label>이메일 주소</label>
+                    <label>メールアドレス</label>
                     <input
                       type="email"
                       value={adminEmail}
                       onChange={(e) => setAdminEmail(e.target.value)}
-                      placeholder="이메일 입력"
+                      placeholder="メールアドレスを入力"
                     />
                   </div>
 
@@ -2603,7 +2603,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                     className="settings-save-btn"
                     onClick={async () => {
                       if (!adminRealName.trim()) {
-                        alert("이름을 입력해 주세요.");
+                        alert("氏名を入力してください。");
                         return;
                       }
                       try {
@@ -2613,48 +2613,48 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                           email: adminEmail.trim(),
                         });
                         if (onUpdateUser) onUpdateUser(updated);
-                        showToast("사용자 정보가 성공적으로 저장되었습니다.", "success");
-                        alert("사용자 정보가 성공적으로 저장되었습니다.");
+                        showToast("ユーザー情報を保存しました。", "success");
+                        alert("ユーザー情報を保存しました。");
                       } catch (err) {
                         alert(`정보 수정 실패: ${err.message}`);
                       }
                     }}
                   >
-                    수정 내용 저장
+                    変更内容を保存
                   </button>
                 </div>
               )}
 
               {activeSettingsTab === "security" && (
                 <div className="settings-tab-content">
-                  <h2>비밀번호 변경</h2>
-                  <p className="tab-description">시스템 보안을 위해 주기적으로 비밀번호를 변경해 주십시오.</p>
+                  <h2>パスワード変更</h2>
+                  <p className="tab-description">システムの安全のため、定期的にパスワードを変更してください。</p>
 
                   <div className="settings-form-group">
-                    <label>현재 비밀번호</label>
+                    <label>現在のパスワード</label>
                     <input
                       type="password"
-                      placeholder="현재 비밀번호 입력"
+                      placeholder="現在のパスワードを入力"
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                     />
                   </div>
 
                   <div className="settings-form-group">
-                    <label>새 비밀번호</label>
+                    <label>新しいパスワード</label>
                     <input
                       type="password"
-                      placeholder="새 비밀번호 입력"
+                      placeholder="新しいパスワードを入力"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                     />
                   </div>
 
                   <div className="settings-form-group">
-                    <label>새 비밀번호 확인</label>
+                    <label>新しいパスワード確認</label>
                     <input
                       type="password"
-                      placeholder="새 비밀번호 다시 입력"
+                      placeholder="新しいパスワードをもう一度入力"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                     />
@@ -2664,15 +2664,15 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                     className="settings-save-btn"
                     onClick={async () => {
                       if (!currentPassword || !newPassword || !confirmPassword) {
-                        alert("모든 필드를 입력해 주세요.");
+                        alert("すべての項目を入力してください。");
                         return;
                       }
                       if (newPassword !== confirmPassword) {
-                        alert("새 비밀번호가 서로 일치하지 않습니다.");
+                        alert("新しいパスワードが一致しません。");
                         return;
                       }
                       if (newPassword.length < 4) {
-                        alert("새 비밀번호는 최소 4자 이상이어야 합니다.");
+                        alert("新しいパスワードは4文字以上で入力してください。");
                         return;
                       }
                       try {
@@ -2680,8 +2680,8 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                           current_password: currentPassword,
                           new_password: newPassword,
                         });
-                        showToast("비밀번호가 성공적으로 변경되었습니다.", "success");
-                        alert("비밀번호가 성공적으로 변경되었습니다.");
+                        showToast("パスワードを変更しました。", "success");
+                        alert("パスワードを変更しました。");
                         setCurrentPassword("");
                         setNewPassword("");
                         setConfirmPassword("");
@@ -2691,7 +2691,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                       }
                     }}
                   >
-                    비밀번호 변경 완료
+                    パスワードを変更
                   </button>
                 </div>
               )}
@@ -2711,7 +2711,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
           <div className="clip-modal" onClick={(e) => e.stopPropagation()}>
             <div className="clip-modal-header">
               <span>
-                사고구간 CAM 클립 · {formatTime(clipEvent.timestamp)}
+                事故区間CAMクリップ · {formatTime(clipEvent.timestamp)}
                 {clipEvent.endTimestamp != null
                   ? ` ~ ${formatTime(clipEvent.endTimestamp)}`
                   : ""}
@@ -2823,7 +2823,7 @@ function UploadModal({ onClose, onUploaded, onError }) {
 
   const handleUpload = async () => {
     if (filesList.length === 0) {
-      onError("업로드할 영상 파일을 선택해 주세요.");
+      onError("アップロードする映像ファイルを選択してください。");
       return;
     }
     setUploading(true);
@@ -2849,11 +2849,11 @@ function UploadModal({ onClose, onUploaded, onError }) {
     setUploading(false);
     if (successCount > 0) {
       if (failCount > 0) {
-        onError(`${successCount}개 업로드 완료 (${failCount}개 실패)`);
+        onError(`${successCount}本のアップロード完了（${failCount}本失敗）`);
       }
       onUploaded();
     } else {
-      onError("모든 영상 파일 업로드에 실패했습니다.");
+      onError("すべての映像ファイルのアップロードに失敗しました。");
     }
   };
 
@@ -2862,8 +2862,8 @@ function UploadModal({ onClose, onUploaded, onError }) {
       <div className="upload-modal multi-upload-modal" onClick={(e) => e.stopPropagation()}>
         <div className="upload-modal-header">
           <div>
-            <h2>영상 다중 업로드</h2>
-            <p className="tab-description">분석할 CCTV 녹화 영상을 업로드합니다. 여러 파일을 한번에 선택하고 개별 날짜를 지정할 수 있습니다.</p>
+            <h2>映像を一括アップロード</h2>
+            <p className="tab-description">分析するCCTV録画映像をアップロードします。複数ファイルを選択し、録画日を個別に指定できます。</p>
           </div>
           <button className="clip-modal-close" onClick={onClose} disabled={uploading}>✕</button>
         </div>
@@ -2887,13 +2887,13 @@ function UploadModal({ onClose, onUploaded, onError }) {
             onClick={() => fileInputRef.current?.click()}
           >
             <div className="dropzone-icon">📹</div>
-            <p className="dropzone-title">클릭하여 영상 파일 선택 (복수 선택 가능)</p>
-            <p className="dropzone-sub">또는 여기에 영상 파일들을 드래그 앤 드롭하세요</p>
+            <p className="dropzone-title">クリックして映像ファイルを選択（複数選択可）</p>
+            <p className="dropzone-sub">またはここに映像ファイルをドラッグ＆ドロップ</p>
           </div>
         ) : (
           <div className="upload-file-list-container">
             <div className="upload-file-list-toolbar">
-              <span className="file-count-badge">선택된 영상: <strong>{filesList.length}개</strong></span>
+              <span className="file-count-badge">選択した映像：<strong>{filesList.length}本</strong></span>
               <div className="file-toolbar-actions">
                 <button
                   type="button"
@@ -2901,7 +2901,7 @@ function UploadModal({ onClose, onUploaded, onError }) {
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
                 >
-                  + 파일 추가
+                  + ファイルを追加
                 </button>
                 <button
                   type="button"
@@ -2909,13 +2909,13 @@ function UploadModal({ onClose, onUploaded, onError }) {
                   onClick={() => setFilesList([])}
                   disabled={uploading}
                 >
-                  전체 삭제
+                  すべて削除
                 </button>
               </div>
             </div>
 
             <div className="bulk-date-bar">
-              <span>일괄 녹화일자 지정:</span>
+              <span>録画日を一括指定：</span>
               <input
                 type="date"
                 max={formatDate(new Date())}
@@ -2924,7 +2924,7 @@ function UploadModal({ onClose, onUploaded, onError }) {
                 }}
                 disabled={uploading}
               />
-              <span className="bulk-date-tip">(각 파일별 개별 일자 설정 가능)</span>
+              <span className="bulk-date-tip">（ファイルごとに個別指定できます）</span>
             </div>
 
             <div className="upload-file-scroll-list">
@@ -2939,7 +2939,7 @@ function UploadModal({ onClose, onUploaded, onError }) {
                   </div>
 
                   <div className="file-item-date-group">
-                    <label>녹화일자:</label>
+                    <label>録画日：</label>
                     <input
                       type="date"
                       value={item.recordingDate}
@@ -2967,7 +2967,7 @@ function UploadModal({ onClose, onUploaded, onError }) {
         {uploading && (
           <div className="upload-progress-box">
             <div className="upload-progress-info">
-              <span>업로드 진행 중 ({uploadProgress.current}/{uploadProgress.total})</span>
+              <span>アップロード中（{uploadProgress.current}/{uploadProgress.total}）</span>
               <span className="upload-progress-filename">{uploadProgress.currentName}</span>
             </div>
             <div className="analysis-progress-track">
@@ -2986,11 +2986,11 @@ function UploadModal({ onClose, onUploaded, onError }) {
             disabled={uploading || filesList.length === 0}
           >
             {uploading
-              ? `업로드 중 (${uploadProgress.current}/${uploadProgress.total})...`
-              : `${filesList.length > 0 ? `${filesList.length}개 ` : ""}영상 업로드`}
+              ? `アップロード中（${uploadProgress.current}/${uploadProgress.total}）…`
+              : `${filesList.length > 0 ? `${filesList.length}本 ` : ""}映像をアップロード`}
           </button>
           <button className="upload-cancel-btn" onClick={onClose} disabled={uploading}>
-            취소
+            キャンセル
           </button>
         </div>
       </div>
@@ -3006,9 +3006,9 @@ function DateVideosModal({ dateText, videos, onClose, onSelectVideo }) {
       <div className="date-videos-modal" onClick={(e) => e.stopPropagation()}>
         <div className="date-videos-header">
           <div>
-            <h2>📅 {dateText} 녹화 영상 목록 ({videos.length}개)</h2>
+            <h2>📅 {dateText} 録画映像一覧（{videos.length}本）</h2>
             <p className="tab-description">
-              해당 날짜에 총 {videos.length}개의 녹화 영상이 존재합니다. 시청할 영상을 선택해 주세요.
+              この日には{videos.length}本の録画映像があります。視聴する映像を選択してください。
             </p>
           </div>
           <button className="clip-modal-close" onClick={onClose}>✕</button>
@@ -3024,18 +3024,18 @@ function DateVideosModal({ dateText, videos, onClose, onSelectVideo }) {
                   alt={`${v.date} 썸네일`}
                   onError={(e) => { e.currentTarget.style.display = "none"; }}
                 />
-                <span className="event-count-badge">이벤트 {v.events.length}건</span>
+                <span className="event-count-badge">イベント {v.events.length}件</span>
               </div>
               <div className="date-video-card-info">
                 <h3>{getVideoDisplayTitle(v, videos)}</h3>
                 <div className="date-video-card-meta">
-                  <span>⏱ 영상 길이: {formatTime(v.duration)}</span>
-                  <span>📍 위치: {v.camera}</span>
-                  <span>⏱ 시작: {v.startTime}</span>
+                  <span>⏱ 映像の長さ：{formatTime(v.duration)}</span>
+                  <span>📍 場所：{v.camera}</span>
+                  <span>⏱ 開始：{v.startTime}</span>
                 </div>
               </div>
               <button className="date-video-play-btn">
-                ▶ 시청하기
+                ▶ 視聴する
               </button>
             </div>
           ))}

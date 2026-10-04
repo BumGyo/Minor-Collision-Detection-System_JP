@@ -267,7 +267,7 @@ button {
 .dashboard-layout {
   min-height: 100vh;
   background-color: #f8fafc;
-  font-family: "Pretendard", "Noto Sans KR", Arial, sans-serif;
+  font-family: "Pretendard", "Hiragino Sans", "Yu Gothic", "Noto Sans KR", Arial, sans-serif;
   color: #1f2937;
 }
 
@@ -5917,7 +5917,7 @@ body.dark-mode .date-video-card-item:hover .date-video-play-btn {
   overflow: hidden;
   background: var(--public-paper);
   color: var(--public-ink);
-  font-family: "Plus Jakarta Sans", "Pretendard", "Noto Sans KR", sans-serif;
+  font-family: "Plus Jakarta Sans", "Pretendard", "Hiragino Sans", "Yu Gothic", "Noto Sans KR", sans-serif;
 }
 
 body.dark-mode .public-login-page {

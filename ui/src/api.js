@@ -31,10 +31,19 @@ async function request(path, { method = "GET", body, isForm = false, signal } = 
   }
   const res = await fetch(`/api${path}`, { method, headers, body: payload, signal });
   if (!res.ok) {
-    let detail = `요청 실패 (${res.status})`;
+    const statusMessages = {
+      400: "入力内容を確認してください。",
+      401: "ユーザーIDまたはパスワードが正しくありません。",
+      403: "この操作を実行する権限がありません。",
+      404: "対象のデータが見つかりません。",
+      500: "サーバーでエラーが発生しました。",
+    };
+    let detail = statusMessages[res.status] || `リクエストに失敗しました（${res.status}）`;
     try {
       const data = await res.json();
-      detail = data.detail || detail;
+         if (res.status !== 401 && !/[가-힣]/.test(data.detail || "")) {
+        detail = data.detail || detail;
+      }
     } catch {
       /* ignore */
     }
@@ -53,9 +62,9 @@ function normalizeEvent(e) {
       e.end_timestamp_sec != null ? Math.round(e.end_timestamp_sec) : null,
     prob: e.crash_prob,
     hasClip: !!e.has_clip,
-    title: "사고 의심 구간",
+    title: "事故の疑いがある区間",
     status:
-      e.crash_prob != null && e.crash_prob >= 0.5 ? "확인 필요" : "분석 완료",
+      e.crash_prob != null && e.crash_prob >= 0.5 ? "確認が必要" : "分析完了",
   };
 }
 
@@ -65,7 +74,7 @@ export function normalizeVideo(v) {
     id: v.id,
     date: v.recording_date || (created ? created.slice(0, 10) : ""),
     startTime: v.recording_start_time || "20:30",
-    camera: v.camera_location || "주차장",
+    camera: v.camera_location || "駐車場",
     duration: Math.round(v.duration_sec || 0),
     width: v.width,
     height: v.height,
