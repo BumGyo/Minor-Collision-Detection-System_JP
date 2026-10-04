@@ -7,7 +7,7 @@
 - `ui/`: React + Vite の日本語対応 Web UI
 - `backend/`: FastAPI API、車両検知、分析ジョブ API
 - `model/`: 事故分析モデルと推論コード
-- `weights/`: 学習済み X3D モデル重み
+- `weights/`: 学習済み 3D Inception モデル重み
 - `docker-compose.yml`: MySQL 8 と Redis
 
 ## 必要環境
@@ -41,7 +41,7 @@ npm run dev -- --host 0.0.0.0
 
 ## モデルについて
 
-- 事故分析用の X3D 重みは `weights/` に含まれています。
+- 事故分析用の 3D Inception 重みは `weights/` に含まれています。
 - 車両検知用の `yolo11x.pt` は GitHub のファイルサイズ制限を避けるためリポジトリには含めていません。`ultralytics` が初回の車両検知時に自動ダウンロードします。
 - `storage/`, `outputs/`, `venv311/`, `ui/node_modules/` は実行時に生成されるため Git 管理対象外です。
 
