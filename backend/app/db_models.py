@@ -1,7 +1,7 @@
-"""SQLAlchemy DB 모델.
+"""SQLAlchemy DB モデル。
 
-테이블 관계: users → videos → analysis_tasks → crash_events
-(crash_events 는 video_id 도 함께 보유 — 빠른 조회용 반정규화)
+テーブル関連: users → videos → analysis_tasks → crash_events
+(crash_events は高速クエリ用に video_id も非正規化して保持)
 """
 from datetime import datetime
 
@@ -19,9 +19,9 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(255), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
-    name = Column(String(100), nullable=True)      # 회원가입: 실명
+    name = Column(String(100), nullable=True)      # 会員登録: 氏名
     email = Column(String(255), unique=True, nullable=True)
-    phone = Column(String(50), nullable=True)      # 연락처
+    phone = Column(String(50), nullable=True)      # 連絡先
     role = Column(String(50), default="USER")
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -34,17 +34,17 @@ class Video(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    video_name = Column(String(255), nullable=False)   # 원본 파일명
-    title = Column(String(100), nullable=True)         # 업로드할 때 넣은 표시 제목
-    video_path = Column(String(500), nullable=False)   # storage 기준 상대경로
-    recording_date = Column(Date, nullable=True)       # 업로드 시 지정한 녹화일자
-    camera_location = Column(String(255), nullable=False, default="주차장")   # 녹화 CCTV 위치
+    video_name = Column(String(255), nullable=False)   # 元ファイル名
+    title = Column(String(100), nullable=True)         # アップロード時に指定された表示タイトル
+    video_path = Column(String(500), nullable=False)   # storage 基準の相対パス
+    recording_date = Column(Date, nullable=True)       # アップロード時に指定された録画日
+    camera_location = Column(String(255), nullable=False, default="駐車場")   # 防犯カメラ設置場所
 
     width = Column(Integer, nullable=False)
     height = Column(Integer, nullable=False)
     fps = Column(Float, nullable=False)
     total_frames = Column(Integer, nullable=False)
-    detected_vehicles = Column(Text, nullable=True)  # YOLO 감지 BBOX JSON 매핑 정보
+    detected_vehicles = Column(Text, nullable=True)  # YOLO検出バウンディングボックスJSONマッピング情報
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -62,7 +62,7 @@ class AnalysisTask(Base):
     video_id = Column(Integer, ForeignKey("videos.id"), nullable=False)
     celery_task_id = Column(String(255), unique=True, index=True, nullable=True)
 
-    # 사용자가 지정한 대상 차량 bbox (원본 해상도 픽셀 좌표)
+    # ユーザーが指定した対象車両バウンディングボックス (元解像度ピクセル座標)
     bbox_xmin = Column(Integer, nullable=False)
     bbox_ymin = Column(Integer, nullable=False)
     bbox_xmax = Column(Integer, nullable=False)
@@ -79,7 +79,7 @@ class AnalysisTask(Base):
 
 
 class VehicleDetectionTask(Base):
-    """GPU 워커가 실행하는 프레임별 차량 탐지 작업."""
+    """GPUワーカーが実行するフレーム別車両検知タスク。"""
     __tablename__ = "vehicle_detection_tasks"
     __table_args__ = (Index("idx_vehicle_detection_tasks_video_id_fk", "video_id"),)
 
@@ -97,7 +97,7 @@ class VehicleDetectionTask(Base):
 
 
 class CrashEvent(Base):
-    """사고 의심 구간(이벤트) 1건. 구간별 CAM 클립 1개."""
+    """事故疑い区間 (イベント) 1件。区間ごとのCAMクリップ1件。"""
     __tablename__ = "crash_events"
     __table_args__ = (
         Index("idx_crash_events_task_id_fk", "task_id"),
@@ -108,17 +108,17 @@ class CrashEvent(Base):
     task_id = Column(Integer, ForeignKey("analysis_tasks.id"), nullable=False)
     video_id = Column(Integer, ForeignKey("videos.id"), nullable=False)
 
-    # 구간 시작
+    # 区間開始
     timestamp_sec = Column(Float, nullable=False)
     frame_number = Column(Integer, nullable=False)
-    # 구간 종료 (클립 길이/구간 표시용)
+    # 区間終了 (クリップ長・区間表示用)
     end_timestamp_sec = Column(Float, nullable=True)
     end_frame_number = Column(Integer, nullable=True)
 
-    crash_prob = Column(Float, nullable=True)          # 구간 대표 확률 (0~1)
-    # DB 컬럼명은 기존 cam_heatmap_path 를 유지하고, 코드에서는 실제 역할인 clip_path 로 쓴다.
+    crash_prob = Column(Float, nullable=True)          # 区間代表確率 (0〜1)
+    # DBカラム名は従来の cam_heatmap_path を維持し、コード上では実際の役割である clip_path として扱う。
     clip_path = Column("cam_heatmap_path", String(500), nullable=True)
-    # 생성된 CAM 클립이 원본 영상에서 시작하는 시각. 이전 분석 결과는 NULL.
+    # 生成されたCAMクリップが元動画において開始する時刻。以前の分析結果はNULL。
     clip_start_sec = Column(Float, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)

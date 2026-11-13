@@ -1,20 +1,20 @@
-"""변형 견딤 시험 — 학습한 증강과 학습하지 않은 변형(저해상도·압축)에 모델 판단이 얼마나 흔들리는지 잰다.
+"""変形耐性テスト — 学習済み拡張と未学習の変形（低解像度・圧縮）に対してモデルの判定がどの程度揺らぐかを測定する。
 
-    python -u -m model.robust_check                      # 평가 폴더 전부, 평가 가중치(GPU 권장, 약 5분)
-    python -u -m model.robust_check --weights <가중치.pth>
-    python -u -m model.robust_check --videos 4           # 사고·정상 절반씩 일부만(코드 점검용)
+    python -u -m model.robust_check                      # 評価フォルダ全体、評価重み（GPU推奨、約5分）
+    python -u -m model.robust_check --weights <重み.pth>
+    python -u -m model.robust_check --videos 4           # 事故・正常を半分ずつ一部のみ（コード点検用）
 
-평가 영상(config.EVAL_FOLDER_PATH)마다 창을 고른다 — 사고 영상은 충돌 시작 앞뒤(시작 25·20·15·10·5·0프레임 전 시작),
-정상 영상은 영상 전체에 고르게 12개. 창마다 30프레임을 학습·서비스와 같이 자르고 줄인 뒤(0번 차량 박스, r=1.0)
-변형별로 P(A)를 잰다. 변형은 클립 전체에 같은 값이다(노이즈는 고정 잔무늬, 시드 고정).
-  · 학습한 증강(dataset.py 와 같은 연산): 좌우 뒤집기 · 밝게 1.4 · 어둡게 0.6 · 대비 0.7 · 채도 0.7 · 색조 +0.1 ·
-    흑백 · 흐림(3×3) · 노이즈 σ8
-  · 학습하지 않은 변형: 저해상도(차량 크롭을 64·40px 로 줄였다 다시 키움 = 화면 속 작은 차) · 압축(JPEG 화질 25) ·
-    저해상도 64px + 압축(작은 차를 압축이 심한 CCTV 로 본 것)
-학습한 증강에는 판단이 덜 흔들리고 학습하지 않은 변형에 크게 흔들리면 증강이 모델에 반영된 것이다. 저해상도에서
-정상 창의 P(A)가 오르면 '흐리면 사고' 지름길을 의심한다(학습 데이터의 저화질 영상이 사고 쪽에 몰려 있음).
-판정은 창 단위 P(A)>0.5 와, 영상의 고른 창 중 하나라도 0.5 를 넘으면 '사고'로 보는 축약 판정이다(서비스 판정과
-다르다 — 변형끼리 비교용). 결과는 화면과 outputs/robust_check/<시각>/report.txt · windows.csv 에 남는다.
+評価動画(config.EVAL_FOLDER_PATH)ごとにウィンドウを選定する — 事故動画は衝突開始の前後（開始25・20・15・10・5・0フレーム前開始）、
+正常動画は動画全体に均等に12個。ウィンドウごとに30フレームを学習・本番運用と同様にクロップ・縮小した後（0番車両ボックス、r=1.0）
+変形ごとにP(A)を測定する。変形はクリップ全体で同一値（ノイズは固定グレイン、シード固定）。
+  ・学習済み拡張(dataset.py と同等の演算): 左右反転・明度 1.4・暗転 0.6・コントラスト 0.7・彩度 0.7・色相 +0.1・
+    グレースケール・ブラー(3×3)・ノイズ σ8
+  ・未学習の変形: 低解像度(車両クロップを64・40pxに縮小後再拡大 = 画面内の遠方・小型車)・圧縮(JPEG品質 25)・
+    低解像度 64px + 圧縮(小型車を高圧縮CCTVで捉えた状態)
+学習済み拡張に対する判定の揺らぎが少なく、未学習の変形に大きく揺らぐ場合、拡張がモデルに正しく反映されている。低解像度で
+正常ウィンドウのP(A)が上昇する場合、「ぼやけていれば事故」というショートカット学習を疑う(学習データの低画質動画が事故側に偏在)。
+判定はウィンドウ単位 P(A)>0.5 および、動画の選定ウィンドウのいずれか1つでも0.5を超えれば「事故」とみなす簡易判定(本番サービスの判定とは
+異なる — 変形間比較用)。結果は画面および outputs/robust_check/<タイムスタンプ>/report.txt ・ windows.csv に出力される。
 """
 import argparse
 import csv
@@ -38,12 +38,12 @@ from device_utils import is_channels_last_3d_supported, is_cuda_like
 from evaluate import _read_label
 from main import _load_model
 
-A_OFFSETS = (25, 20, 15, 10, 5, 0)            # 사고 창 시작 = 충돌 시작 - 이 값(프레임)
+A_OFFSETS = (25, 20, 15, 10, 5, 0)            # 事故ウィンドウ開始 = 衝突開始 - この値(フレーム)
 NOISE_SIGMA = 8.0
 
 
 class _Tee:
-    """화면과 파일에 함께 쓴다."""
+    """画面とファイルの両方に出力する。"""
     def __init__(self, path):
         self.stdout, self.f = sys.stdout, open(path, 'w', encoding='utf-8')
 
@@ -59,28 +59,28 @@ class _Tee:
         self.f.close()
 
 
-# ───────────────────────── 변형 ─────────────────────────
+# ───────────────────────── 変形 ─────────────────────────
 def _pil(fn):
-    """PIL 변환을 클립의 모든 프레임에 같은 값으로 — dataset._apply_augmentation 과 같은 연산."""
+    """PIL変換をクリップの全フレームに同一値で適用 — dataset._apply_augmentation と同等の演算。"""
     return lambda frames, seed: [np.array(fn(Image.fromarray(f))) for f in frames]
 
 
 def _noise(frames, seed):
-    # 예전 학습 노이즈 — 프레임마다 새로 뽑는다(창마다 시드 고정 → 다시 돌려도 같다). 11-05 부터 학습엔 없음(참고용)
+    # 以前の学習ノイズ — フレームごとに新規抽出(ウィンドウごとにシード固定 → 再現性あり)。11-05以降は学習から除外(参考用)
     rng = np.random.default_rng(seed)
     return [np.clip(f.astype(np.float32) + rng.normal(0.0, NOISE_SIGMA, f.shape), 0, 255).astype(np.uint8)
             for f in frames]
 
 
 def _grain(frames, seed):
-    # 지금 학습 노이즈(dataset._apply_augmentation) — 클립 내내 같은 잔무늬(창마다 시드 고정)
+    # 現在の学習ノイズ(dataset._apply_augmentation) — クリップ全体で同一グレイン(ウィンドウごとにシード固定)
     rng = np.random.default_rng(seed)
     g = rng.normal(0.0, NOISE_SIGMA, frames[0].shape).astype(np.float32)
     return [np.clip(f.astype(np.float32) + g, 0, 255).astype(np.uint8) for f in frames]
 
 
 def _low(size, jpeg=None):
-    """224 크롭을 size 로 줄였다(카메라가 작게 찍은 차) 다시 키운다 — 서비스가 작은 크롭을 키우는 것과 같은 보간."""
+    """224クロップをsizeに縮小後(カメラ遠方の小型車)再拡大 — 本番サービスが小クロップを拡大するのと同様の補間。"""
     def fn(frames, seed):
         out = []
         for f in frames:
@@ -97,13 +97,13 @@ def _jpeg_one(f, q):
     return cv2.cvtColor(cv2.imdecode(buf, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
 
 
-TRAINED, UNTRAINED, KEYFRAME = '학습한 증강', '학습 안 한 변형', 'H.264 키프레임(화질 튐)'
-REF = '참고: 예전 학습 노이즈(매 프레임 깜빡임)'
-LIGHT = '불빛(야간)'
+TRAINED, UNTRAINED, KEYFRAME = '学習済み拡張', '未学習の変形', 'H.264キーフレーム(画質変動)'
+REF = '参考: 以前の学習ノイズ(毎フレームちらつき)'
+LIGHT = '照明(夜間)'
 
 
 def _light(**kw):
-    """밤처럼 어둡게(×0.4) 한 뒤 움직이는 불빛을 더한다 — dataset.add_light(불빛 증강과 같은 함수), 값은 고정."""
+    """夜間のように暗転(×0.4)させた後、動的な照明を加算 — dataset.add_light(照明拡張と同等の関数)、値は固定。"""
     def fn(frames, seed):
         from dataset import add_light
         return add_light(list(frames), **kw)
@@ -113,54 +113,54 @@ H264_CRF = 35
 
 
 def _h264(crf, gop):
-    """크롭 30프레임을 H.264 로 압축했다 푼다 — 키프레임은 gop 프레임마다(창 길이 이상이면 창 처음에만 = 튐 없음)."""
+    """クロップ30フレームをH.264で圧縮・展開 — キーフレームはgopフレームごと(ウィンドウ長以上なら先頭のみ = 変動なし)。"""
     def fn(frames, seed):
         from dataset import h264_roundtrip
         return h264_roundtrip(list(frames), crf, gop)
     return fn
 CONDITIONS = [
-    ('orig', '원본', None, lambda frames, seed: frames),
-    ('flip', '좌우 뒤집기', TRAINED, _pil(TF.hflip)),
-    ('bright', '밝게 ×1.4', TRAINED, _pil(lambda im: TF.adjust_brightness(im, 1.4))),
-    ('dark', '어둡게 ×0.6', TRAINED, _pil(lambda im: TF.adjust_brightness(im, 0.6))),
-    ('contrast', '대비 ×0.7', TRAINED, _pil(lambda im: TF.adjust_contrast(im, 0.7))),
-    ('sat', '채도 ×0.7', TRAINED, _pil(lambda im: TF.adjust_saturation(im, 0.7))),
-    ('hue', '색조 +0.1', TRAINED, _pil(lambda im: TF.adjust_hue(im, 0.1))),
-    ('gray', '흑백', TRAINED, _pil(lambda im: TF.rgb_to_grayscale(im, num_output_channels=3))),
-    ('blur', '흐림 3×3', TRAINED, _pil(lambda im: TF.gaussian_blur(im, kernel_size=3))),
-    ('grain', f'잔무늬 노이즈 σ{NOISE_SIGMA:g}', TRAINED, _grain),
-    ('low64', '저해상도 64px', UNTRAINED, _low(64)),
-    ('low40', '저해상도 40px', UNTRAINED, _low(40)),
-    ('jpeg25', 'JPEG 화질 25', UNTRAINED, lambda frames, seed: [_jpeg_one(f, 25) for f in frames]),
-    ('low64j', '저해상도 64px+압축', UNTRAINED, _low(64, jpeg=25)),
-    ('noise', f'깜빡이는 노이즈 σ{NOISE_SIGMA:g}', REF, _noise),
+    ('orig', 'オリジナル', None, lambda frames, seed: frames),
+    ('flip', '左右反転', TRAINED, _pil(TF.hflip)),
+    ('bright', '明度 ×1.4', TRAINED, _pil(lambda im: TF.adjust_brightness(im, 1.4))),
+    ('dark', '暗転 ×0.6', TRAINED, _pil(lambda im: TF.adjust_brightness(im, 0.6))),
+    ('contrast', 'コントラスト ×0.7', TRAINED, _pil(lambda im: TF.adjust_contrast(im, 0.7))),
+    ('sat', '彩度 ×0.7', TRAINED, _pil(lambda im: TF.adjust_saturation(im, 0.7))),
+    ('hue', '色相 +0.1', TRAINED, _pil(lambda im: TF.adjust_hue(im, 0.1))),
+    ('gray', 'グレースケール', TRAINED, _pil(lambda im: TF.rgb_to_grayscale(im, num_output_channels=3))),
+    ('blur', 'ブラー 3×3', TRAINED, _pil(lambda im: TF.gaussian_blur(im, kernel_size=3))),
+    ('grain', f'グレインノイズ σ{NOISE_SIGMA:g}', TRAINED, _grain),
+    ('low64', '低解像度 64px', UNTRAINED, _low(64)),
+    ('low40', '低解像度 40px', UNTRAINED, _low(40)),
+    ('jpeg25', 'JPEG品質 25', UNTRAINED, lambda frames, seed: [_jpeg_one(f, 25) for f in frames]),
+    ('low64j', '低解像度 64px+圧縮', UNTRAINED, _low(64, jpeg=25)),
+    ('noise', f'ちらつきノイズ σ{NOISE_SIGMA:g}', REF, _noise),
 ]
 try:
-    import av  # noqa: F401 — H.264 변형에 필요(dataset.h264_roundtrip)
+    import av  # noqa: F401 — H.264変形に必要(dataset.h264_roundtrip)
     CONDITIONS += [
-        ('h264g30', f'H.264 압축만(CRF {H264_CRF})', KEYFRAME, _h264(H264_CRF, 300)),
-        ('h264g15', '+ 15프레임마다 키프레임', KEYFRAME, _h264(H264_CRF, 15)),
-        ('h264g10', '+ 10프레임마다 키프레임', KEYFRAME, _h264(H264_CRF, 10)),
-        ('h264g15q', '+ 15프레임마다·CRF 42', KEYFRAME, _h264(42, 15)),
+        ('h264g30', f'H.264 圧縮のみ(CRF {H264_CRF})', KEYFRAME, _h264(H264_CRF, 300)),
+        ('h264g15', '+ 15フレームごとキーフレーム', KEYFRAME, _h264(H264_CRF, 15)),
+        ('h264g10', '+ 10フレームごとキーフレーム', KEYFRAME, _h264(H264_CRF, 10)),
+        ('h264g15q', '+ 15フレームごと・CRF 42', KEYFRAME, _h264(42, 15)),
     ]
     KEYFRAME_NOTE = ''
 except ImportError:
-    KEYFRAME_NOTE = 'PyAV(av) 가 없어 H.264 키프레임 변형은 건너뜀 — pip install av'
+    KEYFRAME_NOTE = 'PyAV(av) がないため H.264 キーフレーム変形はスキップ — pip install av'
 
 
-# 불빛(2026-11-05): 같은 '밤(×0.4)'에 불빛만 더한 것과 비교해 불빛 때문에 P(A)가 오르는지(정상 창) · 떨어지는지(사고 창)
+# 照明(2026-11-05): 同一「夜間(×0.4)」に照明のみ加算した場合と比較し、照明によるP(A)の上昇(正常)・低下(事故)を検証
 CONDITIONS += [
-    ('night', '밤처럼 어둡게 ×0.4', LIGHT, _light(kind='none', dark=0.4)),
-    ('lsweep', '+ 흰 빛 훑기', LIGHT, _light(kind='sweep', dark=0.4, peak=160, radius=0.35, t0=8, dur=14,
+    ('night', '夜間暗転 ×0.4', LIGHT, _light(kind='none', dark=0.4)),
+    ('lsweep', '+ 白色光スイープ', LIGHT, _light(kind='sweep', dark=0.4, peak=160, radius=0.35, t0=8, dur=14,
                                              direction=1, color='white')),
-    ('lramp', '+ 따뜻한 빛 비추기', LIGHT, _light(kind='ramp', dark=0.4, peak=120, t0=10, dur=8, direction=-1,
+    ('lramp', '+ 温色光照射', LIGHT, _light(kind='ramp', dark=0.4, peak=120, t0=10, dur=8, direction=-1,
                                               color='warm')),
-    ('lred', '+ 빨간 미등 훑기', LIGHT, _light(kind='sweep', dark=0.4, peak=140, radius=0.2, t0=8, dur=14,
+    ('lred', '+ 赤色テールランプスイープ', LIGHT, _light(kind='sweep', dark=0.4, peak=140, radius=0.2, t0=8, dur=14,
                                             direction=-1, color='red')),
 ]
 
 
-# ───────────────────────── 창 고르기·읽기 ─────────────────────────
+# ───────────────────────── ウィンドウ選定・読み込み ─────────────────────────
 def _windows(total, gt_sf, n_s):
     L = config.CLIP_LENGTH
     last = max(0, total - L)
@@ -170,7 +170,7 @@ def _windows(total, gt_sf, n_s):
 
 
 def _read_clips(path, bbox, starts):
-    """창 시작점들 → [(T,H,W,3) uint8] — 처음부터 차례로 읽으며(서비스처럼) 필요한 프레임만 자르고 줄인다."""
+    """ウィンドウ開始位置リスト → [(T,H,W,3) uint8] — 先頭から順次読み込み(本番同様)、必要フレームのみクロップ・縮小。"""
     L = config.CLIP_LENGTH
     need = {s + i for s in starts for i in range(L)}
     crop_self = SimpleNamespace(resize=tuple(config.RESIZE))
@@ -190,13 +190,13 @@ def _read_clips(path, bbox, starts):
         fr = [crops[s + i] for i in range(L) if s + i in crops]
         if not fr:
             continue
-        while len(fr) < L:                       # 영상이 짧으면 마지막 프레임으로 채운다(dataset.py 와 같다)
+        while len(fr) < L:                       # 動画が短い場合は最終フレームでパディング(dataset.py と同等)
             fr.append(fr[-1])
         clips.append((s, np.stack(fr)))
     return clips
 
 
-# ───────────────────────── 추론 ─────────────────────────
+# ───────────────────────── 推論 ─────────────────────────
 def _infer(model, device, clips, batch, cl):
     mean = torch.tensor(config.NORM_MEAN, dtype=torch.float32, device=device).view(1, 3, 1, 1, 1)
     std = torch.tensor(config.NORM_STD, dtype=torch.float32, device=device).view(1, 3, 1, 1, 1)
@@ -204,7 +204,7 @@ def _infer(model, device, clips, batch, cl):
     with torch.no_grad():
         for i in range(0, len(clips), batch):
             x = torch.from_numpy(np.stack(clips[i:i + batch])).to(device)        # (B,T,H,W,3) uint8
-            x = (x.permute(0, 4, 1, 2, 3).float() / 255.0 - mean) / std           # dataset._frames_to_tensor 와 같다
+            x = (x.permute(0, 4, 1, 2, 3).float() / 255.0 - mean) / std           # dataset._frames_to_tensor と同等
             if cl:
                 x = x.contiguous(memory_format=torch.channels_last_3d)
             out += torch.softmax(model(x).float(), 1)[:, 1].cpu().tolist()
@@ -212,21 +212,21 @@ def _infer(model, device, clips, batch, cl):
 
 
 def _auc(pos, neg):
-    """사고 창이 정상 창보다 P(A)가 높을 확률(동점 반) — 판정 기준과 무관한 구분력."""
+    """事故ウィンドウが正常ウィンドウよりP(A)が高い確率(同点は0.5) — 判定閾値に依存しない識別能。"""
     if not pos or not neg:
         return float('nan')
     p, n = np.asarray(pos)[:, None], np.asarray(neg)[None, :]
     return float((p > n).mean() + 0.5 * (p == n).mean())
 
 
-# ───────────────────────── 실행 ─────────────────────────
+# ───────────────────────── 実行 ─────────────────────────
 def main():
-    ap = argparse.ArgumentParser(description='변형 견딤 시험')
-    ap.add_argument('--weights', default=str(config.EVAL_WEIGHTS_PATH), help='시험할 가중치(기본 평가 가중치)')
-    ap.add_argument('--folder', default=str(config.EVAL_FOLDER_PATH), help='평가 영상 폴더(mp4 + txt)')
-    ap.add_argument('--videos', type=int, default=0, help='사고·정상 절반씩 이 수만(0 = 전부)')
-    ap.add_argument('--s-windows', type=int, default=12, help='정상 영상마다 고를 창 수')
-    ap.add_argument('--batch', type=int, default=0, help='추론 묶음(0 = GPU 16 · CPU 4)')
+    ap = argparse.ArgumentParser(description='変形耐性テスト')
+    ap.add_argument('--weights', default=str(config.EVAL_WEIGHTS_PATH), help='検証対象の重みパス(デフォルト: 評価用重み)')
+    ap.add_argument('--folder', default=str(config.EVAL_FOLDER_PATH), help='評価動画フォルダ(mp4 + txt)')
+    ap.add_argument('--videos', type=int, default=0, help='事故・正常を各この件数のみ評価(0 = 全件)')
+    ap.add_argument('--s-windows', type=int, default=12, help='正常動画ごとに選定するウィンドウ数')
+    ap.add_argument('--batch', type=int, default=0, help='推論バッチサイズ(0 = GPU 16 · CPU 4)')
     args = ap.parse_args()
 
     out_dir = Path(config._ROOT) / 'outputs' / 'robust_check' / datetime.now().strftime('%y%m%d_%H%M%S')
@@ -238,7 +238,7 @@ def main():
     finally:
         sys.stdout = tee.stdout
         tee.close()
-        print(f'\n[저장] {out_dir / "report.txt"}')
+        print(f'\n[保存] {out_dir / "report.txt"}')
 
 
 def _run(args, out_dir):
@@ -248,15 +248,15 @@ def _run(args, out_dir):
     if is_cuda_like(device):
         torch.backends.cudnn.benchmark = True
     batch = args.batch or (16 if is_cuda_like(device) else 4)
-    print(f'[변형 견딤 시험] {datetime.now():%Y-%m-%d %H:%M} · 장치 {device} · FP32 · 묶음 {batch}')
-    print(f'가중치: {args.weights}')
+    print(f'[変形耐性テスト] {datetime.now():%Y-%m-%d %H:%M} · デバイス {device} · FP32 · バッチ {batch}')
+    print(f'重み: {args.weights}')
 
     folder = Path(args.folder)
     vids = []
     for mp4 in sorted(folder.glob('*.mp4')):
         txt = mp4.with_suffix('.txt')
         if not txt.exists() or mp4.stem in (getattr(config, 'EXCLUDE_VIDEOS', ()) or ()):
-            continue   # 10fps 미만 영상(config.LOW_FPS_VIDEOS)은 뺀다
+            continue   # 10fps未満の動画(config.LOW_FPS_VIDEOS)は除外
         bboxes, gt_sf, _ = _read_label(str(txt))
         if bboxes:
             vids.append((mp4, bboxes.get(config.TARGET_ID, next(iter(bboxes.values()))), gt_sf))
@@ -265,11 +265,11 @@ def _run(args, out_dir):
         s = [v for v in vids if v[2] is None][:args.videos // 2]
         vids = a + s
     n_a = sum(v[2] is not None for v in vids)
-    print(f'영상: {folder} — 사고 {n_a}개 · 정상 {len(vids) - n_a}개 · 변형 {len(CONDITIONS) - 1}가지 + 원본')
+    print(f'動画: {folder} — 事故 {n_a}件 · 正常 {len(vids) - n_a}件 · 変形 {len(CONDITIONS) - 1}種 + オリジナル')
     if KEYFRAME_NOTE:
         print(f'  ⚠️ {KEYFRAME_NOTE}')
 
-    rows = []                                    # (영상, gt, 창 시작, 변형, P(A))
+    rows = []                                    # (動画, gt, ウィンドウ開始, 変形, P(A))
     t0 = time.perf_counter()
     for vi, (mp4, bbox, gt_sf) in enumerate(vids):
         cap = cv2.VideoCapture(str(mp4))
@@ -281,7 +281,7 @@ def _run(args, out_dir):
             xs = [np.stack(fn(list(c), seed=vi * 1000 + s)) for s, c in clips]
             for (s, _), p in zip(clips, _infer(model, device, xs, batch, cl)):
                 rows.append((mp4.name, gt, s, key, p))
-        print(f'  {vi + 1}/{len(vids)} {mp4.name} ({gt}) 창 {len(clips)}개 · {time.perf_counter() - t0:.0f}초', flush=True)
+        print(f'  {vi + 1}/{len(vids)} {mp4.name} ({gt}) ウィンドウ {len(clips)}件 · {time.perf_counter() - t0:.0f}秒', flush=True)
 
     with open(out_dir / 'windows.csv', 'w', newline='', encoding='utf-8') as f:
         w = csv.writer(f)
@@ -302,8 +302,8 @@ def _report(rows):
         pa = [p for v, gt, s, p in sub if gt == 'A']
         ps = [p for v, gt, s, p in sub if gt == 'S']
         d = [abs(p - base[(v, s)]) for v, gt, s, p in sub]
-        miss = sum(gt == 'A' and base[(v, s)] > 0.5 >= p for v, gt, s, p in sub)     # 사고 창: 맞던 것을 놓침
-        fa = sum(gt == 'S' and base[(v, s)] <= 0.5 < p for v, gt, s, p in sub)       # 정상 창: 새로 오탐
+        miss = sum(gt == 'A' and base[(v, s)] > 0.5 >= p for v, gt, s, p in sub)     # 事故ウィンドウ: 正解を検出漏れ
+        fa = sum(gt == 'S' and base[(v, s)] <= 0.5 < p for v, gt, s, p in sub)       # 正常ウィンドウ: 新規誤検知
         vmax = {}
         for v, gt, s, p in sub:
             vmax[v] = max(vmax.get(v, 0.0), p)
@@ -313,9 +313,9 @@ def _report(rows):
                           vfa=sum(gt_of[v] == 'S' and m > 0.5 for v, m in vmax.items()),
                           n_a=len(pa), n_s=len(ps))
     o = stats['orig']
-    print(f'\n[결과] 창: 사고 {o["n_a"]}개 · 정상 {o["n_s"]}개 (사고 영상 {n_av}개 · 정상 영상 {n_sv}개)')
-    print(f'  {"변형":<18}{"사고창 P(A)":>11}{"정상창 P(A)":>11}{"평균 변화":>9}{"놓침+":>6}{"오탐+":>6}'
-          f'{"구분력":>8}{"사고영상":>9}{"정상오탐":>9}')
+    print(f'\n[結果] ウィンドウ: 事故 {o["n_a"]}件 · 正常 {o["n_s"]}件 (事故動画 {n_av}件 · 正常動画 {n_sv}件)')
+    print(f'  {"変形":<18}{"事故窓 P(A)":>11}{"正常窓 P(A)":>11}{"平均変化":>9}{"検出漏れ+":>6}{"誤検知+":>6}'
+          f'{"識別能":>8}{"事故動画":>9}{"正常誤検知":>9}')
     group = None
     for key, name, g, _ in CONDITIONS:
         if g != group:
@@ -325,43 +325,43 @@ def _report(rows):
         s = stats[key]
         print(f'  {name:<18}{s["pa"]:>11.3f}{s["ps"]:>11.3f}{s["d"]:>9.3f}{s["miss"]:>6}{s["fa"]:>6}'
               f'{s["auc"]:>8.3f}{s["hit"]:>6}/{n_av:<2}{s["vfa"]:>6}/{n_sv:<2}')
-    print('  · 평균 변화 = 원본 대비 |P(A) 차이| 평균 · 놓침+ = 원본에선 0.5 를 넘던 사고 창이 넘지 못함 · '
-          '오탐+ = 원본에선 0.5 이하던 정상 창이 넘음')
-    print('  · 구분력 = 사고 창이 정상 창보다 P(A)가 높을 확률(1 이 완벽, 0.5 는 무작위) · '
-          '사고영상/정상오탐 = 영상의 고른 창 중 하나라도 0.5 초과(축약 판정)')
+    print('  ・平均変化 = オリジナル対比 |P(A) 差分| 平均 · 検出漏れ+ = オリジナルで 0.5 を超過していた事故窓が下回った数 · '
+          '誤検知+ = オリジナルで 0.5 以下だった正常窓が超過した数')
+    print('  ・識別能 = 事故窓が正常窓よりP(A)が高い確率(1が完全、0.5はランダム) · '
+          '事故動画/正常誤検知 = 動画の選定窓のいずれか1つでも 0.5 超過(簡易判定)')
 
     tr = [stats[k] for k, _, g, _ in CONDITIONS if g == TRAINED]
     un = [stats[k] for k, _, g, _ in CONDITIONS if g == UNTRAINED]
-    print('\n[판단]')
+    print('\n[判定]')
     d_tr, d_un = np.mean([s['d'] for s in tr]), np.mean([s['d'] for s in un])
     a_tr, a_un = np.mean([s['auc'] for s in tr]), np.mean([s['auc'] for s in un])
-    print(f'  1) 평균 변화: 학습한 증강 {d_tr:.3f} · 학습 안 한 변형 {d_un:.3f} / '
-          f'구분력: 원본 {o["auc"]:.3f} · 학습한 증강 평균 {a_tr:.3f} · 학습 안 한 변형 평균 {a_un:.3f}')
+    print(f'  1) 平均変化: 学習済み拡張 {d_tr:.3f} · 未学習の変形 {d_un:.3f} / '
+          f'識別能: オリジナル {o["auc"]:.3f} · 学習済み拡張平均 {a_tr:.3f} · 未学習の変形平均 {a_un:.3f}')
     worst_tr = max(tr, key=lambda s: s['d'])
     if d_un > d_tr * 1.5:
-        print('     → 학습한 증강에는 덜 흔들리고 학습 안 한 변형에 더 흔들립니다 — 증강이 모델에 반영된 것으로 보입니다.')
+        print('     → 学習済み拡張に対する揺らぎが少なく、未学習の変形でより揺らぎます — 拡張がモデルに正しく反映されていると考えられます。')
     else:
-        print('     → 학습한 증강과 학습 안 한 변형의 흔들림이 비슷합니다 — 증강의 효과가 뚜렷하지 않습니다.')
-    print(f'     학습한 증강 중 가장 흔들리는 것: {worst_tr["name"]}(평균 변화 {worst_tr["d"]:.3f}, '
-          f'놓침+ {worst_tr["miss"]} · 오탐+ {worst_tr["fa"]})')
+        print('     → 学習済み拡張と未学習の変形の揺らぎが同等です — 拡張の効果が顕著ではありません。')
+    print(f'     学習済み拡張の中で最も揺らぎが大きい項目: {worst_tr["name"]}(平均変化 {worst_tr["d"]:.3f}, '
+          f'検出漏れ+ {worst_tr["miss"]} · 誤検知+ {worst_tr["fa"]})')
     low = [stats[k] for k in ('low64', 'low40', 'jpeg25', 'low64j')]
     rise_s = max(s['ps'] - o['ps'] for s in low)
     rise_a = max(s['pa'] - o['pa'] for s in low)
     fa_low = max(s['fa'] for s in low)
-    print('  2) 화질을 낮추면(저해상도·압축) P(A)가:')
-    print(f'     정상 창 원본 {o["ps"]:.3f} → ' + ' / '.join(f'{s["name"]} {s["ps"]:.3f}' for s in low)
-          + f' · 새 오탐 창 최대 {fa_low}개')
-    print(f'     사고 창 원본 {o["pa"]:.3f} → ' + ' / '.join(f'{s["name"]} {s["pa"]:.3f}' for s in low))
+    print('  2) 画質を低下させた場合(低解像度・圧縮)の P(A):')
+    print(f'     正常窓 オリジナル {o["ps"]:.3f} → ' + ' / '.join(f'{s["name"]} {s["ps"]:.3f}' for s in low)
+          + f' · 新規誤検知窓 最大 {fa_low}件')
+    print(f'     事故窓 オリジナル {o["pa"]:.3f} → ' + ' / '.join(f'{s["name"]} {s["pa"]:.3f}' for s in low))
     if rise_s > 0.05 or fa_low >= max(2, 0.05 * o['n_s']):
-        print('     → 화질이 나빠지면 정상 창도 사고 쪽으로 기웁니다 — "흐리면 사고" 지름길을 의심할 만합니다'
-              '(저화질 증강·데이터로 보완).')
+        print('     → 画質が低下すると正常窓も事故側に傾斜します — 「ぼやけていれば事故」というショートカットが疑われます'
+              '(低画質拡張・データ拡充による補強を推奨)。')
     elif rise_a > 0.1:
-        print('     → 정상 창은 거의 그대로지만 사고 창의 P(A)가 화질이 나빠질수록 오릅니다 — 같은 방향의 기울기가 있어,'
-              ' 정상 창이 조금이라도 애매하면 오탐으로 이어질 수 있습니다(저화질 증강으로 보완할 만함).')
+        print('     → 正常窓はほぼ不変ですが、事故窓のP(A)が画質低下に伴い上昇します — 同一方向の傾向があり、'
+              '正常窓がわずかでも曖昧な場合に誤検知へ繋がる可能性があります(低画質拡張での補強を検討)。')
     elif max(s['pa'] for s in low) < o['pa'] - 0.1:
-        print('     → 화질이 나빠지면 사고 창을 놓치는 쪽입니다(지름길보다는 저해상도에서 정보가 부족한 것).')
+        print('     → 画質が低下すると事故窓を見落とす傾向にあります(ショートカットというより低解像度での情報不足)。')
     else:
-        print('     → 화질이 나빠져도 판단이 크게 기울지 않습니다 — 지름길 징후는 약합니다.')
+        print('     → 画質が低下しても判定に大きな偏りは見られません — ショートカットの兆候は軽微です。')
     if 'h264g30' in stats:
         _report_keyframe(rows, stats, th)
     if 'night' in stats:
@@ -369,10 +369,10 @@ def _report(rows):
 
 
 def _report_light(rows, stats, th):
-    """4) 불빛: 같은 '밤'(night)에 불빛만 더했을 때 정상 창 P(A)가 오르는지(오탐 경향)·사고 창이 떨어지는지(불빛에 가려 놓침)."""
+    """4) 照明: 同一「夜間」(night)に照明のみを加算した際、正常窓のP(A)が上昇するか(誤検知傾向)・事故窓が低下するか(遮光による見落とし)。"""
     ref = {(v, s): p for v, gt, s, k, p in rows if k == 'night'}
     c = stats['night']
-    print(f'  4) 불빛(같은 밤 ×0.4 에 불빛만 더함) — 밤: 정상 창 {c["ps"]:.3f} · 사고 창 {c["pa"]:.3f}')
+    print(f'  4) 照明(同一夜間 ×0.4 に照明のみ加算) — 夜間: 正常窓 {c["ps"]:.3f} · 事故窓 {c["pa"]:.3f}')
     worst_s, worst_a = None, None
     for key in ('lsweep', 'lramp', 'lred'):
         sub = [(v, gt, s, p) for v, gt, s, k, p in rows if k == key]
@@ -380,42 +380,42 @@ def _report_light(rows, stats, th):
         da = [p - ref[(v, s)] for v, gt, s, p in sub if gt == 'A']
         new_fa = sum(gt == 'S' and ref[(v, s)] <= th < p for v, gt, s, p in sub)
         new_miss = sum(gt == 'A' and ref[(v, s)] > th >= p for v, gt, s, p in sub)
-        print(f'     {stats[key]["name"]:<16} 정상 창 P(A) 변화 평균 {np.mean(ds):+.3f}(최대 {max(ds):+.3f}) · 새 오탐 창 {new_fa}개 · '
-              f'사고 창 {np.mean(da):+.3f} · 새로 놓친 사고 창 {new_miss}개')
+        print(f'     {stats[key]["name"]:<16} 正常窓 P(A) 変化平均 {np.mean(ds):+.3f}(最大 {max(ds):+.3f}) · 新規誤検知窓 {new_fa}件 · '
+              f'事故窓 {np.mean(da):+.3f} · 新規見落とし事故窓 {new_miss}件')
         if worst_s is None or np.mean(ds) > worst_s[1]:
             worst_s = (stats[key]['name'], float(np.mean(ds)), new_fa)
         if worst_a is None or np.mean(da) < worst_a[1]:
             worst_a = (stats[key]['name'], float(np.mean(da)), new_miss)
     n_s = stats['orig']['n_s']
     if worst_s[1] > 0.03 or worst_s[2] >= max(2, 0.05 * n_s):
-        print(f'     → 불빛만으로 정상 창이 사고 쪽으로 기웁니다({worst_s[0]}) — 야간 불빛 오탐 경향. 불빛 증강·야간 정상 영상으로 보완')
+        print(f'     → 照明のみで正常窓が事故側に傾斜します({worst_s[0]}) — 夜間照明の誤検知傾向。照明拡張・夜間正常動画で補強')
     else:
-        print('     → 불빛에 정상 창 판단이 거의 흔들리지 않습니다.')
+        print('     → 照明による正常窓判定の揺らぎはほぼありません。')
     if worst_a[1] < -0.05:
-        print(f'     → 불빛이 있으면 사고 창 P(A)가 떨어집니다({worst_a[0]}) — 전조등을 켠 차의 야간 충돌을 놓칠 수 있음')
+        print(f'     → 照明が存在すると事故窓 P(A) が低下します({worst_a[0]}) — ヘッドライト点灯車の夜間衝突を見落とすリスクあり')
 
 
 def _report_keyframe(rows, stats, th):
-    """3) 키프레임 화질 튐: '압축만'(h264g30) 대비 키프레임을 창 안에 둔 변형에서 P(A)가 오르는지."""
+    """3) キーフレーム画質変動: 「圧縮のみ」(h264g30)に対しキーフレームをウィンドウ内に配置した変形でのP(A)上昇を検証。"""
     ref = {(v, s): p for v, gt, s, k, p in rows if k == 'h264g30'}
     c = stats['h264g30']
-    print(f'  3) 키프레임 화질 튐(같은 H.264 압축에 키프레임만 더 둔 것) — 압축만: 정상 창 {c["ps"]:.3f} · 사고 창 {c["pa"]:.3f}')
+    print(f'  3) キーフレーム画質変動(同一H.264圧縮にキーフレームを追加配置) — 圧縮のみ: 正常窓 {c["ps"]:.3f} · 事故窓 {c["pa"]:.3f}')
     worst = None
     for key in ('h264g15', 'h264g10', 'h264g15q'):
         sub = [(v, gt, s, p) for v, gt, s, k, p in rows if k == key]
         ds = [p - ref[(v, s)] for v, gt, s, p in sub if gt == 'S']
         da = [p - ref[(v, s)] for v, gt, s, p in sub if gt == 'A']
         new_fa = sum(gt == 'S' and ref[(v, s)] <= th < p for v, gt, s, p in sub)
-        print(f'     {stats[key]["name"]:<18} 정상 창 P(A) 변화 평균 {np.mean(ds):+.3f}(최대 {max(ds):+.3f}) · '
-              f'사고 창 {np.mean(da):+.3f} · 압축만에선 아니던 정상 오탐 창 {new_fa}개')
+        print(f'     {stats[key]["name"]:<18} 正常窓 P(A) 変化平均 {np.mean(ds):+.3f}(最大 {max(ds):+.3f}) · '
+              f'事故窓 {np.mean(da):+.3f} · 圧縮のみでは対象外だった正常誤検知窓 {new_fa}件')
         if worst is None or np.mean(ds) > worst[1]:
             worst = (stats[key]['name'], float(np.mean(ds)), new_fa)
     n_s = stats['orig']['n_s']
     if worst[1] > 0.03 or worst[2] >= max(2, 0.05 * n_s):
-        print(f'     → 키프레임 화질 튐만으로 정상 창이 사고 쪽으로 기웁니다({worst[0]}) — 멈춘 장면의 압축 튐을 흔들림으로 '
-              '읽는 경향(ReS_0018 같은 오탐). 헤드 풀링을 바꿨다면 이 값이 늘었는지 대조군과 비교하세요.')
+        print(f'     → キーフレーム画質変動のみで正常窓が事故側に傾斜します({worst[0]}) — 静止シーンの圧縮アーティファクトを揺れとして'
+              '誤認する傾向(ReS_0018等の誤検知)。ヘッドプーリングを変更した場合は対照群と比較してください。')
     else:
-        print('     → 키프레임 화질 튐에 판단이 거의 흔들리지 않습니다.')
+        print('     → キーフレーム画質変動に対する判定の揺らぎはほぼありません。')
 
 
 if __name__ == '__main__':

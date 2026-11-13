@@ -1,4 +1,4 @@
-"""SQLAlchemy 엔진 / 세션 / Base / get_db 의존성."""
+"""SQLAlchemy エンジン / セッション / Base / get_db 依存関係。"""
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
@@ -6,7 +6,7 @@ from app.settings import settings
 
 
 def normalize_database_url(url: str) -> str:
-    """SQLAlchemy가 Supabase PostgreSQL URL을 psycopg로 열도록 정규화한다."""
+    """SQLAlchemyがSupabase PostgreSQL URLをpsycopgで接続できるように正規化する。"""
     if url.startswith("postgres://"):
         return "postgresql+psycopg://" + url.removeprefix("postgres://")
     if url.startswith("postgresql://"):
@@ -37,7 +37,7 @@ Base = declarative_base()
 
 
 def get_db():
-    """FastAPI 의존성: 요청 단위 DB 세션."""
+    """FastAPI 依存関係: リクエスト単位のDBセッション。"""
     db = SessionLocal()
     try:
         yield db

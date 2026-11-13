@@ -1,4 +1,4 @@
-"""영상 업로드 / 목록 / 상세 / 스트리밍 라우터."""
+"""動画アップロード / 一覧 / 詳細 / ストリーミングルーター。"""
 import json
 import logging
 import math
@@ -24,10 +24,10 @@ from app.thumbnails import ensure_thumbnail, thumbnail_key, delete_thumbnail_cac
 router = APIRouter(prefix="/api/videos", tags=["videos"])
 
 
-# ---------- 직렬화 헬퍼 ----------
+# ---------- シリアライズヘルパー ----------
 def raw_clip_path(ev: db_models.CrashEvent):
-    """합성 없는 원본 사고 클립 경로 — 분석 때 표시 클립 옆에 '<이름>_raw.mp4' 로 만든다.
-    (DB 컬럼을 늘리지 않으려고 이름 규칙으로 찾는다. 예전 분석 결과엔 없을 수 있다)"""
+    """合成なしの元事故クリップパス — 分析時に表示クリップの隣に '<名前>_raw.mp4' として生成。
+    (DBカラムを増やさないよう命名規則で検索。過去の分析結果には存在しない場合あり)"""
     if not ev.clip_path:
         return None
     p = settings.abs_path(ev.clip_path)
@@ -41,7 +41,7 @@ def raw_clip_key(ev: db_models.CrashEvent):
 
 
 def _unlink_event_clips(events, db: Session):
-    """다른 이벤트가 공유하지 않는 R2/로컬 클립만 지운다."""
+    """他のイベントが共有していないR2/ローカルクリップのみ削除する。"""
     ids = {ev.id for ev in events}
     storage = get_storage()
     for path in {ev.clip_path for ev in events if ev.clip_path}:
@@ -63,9 +63,9 @@ def to_event_out(ev: db_models.CrashEvent) -> api_schemas.EventOut:
         end_frame_number=ev.end_frame_number,
         crash_prob=ev.crash_prob,
         has_clip=bool(ev.clip_path),
-        # 목록을 만드는 동안 원격 객체 저장소에 HEAD 요청을 보내면, R2 지연 하나가
-        # 영상 목록 전체를 멈춘다. 원본 클립은 분석 결과의 이름 규칙으로 생성되므로
-        # 여기서는 DB 메타데이터만으로 노출 여부를 판단한다.
+        # 一覧生成中にリモートオブジェクトストレージへHEADリクエストを送信すると、R2の遅延1つで
+        # 動画一覧全体がブロッキングされる。元クリップは分析結果の命名規則により生成されるため
+        # ここではDBメタデータのみで公開可否を判定する。
         has_raw_clip=bool(raw_clip_key(ev)),
         analyzed_at=_utc(ev.created_at),
         analysis_no=analysis_no(ev),
@@ -108,7 +108,7 @@ def to_video_out(v: db_models.Video, with_history: bool = False) -> api_schemas.
         video_name=v.video_name,
         title=v.title,
         recording_date=v.recording_date,
-        camera_location=v.camera_location or "주차장",
+        camera_location=v.camera_location or "駐車場",
         width=v.width,
         height=v.height,
         fps=v.fps,
@@ -145,7 +145,7 @@ def video_list_query(db: Session, user_id: int):
 
 
 def _last_task_out(v: db_models.Video):
-    """가장 최근 분석 작업(없으면 None)."""
+    """最新の分析タスク (存在しない場合は None)。"""
     if not v.analysis_tasks:
         return None
     t = max(v.analysis_tasks, key=lambda x: x.id)
@@ -155,8 +155,8 @@ def _last_task_out(v: db_models.Video):
 
 
 def _extract_metadata(path: Path):
-    """cv2로 영상 메타데이터(가로/세로/fps/총프레임) 추출."""
-    import cv2  # 지연 임포트 (웹 프로세스에 opencv 필요)
+    """cv2で動画メタデータ (幅/高さ/fps/総フレーム数) を抽出。"""
+    import cv2
     cap = cv2.VideoCapture(str(path))
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -176,7 +176,7 @@ def upload_video(
 ):
     title = (title or "").strip()
     if len(title) > 100:
-        raise HTTPException(status_code=400, detail="제목은 100자까지 입력할 수 있습니다.")
+        raise HTTPException(status_code=400, detail="タイトルは100文字以内で入力してください。")
 
     ext = Path(file.filename).suffix or ".mp4"
     stored_name = f"{uuid4().hex}{ext}"
@@ -188,7 +188,7 @@ def upload_video(
     try:
         width, height, fps, total_frames = _extract_metadata(temp_path)
         if total_frames <= 0:
-            raise HTTPException(status_code=400, detail="영상을 읽을 수 없습니다.")
+            raise HTTPException(status_code=400, detail="動画を読み込めません。")
         storage.upload_path(temp_path, object_key, content_type=file.content_type or "video/mp4")
         try:
             ensure_thumbnail(storage, object_key, settings.THUMBNAIL_DIR, source_video=temp_path)
@@ -202,7 +202,7 @@ def upload_video(
         try:
             rec_date = date.fromisoformat(recording_date)
         except ValueError:
-            raise HTTPException(status_code=400, detail="녹화일자 형식이 잘못되었습니다.")
+            raise HTTPException(status_code=400, detail="録画日の形式が正しくありません。")
 
     video = db_models.Video(
         user_id=user.id,
@@ -238,7 +238,7 @@ def list_videos(
 def _get_owned_video(video_id: int, db: Session, user: db_models.User):
     video = db.get(db_models.Video, video_id)
     if video is None or video.user_id != user.id:
-        raise HTTPException(status_code=404, detail="영상을 찾을 수 없습니다.")
+        raise HTTPException(status_code=404, detail="動画が見つかりません。")
     return video
 
 
@@ -257,7 +257,7 @@ def delete_video(
     db: Session = Depends(get_db),
     user: db_models.User = Depends(get_current_user),
 ):
-    """영상 삭제 — 관련 파일(원본·썸네일·CAM 클립)과 DB(이벤트·태스크·영상) 모두 제거."""
+    """動画削除 — 関連ファイル (元動画・サムネイル・CAMクリップ) および DB (イベント・タスク・動画レコード) をすべて削除。"""
     video = _get_owned_video(video_id, db, user)
 
     purge_video(video, db)
@@ -271,13 +271,13 @@ def clear_video_analysis_history(
     db: Session = Depends(get_db),
     user: db_models.User = Depends(get_current_user),
 ):
-    """해당 영상의 분석 이력·사고 이벤트·클립을 지운다. 원본 영상은 보존한다."""
+    """該当動画の分析履歴・事故イベント・クリップを削除する。元動画は保持する。"""
     video = _get_owned_video(video_id, db, user)
     tasks = db.query(db_models.AnalysisTask).filter(
         db_models.AnalysisTask.video_id == video.id
     ).all()
     if any(task.status in ("PENDING", "PROCESSING") for task in tasks):
-        raise HTTPException(status_code=409, detail="분석이 진행 중인 동안에는 이력을 초기화할 수 없습니다.")
+        raise HTTPException(status_code=409, detail="分析の実行中は履歴を初期化できません。")
 
     events = db.query(db_models.CrashEvent).filter(
         db_models.CrashEvent.video_id == video.id
@@ -292,15 +292,15 @@ def clear_video_analysis_history(
 
 
 def purge_video(video: db_models.Video, db: Session) -> None:
-    """영상·클립·이력·원본을 제거한다. 보관 기간 정리와 수동 삭제가 함께 쓴다."""
-    # 1) 관련 CAM 클립 파일 삭제 + crash_events 행 삭제
+    """動画・クリップ・履歴・元ファイルを削除する。保存期間満了クリーンアップと手動削除で共用。"""
+    # 1) 関連CAMクリップファイルの削除 + crash_events 行の削除
     events = db.query(db_models.CrashEvent).filter(
         db_models.CrashEvent.video_id == video.id).all()
     _unlink_event_clips(events, db)
     for ev in events:
         db.delete(ev)
 
-    # 2) analysis_tasks 행 삭제
+    # 2) analysis_tasks 行削除
     for task in db.query(db_models.AnalysisTask).filter(
             db_models.AnalysisTask.video_id == video.id).all():
         db.delete(task)
@@ -318,14 +318,14 @@ def purge_video(video: db_models.Video, db: Session) -> None:
                 pass
         db.delete(task)
 
-    # 3) 원본 영상 + 썸네일 파일 삭제
+    # 3) 元動画 + サムネイルファイル削除
     storage = get_storage()
     storage.delete(video.video_path)
     storage.delete(f"thumbnails/{Path(video.video_path).stem}.jpg")
     storage.delete(thumbnail_key(video.video_path))
     delete_thumbnail_cache(video.video_path, settings.THUMBNAIL_DIR)
 
-    # 4) 영상 행 삭제
+    # 4) 動画レコード削除
     db.delete(video)
 
 
@@ -336,14 +336,14 @@ def delete_crash_event(
     db: Session = Depends(get_db),
     user: db_models.User = Depends(get_current_user),
 ):
-    """특정 사고 감지 이벤트 1건 삭제."""
+    """特定の事故検出イベント1件を削除。"""
     video = _get_owned_video(video_id, db, user)
     event = db.query(db_models.CrashEvent).filter(
         db_models.CrashEvent.id == event_id,
         db_models.CrashEvent.video_id == video.id,
     ).first()
     if event is None:
-        raise HTTPException(status_code=404, detail="이벤트를 찾을 수 없습니다.")
+        raise HTTPException(status_code=404, detail="イベントが見つかりません。")
 
     _unlink_event_clips([event], db)
 
@@ -358,7 +358,7 @@ def clear_all_crash_events(
     db: Session = Depends(get_db),
     user: db_models.User = Depends(get_current_user),
 ):
-    """해당 영상의 모든 사고 감지 이벤트 삭제."""
+    """該当動画のすべての事故検出イベントを削除。"""
     video = _get_owned_video(video_id, db, user)
     events = db.query(db_models.CrashEvent).filter(
         db_models.CrashEvent.video_id == video.id
@@ -377,12 +377,12 @@ def stream_video(video_id: int, db: Session = Depends(get_db), user: db_models.U
     video = _get_owned_video(video_id, db, user)
     storage = get_storage()
     if not storage.exists(video.video_path):
-        raise HTTPException(status_code=404, detail="영상 파일이 없습니다.")
+        raise HTTPException(status_code=404, detail="動画ファイルが見つかりません。")
     if not isinstance(storage, LocalObjectStorage):
         return RedirectResponse(storage.presigned_url(
             video.video_path, settings.S3_PRESIGNED_URL_EXPIRES))
     path = storage.local_path(video.video_path)
-    # FileResponse는 HTTP Range 요청(영상 탐색)을 지원한다.
+    # FileResponseはHTTP Rangeリクエスト(動画シーク)に対応。
     return FileResponse(str(path), media_type="video/mp4")
 
 
@@ -392,7 +392,7 @@ def video_thumbnail(video_id: int, request: Request, db: Session = Depends(get_d
     try:
         path = ensure_thumbnail(get_storage(), video.video_path, settings.THUMBNAIL_DIR)
     except (FileNotFoundError, ValueError):
-        raise HTTPException(status_code=404, detail="썸네일을 생성할 수 없습니다.")
+        raise HTTPException(status_code=404, detail="サムネイルを生成できません。")
     response = FileResponse(str(path), media_type="image/jpeg", stat_result=path.stat(),
                             headers={"Cache-Control": "private, no-cache",
                                      "Vary": "Cookie, Authorization"})
@@ -414,19 +414,19 @@ def detect_vehicles_in_video(
     db: Session = Depends(get_db),
     user: db_models.User = Depends(get_current_user),
 ):
-    """YOLO 모델로 지정 시각 프레임의 차량을 탐지하여 BBOX JSON을 DB에 저장하고 반환합니다."""
+    """YOLOモデルで指定時刻のフレームから車両を検出し、BBOX JSONをDBに保存して返します。"""
     import json
 
     video = _get_owned_video(video_id, db, user)
     storage = get_storage()
     if not storage.exists(video.video_path):
-        raise HTTPException(status_code=404, detail="영상 파일이 없습니다.")
+        raise HTTPException(status_code=404, detail="動画ファイルが見つかりません。")
 
-    # 차량 탐지 모듈은 지연 임포트 — ultralytics/torch를 웹 프로세스 시작 시 로드하지 않도록.
+    # 車両検知モジュールは遅延インポート — ultralytics/torchをWebプロセス起動時にロードしないようにする。
     try:
         from app.vehicle_detector import get_detector, read_source_frame
     except Exception as err:
-        raise HTTPException(status_code=500, detail=f"차량 탐지 모듈 로드 실패: {err}")
+        raise HTTPException(status_code=500, detail=f"車両検出モジュールのロードに失敗しました: {err}")
 
     frame_index = int((timestamp_sec or 0.0) * (video.fps or 30.0))
     frame_index = max(0, min(frame_index, max(0, video.total_frames - 1)))
@@ -437,16 +437,16 @@ def detect_vehicles_in_video(
         ) as src_path:
             frame = read_source_frame(src_path, frame_index=frame_index)
     except Exception as err:
-        raise HTTPException(status_code=500, detail=f"프레임 추출 실패: {err}")
+        raise HTTPException(status_code=500, detail=f"フレームの抽出に失敗しました: {err}")
 
-    # YOLO11x(detection) + 동적 imgsz(상한 1536) + 낮은 conf + 야간 전처리
-    # → 원거리/야간/부분가림 회수율 강화. detection 모델이라 마스크 없이
-    #   YOLO detection bbox를 그대로 사용한다. 동적 imgsz는 프레임 해상도에
-    #   맞춰 입력 크기를 정해 고해상도 정보손실/저해상도 낭비를 함께 줄인다.
-    # 탐지기는 get_detector로 프로세스당 1회만 로드·재사용(매 요청 재로드 오버헤드 제거).
+    # YOLO11x(detection) + 動的imgsz(上限 1536) + 低conf + 夜間前処理
+    # → 遠距離/夜間/部分的遮蔽の回収率を強化。detectionモデルのためマスクなしで
+    #   YOLO detection bboxをそのまま使用。動的imgszはフレーム解像度に応じて
+    #   入力サイズを決定し高解像度での情報損失および低解像度での無駄を同時に抑制。
+    # 検知器は get_detector によりプロセスあたり1回のみロード・再利用(リクエストごとの再ロードオーバーヘッドを排除)。
     model_path = str(settings.BASE_DIR / "yolo11x.pt")
     if not Path(model_path).exists():
-        model_path = "yolo11x.pt"  # 파일 없으면 ultralytics가 자동 다운로드
+        model_path = "yolo11x.pt"
 
     try:
         detector = get_detector(
@@ -454,7 +454,7 @@ def detect_vehicles_in_video(
             enhance_night=True, dynamic_imgsz=True, imgsz_min=640)
         detections = detector.detect_frame(frame)
     except Exception as err:
-        raise HTTPException(status_code=500, detail=f"YOLO 차량 탐지 중 오류: {err}")
+        raise HTTPException(status_code=500, detail=f"YOLO車両検出処理エラー: {err}")
 
     detected_list = []
     for idx, det in enumerate(detections):
@@ -466,8 +466,8 @@ def detect_vehicles_in_video(
             "bbox": [x1, y1, x2, y2],
         })
 
-    # [디버그] 서비스가 실제로 탐지한 결과를 이미지로 저장 (outputs/) — 눈으로 확인용.
-    #   탐지에 쓴 원본 프레임에 bbox(#번호·클래스·신뢰도)를 그려 저장한다.
+    # [デバッグ] サービスが実際に検知した結果を画像として保存 (outputs/) — 目視確認用。
+    #   検知に使用した元フレームにbbox(#番号・クラス・信頼度)を描画して保存。
     if settings.DETECT_DEBUG_IMAGES:
       try:
         import cv2
@@ -483,9 +483,9 @@ def detect_vehicles_in_video(
         base = Path(video.video_name).stem
         out_img = out_dir / f"detect_{base}_f{frame_index}.jpg"
         cv2.imwrite(str(out_img), dbg)
-        print(f"[detect] 결과 이미지 저장: {out_img}  (탐지 {len(detected_list)}대, 프레임 {frame.shape[1]}x{frame.shape[0]})")
-      except Exception as _dbg_err:  # 디버그 저장 실패는 탐지 응답에 영향 없음
-          print(f"[detect] 결과 이미지 저장 실패(무시): {_dbg_err}")
+        print(f"[detect] 結果画像を保存: {out_img}  (検知 {len(detected_list)}台, フレーム {frame.shape[1]}x{frame.shape[0]})")
+      except Exception as _dbg_err:  # デバッグ保存の失敗は検知レスポンスに影響なし
+          print(f"[detect] 結果画像の保存失敗(無視): {_dbg_err}")
 
     json_str = json.dumps(detected_list, ensure_ascii=False)
     video.detected_vehicles = json_str
@@ -550,10 +550,10 @@ def _enqueue_vehicle_detection(video: db_models.Video, timestamp_sec: float, db:
         async_result = run_vehicle_detection_task.delay(task.id)
     except Exception as exc:
         task.status = "FAILURE"
-        task.error_message = f"탐지 작업을 큐에 넣지 못했습니다: {exc}"[:2000]
+        task.error_message = f"検知タスクをキューに登録できませんでした: {exc}"[:2000]
         task.finished_at = datetime.utcnow()
         db.commit()
-        raise HTTPException(status_code=503, detail="탐지 작업을 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.") from exc
+        raise HTTPException(status_code=503, detail="検知タスクを開始できませんでした。しばらく経ってから再試行してください。") from exc
     task.celery_task_id = async_result.id
     db.commit()
     return api_schemas.VehicleDetectionTaskOut(
@@ -570,7 +570,7 @@ def enqueue_vehicle_detection(
     db: Session = Depends(get_db),
     user: db_models.User = Depends(get_current_user),
 ):
-    """GPU 워커에 차량 탐지를 맡기고, UI가 추적할 작업 ID를 반환한다."""
+    """GPUワーカーに車両検知を委任し、UIが追跡するためのタスクIDを返却する。"""
     video = _get_owned_video(video_id, db, user)
     return _enqueue_vehicle_detection(video, timestamp_sec or 0.0, db)
 
@@ -586,7 +586,7 @@ def get_vehicle_detection_task(
     video = _get_owned_video(video_id, db, user)
     task = db.get(db_models.VehicleDetectionTask, task_id)
     if task is None or task.video_id != video.id:
-        raise HTTPException(status_code=404, detail="차량 탐지 작업을 찾을 수 없습니다.")
+        raise HTTPException(status_code=404, detail="車両検知タスクが見つかりません。")
     return api_schemas.VehicleDetectionTaskStatusOut(
         task_id=task.id,
         status=task.status,

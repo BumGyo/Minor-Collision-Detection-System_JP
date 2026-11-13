@@ -1,5 +1,5 @@
-# SIOT 분석 워커(Celery). deploy/install.sh 가 __REPO__·__USER__ 를 바꿔 /etc/systemd/system 에 설치한다.
-# 로그: journalctl -u siot-worker -f
+# SIOT 分析ワーカー(Celery)。deploy/install.sh が __REPO__・__USER__ を置換して /etc/systemd/system に登録します。
+# ログ確認: journalctl -u siot-worker -f
 [Unit]
 Description=SIOT analysis worker (Celery)
 After=network-online.target docker.service siot-backend.service
@@ -11,12 +11,12 @@ User=__USER__
 WorkingDirectory=__REPO__/backend
 EnvironmentFile=-__REPO__/.env
 Environment=PYTHONUNBUFFERED=1
-# 분석은 한 번에 하나씩(워커 1개 전제 — app/worker.py 의 재시작 정리 참고)
+# 分析は一度に1件ずつ順次実行(ワーカー1基前提 — app/worker.py の再起動クリーンアップ参照)
 ExecStart=__REPO__/venv311/bin/celery -A app.worker worker --concurrency=1 --loglevel=info
 Restart=always
 RestartSec=5
-# 갱신·재시작 때 진행 중 분석이 끝날 때까지 오래 기다리지 않는다.
-# 끊긴 분석은 다음 시작 때 '실패'로 정리되고 화면에서 다시 실행할 수 있다
+# 更新・再起動時に実行中分析の完了を長時間待機しない。
+# 中断された分析は次回起動時に「失敗」として整理され UI から再実行可能
 TimeoutStopSec=20
 
 [Install]

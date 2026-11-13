@@ -16,8 +16,8 @@ import config
 
 
 def _open_video(path, threads=None):
-    """영상 열기. threads 를 주면 영상 풀기 스레드를 그 수로 제한한다(config.TRAIN_CV2_THREADS —
-    로더 작업자 여러 개가 CPU 코어를 나눠 쓸 때). 그렇게 못 열면 기본 방식으로 연다. 풀린 화소는 같다."""
+    """動画を開く。threads を指定すると動画デコードスレッドをその数に制限する(config.TRAIN_CV2_THREADS —
+    ローダーワーカーが複数でCPUコアを共有する場合)。その方法で開けない場合はデフォルト方式で開く。デコードされた画素は同一。"""
     if threads and hasattr(cv2, 'CAP_PROP_N_THREADS'):
         cap = cv2.VideoCapture(path, cv2.CAP_FFMPEG, [cv2.CAP_PROP_N_THREADS, int(threads)])
         if cap.isOpened():
@@ -27,10 +27,10 @@ def _open_video(path, threads=None):
 
 
 def h264_roundtrip(frames, crf, gop):
-    """RGB 프레임 목록을 H.264(libx264)로 메모리 안에서 압축했다 풀어 같은 수의 프레임으로 돌려준다.
+    """RGBフレームリストをH.264(libx264)でメモリ内で圧縮・伸張し、同じフレーム数で返す。
 
-    실제 CCTV 처럼 키프레임 사이는 앞 프레임과 달라진 곳만 저장해, 가만히 있는 곳은 그대로고 움직이는 곳이 깨진다.
-    B 프레임 없음(zerolatency)·스레드 1(로더 작업자가 이미 코어를 나눠 씀). 크기는 짝수여야 한다(yuv420p).
+    実際のCCTVのようにキーフレーム間は前フレームとの差分のみ保存し、静止部分は維持され動く部分が劣化する。
+    Bフレームなし(zerolatency)・スレッド1(ローダーワーカーが既にコアを共有)。サイズは偶数である必要がある(yuv420p)。
     """
     import io
     import av
@@ -56,7 +56,7 @@ def h264_roundtrip(frames, crf, gop):
     finally:
         inp.close()
     if len(dec) != len(frames):
-        raise ValueError(f'H.264 복원 프레임 수가 다름({len(dec)} != {len(frames)})')
+        raise ValueError(f'H.264復元フレーム数が一致しません({len(dec)} != {len(frames)})')
     return dec
 
 
@@ -64,21 +64,21 @@ LIGHT_COLORS = {'white': (255, 255, 255), 'warm': (255, 236, 200), 'cool': (215,
 
 
 def add_light(frames, kind, dark=1.0, peak=150.0, radius=0.35, t0=8, dur=14, direction=1, color='white', y=0.55):
-    """크롭 프레임(RGB uint8, 같은 크기)에 움직이는 불빛을 더한다 — 불빛 증강·robust_check 불빛 변형 공용(2026-11-05).
+    """クロップフレーム(RGB uint8、同サイズ)に移動する光を追加する — 光増強・robust_check光変形共用(2026-11-05)。
 
-    dark     : 먼저 곱할 밝기 배율(밤처럼, 1 이면 그대로)
-    kind     : 'sweep' = 타원 빛 덩어리가 t0 부터 dur 프레임 동안 한쪽 끝에서 반대쪽으로 지나감(지나가는 차 전조등이 훑음)
-               'ramp'  = t0 부터 dur 프레임 동안 서서히 밝아져 그대로 유지, 한쪽이 더 밝은 기울기(다가오는 차가 비춤)
-    peak     : 더하는 밝기 최대(0~255), radius: 빛 덩어리 가로 반지름(크롭 한 변 대비), y: 빛 중심 높이(크롭 대비)
-    direction: 1 = 왼쪽→오른쪽(ramp 는 왼쪽이 밝음), -1 = 반대. color: LIGHT_COLORS 키
-    모양은 프레임마다 매끄럽게 이어지고(빛만 움직임) 차체 윤곽은 그대로다 — 밝기 변화 ≠ 흔들림을 가르치려는 것.
+    dark     : 事前に乗算する明度倍率(夜間のように、1ならそのまま)
+    kind     : 'sweep' = 楕円の光の塊がt0からdurフレームかけて一方の端から反対側へ通過(通過車両のヘッドライトのスキャン)
+               'ramp'  = t0からdurフレームかけて徐々に明るくなり維持、片側がより明るい勾配(接近車両の照射)
+    peak     : 追加する最大明度(0~255)、radius: 光の塊の横半径(クロップ一辺基準)、y: 光の中心の高さ(クロップ基準)
+    direction: 1 = 左→右(rampは左が明るい)、-1 = 逆。color: LIGHT_COLORSキー
+    形状はフレーム間で滑らかに連続し(光のみ移動)、車体輪郭はそのまま維持 — 明度変化 ≠ 揺れを学習させるため。
     """
     n = len(frames)
     h, w = frames[0].shape[:2]
     col = np.array(LIGHT_COLORS.get(color, LIGHT_COLORS['white']), np.float32) / 255.0
     yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
     sx, sy = max(2.0, radius * w), max(2.0, radius * w * 0.6)
-    # 크롭이 화면 밖으로 나가 검게 채운 곳(모든 프레임에서 0)은 장면이 아니라 빛을 받지 않는다
+    # クロップが画面外に出て黒塗りされた領域(全フレームで0)はシーンではないため光を受けない
     keep = (~np.all(np.stack(frames) == 0, axis=(0, 3)))[..., None].astype(np.float32)
     out = []
     for t, f in enumerate(frames):
@@ -87,11 +87,11 @@ def add_light(frames, kind, dark=1.0, peak=150.0, radius=0.35, t0=8, dur=14, dir
         if kind == 'sweep' and 0.0 <= u <= 1.0:
             cx = (-sx + u * (w + 2 * sx)) if direction > 0 else (w + sx - u * (w + 2 * sx))
             g = np.exp(-(((xx - cx) / sx) ** 2 + ((yy - y * h) / sy) ** 2) / 2.0)
-            amp = peak * math.sin(math.pi * u) ** 0.5           # 들어오고 나갈 때 부드럽게
+            amp = peak * math.sin(math.pi * u) ** 0.5           # フェードイン・フェードアウトを滑らかに
             img = img + amp * g[..., None] * col * keep
         elif kind == 'ramp' and u >= 0.0:
             s = min(1.0, u)
-            s = s * s * (3 - 2 * s)                               # 부드럽게 밝아짐
+            s = s * s * (3 - 2 * s)                               # 滑らかに明るくなる
             grad = (xx / max(1, w - 1)) if direction < 0 else (1.0 - xx / max(1, w - 1))
             img = img + peak * s * (0.35 + 0.65 * grad)[..., None] * col * keep
         out.append(np.clip(img, 0, 255).astype(np.uint8))
@@ -99,11 +99,11 @@ def add_light(frames, kind, dark=1.0, peak=150.0, radius=0.35, t0=8, dur=14, dir
 
 
 def limit_cv2_threads(n, _worker_id=None):
-    """OpenCV 계산(색 변환·크기 줄이기) 스레드 수를 n 으로. 로더를 만들기 전에 부모 프로세스에서 한 번 부르고,
-    DataLoader worker_init_fn 으로도 넘긴다(functools.partial(limit_cv2_threads, n)).
+    """OpenCVの計算(色変換・リサイズ)スレッド数をnに設定。ローダー作成前に親プロセスで一度呼び出し、
+    DataLoaderのworker_init_fnにも渡す(functools.partial(limit_cv2_threads, n))。
 
-    ⚠️ fork 된 작업자 안에서 처음 바꾸면 멈춘다(부모가 OpenCV 스레드를 이미 띄웠을 때 — 2026-10-28 확인).
-       그래서 부모에서 먼저 정해 작업자가 물려받게 하고, 작업자에서는 값이 다를 때만(spawn — Windows·macOS) 바꾼다.
+    ⚠️ forkされたワーカー内で初めて変更するとハングする(親がOpenCVスレッドを既に起動している場合 — 2026-10-28確認)。
+       そのため親で先に決定してワーカーに継承させ、ワーカー側では値が異なる場合のみ(spawn — Windows・macOS)変更する。
     """
     if cv2.getNumThreads() != int(n):
         cv2.setNumThreads(int(n))
@@ -123,31 +123,31 @@ class HitAndRunDataset(Dataset):
         self.clip_length = clip_length
         self.r_value = r_value
         self.resize = resize
-        # augment=True → 학습용(랜덤 증강 적용), False → 검증용(증강 없음, 결정적)
+        # augment=True → 学習用(ランダム増強適用)、False → 検証用(増強なし、決定的)
         self.augment = augment
-        # 클립 저장본 폴더(검증 전용, config.TRAIN_VAL_CACHE). 증강하면 매번 클립이 달라 쓸 수 없다.
+        # クリップキャッシュフォルダ(検証専用、config.TRAIN_VAL_CACHE)。増強時は毎回クリップが異なるため使用不可。
         if augment and cache_dir:
-            raise ValueError('클립 저장본은 증강 없는(검증) 데이터셋에만 쓸 수 있습니다')
+            raise ValueError('クリップキャッシュは増強なし(検証)データセットにのみ使用可能です')
         self.cache_dir = Path(cache_dir) if cache_dir else None
         self._cache_off = False
-        self._lq_off = False         # 저화질 증강이 실패하면(PyAV 없음 등) 이 작업자는 끄고 계속한다
-        # 영상 풀기 스레드 수(None = OpenCV 기본). 작업자 쪽 OpenCV 계산 스레드는 train.py 가 맞춘다.
+        self._lq_off = False         # 低画質増強が失敗した場合(PyAV未インストール等)、このワーカーは無効化して続行
+        # 動画デコードスレッド数(None = OpenCVデフォルト)。ワーカー側のOpenCV計算スレッドはtrain.pyが調整。
         self.cv2_threads = getattr(config, 'TRAIN_CV2_THREADS', None)
-        # A 클립 방식(config.TRAIN_A_MODE). 'span'이면 샘플마다 창 묶음 (K, 3, T, H, W)을
-        # 돌려주고(비충돌은 K=1), 로더는 span_collate 로 묶는다.
+        # Aクリップ方式(config.TRAIN_A_MODE)。'span'の場合、サンプルごとにウィンドウ束 (K, 3, T, H, W)を
+        # 返し(非衝突はK=1)、ローダーはspan_collateでまとめる。
         a_mode = getattr(config, 'TRAIN_A_MODE', 'pre')
         if a_mode not in ('pre', 'span'):
-            raise ValueError(f"TRAIN_A_MODE 는 'pre' 또는 'span' 이어야 합니다: {a_mode!r}")
+            raise ValueError(f"TRAIN_A_MODE は 'pre' または 'span' である必要があります: {a_mode!r}")
         self.span = a_mode == 'span'
-        # 정규화 통계는 사전학습(Kinetics-400)과 동일하게 config에서 일괄 관리
+        # 正規化統計量は事前学習(Kinetics-400)と同様にconfigで一括管理
         self.mean = torch.tensor(
             config.NORM_MEAN, dtype=torch.float32).view(3, 1, 1, 1)
         self.std = torch.tensor(
             config.NORM_STD, dtype=torch.float32).view(3, 1, 1, 1)
 
-        # data_dir 하위 폴더(rcdata/realdata 등)까지 재귀적으로 mp4를 수집한다.
-        # → 최상위에 파일이 있어도(기존 방식) 하위 폴더에 있어도 모두 포함.
-        # data_dir 은 폴더 여러 개(목록)여도 된다 — val_recheck 가 검증 폴더 + 학습 폴더를 함께 읽을 때.
+        # data_dir 配下のサブフォルダ(rcdata/realdata等)まで再帰的にmp4を収集する。
+        # → 最上位にファイルがあっても(既存方式)サブフォルダにあってもすべて含む。
+        # data_dir は複数フォルダ(リスト)でも可 — val_recheck が検証フォルダ + 学習フォルダを同時に読み込む場合。
         dirs = data_dir if isinstance(data_dir, (list, tuple)) else [data_dir]
         self.mp4_paths = sorted(
             p for d in dirs for p in glob.glob(os.path.join(str(d), '**', '*.mp4'), recursive=True))
@@ -159,7 +159,7 @@ class HitAndRunDataset(Dataset):
     def _build_index(self):
         samples = []
         for mp4_path in self.mp4_paths:
-            # txt는 같은 경로의 확장자만 바꾼 것 (rcdata/realdata 어디든 동일 규칙)
+            # txtは同じパスの拡張子のみ変更したもの (rcdata/realdata どこでも同一ルール)
             txt_path = os.path.splitext(mp4_path)[0] + ".txt"
             file_name = os.path.splitext(os.path.basename(mp4_path))[0]
             bboxes, action = self._parse_annotation(txt_path)
@@ -168,7 +168,7 @@ class HitAndRunDataset(Dataset):
                 class_str = action[0]
                 target_id = int(float(action[1]))
                 start_f = int(float(action[2]))
-                # 충돌 종료 프레임 — A 슬라이싱이 구간을 벗어나지 않도록 쓴다
+                # 衝突終了フレーム — Aスライシングが区間外に出ないように使用
                 end_f = int(float(action[3])) if len(action) > 3 else start_f
             else:
                 class_str = 'S'
@@ -182,28 +182,28 @@ class HitAndRunDataset(Dataset):
                 target_id, [0, 0, self.resize[0], self.resize[1]])
             label = 1 if class_str == 'A' else 0
 
-            # 영상 메타는 한 번만 읽는다(S 슬라이싱의 총프레임 + 지터 환산용 fps).
+            # 動画メタデータは一度のみ読み込む(Sスライシングの総フレーム数 + ジッター換算用fps)。
             total, fps = self._video_meta(mp4_path)
 
             def _add(sf, wins=None, car=None):
                 car = target_id if car is None else car
                 sample = {
                     'file_name': file_name,
-                    'video_key': mp4_path,   # 분할을 '영상 단위'로 묶기 위한 키
+                    'video_key': mp4_path,   # 分割を「動画単位」でまとめるためのキー
                     'mp4_path': mp4_path,
                     'label': label,
                     'start_f': sf,
                     'bbox': target_bbox if car == target_id else bboxes[car],
-                    'car_id': car,           # 크롭 기준 차량 번호
-                    'fps': fps,              # 시간 지터를 '초' 기준으로 맞추기 위함
-                    'total': total,          # fps 증강이 k배로 읽을 수 있는지 확인용
+                    'car_id': car,           # クロップ基準車両番号
+                    'fps': fps,              # 時間ジッターを「秒」基準で合わせるため
+                    'total': total,          # fps増強でk倍で読み込めるか確認用
                 }
                 if wins is not None:
-                    sample['win_starts'] = wins  # span: 구간을 덮는 창들의 시작 프레임
+                    sample['win_starts'] = wins  # span: 区間をカバーするウィンドウの開始フレーム
                 samples.append(sample)
 
-            # S 클립을 만들 차량: 기본은 대상 차량(0번) 하나. 실제 영상 S 는 1번 차량도
-            # (config.TRAIN_S_REAL_USE_CAR1). RC S 는 0번만.
+            # Sクリップを作成する車両: 基本は対象車両(0番)1台。実動画Sは1番車両も
+            # (config.TRAIN_S_REAL_USE_CAR1)。RC Sは0番のみ。
             s_cars = [target_id]
             if (label == 0 and getattr(config, 'TRAIN_S_REAL_USE_CAR1', False)
                     and 'realdata' in os.path.normpath(mp4_path).split(os.sep)
@@ -211,23 +211,23 @@ class HitAndRunDataset(Dataset):
                 s_cars.append(1)
 
             if label == 1:
-                # 충돌(A): 창을 start_f 보다 TRAIN_A_PRE_FRAMES 앞에서 시작해
-                # '접근 → 충돌 → 흔들림'이 한 창에 담기게 한다(config 주석 참고).
+                # 衝突(A): ウィンドウをstart_fよりTRAIN_A_PRE_FRAMES前から開始し
+                # 「接近 → 衝突 → 揺れ」が1ウィンドウに収まるようにする(configコメント参照)。
                 pre = int(getattr(config, 'TRAIN_A_PRE_FRAMES', 0))
                 a_start = max(0, start_f - pre)
                 a_stride = max(1, int(getattr(config, 'TRAIN_A_SLICE_STRIDE', 15)))
-                last = end_f - self.clip_length + 1      # 창 끝 == end_f 인 시작점
+                last = end_f - self.clip_length + 1      # ウィンドウ終端 == end_f となる開始点
                 if self.span:
-                    # span: 접근부터 충돌 종료까지를 덮는 창들을 샘플 하나로 둔다.
+                    # span: 接近から衝突終了までをカバーするウィンドウ群を1サンプルとする。
                     wins = self._span_starts(a_start, last, total)
                     _add(wins[0], wins)
                 elif (getattr(config, 'TRAIN_A_SLICE_ENABLED', False)
                         and last > a_start):
-                    # (기본 off) 구간 안에서 창을 밀어 A 클립을 늘리는 경로.
-                    # 첫 창만 접근을 담고 나머지는 '충돌 중'이 된다.
+                    # (デフォルトoff) 区間内でウィンドウをスライドしてAクリップを増やすパス。
+                    # 最初のウィンドウのみ接近を含み、残りは「衝突中」となる。
                     starts = list(range(a_start, last + 1, a_stride))
                     if starts[-1] != last:
-                        starts.append(last)   # 마지막 창은 충돌 종료에 정렬
+                        starts.append(last)   # 最後のウィンドウは衝突終了にアライン
                     for sf in starts:
                         _add(sf)
                 else:
@@ -236,9 +236,9 @@ class HitAndRunDataset(Dataset):
                 for car in s_cars:
                     _add(start_f, car=car)
             else:
-                # 비충돌(S)은 영상 전체를 클립 길이 단위로 잘라 전부 학습에 넣는다.
-                # (기존엔 맨 앞 30프레임 1개뿐이라 '차가 지나가지만 충돌 아님'을
-                #  학습하지 못했고, 이것이 오탐의 직접 원인이었다 — config 주석 참고)
+                # 非衝突(S)は動画全体をクリップ長単位で分割してすべて学習に投入する。
+                # (従来は先頭30フレーム1個のみだったため「車が通過するが衝突ではない」を
+                #  学習できず、これが誤検知の直接原因となっていた — configコメント参照)
                 stride = max(1, int(getattr(config, 'TRAIN_S_SLICE_STRIDE',
                                             self.clip_length)))
                 cap_n = int(getattr(config, 'TRAIN_S_MAX_CLIPS_PER_VIDEO', 0))
@@ -253,12 +253,12 @@ class HitAndRunDataset(Dataset):
         return samples
 
     def _span_starts(self, a_start, last, total):
-        """span 창 시작점들 — 첫 창은 a_start(접근), 마지막 창은 끝이 충돌 종료.
+        """spanウィンドウの開始点群 — 最初のウィンドウはa_start(接近)、最後のウィンドウは終端が衝突終了。
 
-        last : 끝이 충돌 종료에 맞는 창의 시작점. 영상 끝을 넘지 않게 자른다.
-        구간이 창 하나에 들어가면(last <= a_start) 창 1개 = 'pre' 방식과 같다.
-        그 밖에는 TRAIN_SPAN_WINDOW_STRIDE 이하 간격으로 구간을 고르게 나누고,
-        창이 TRAIN_SPAN_MAX_WINDOWS 를 넘으면 간격을 넓혀 그 개수로 덮는다.
+        last : 終端が衝突終了に一致するウィンドウの開始点。動画の終端を超えないよう切り詰める。
+        区間が1ウィンドウに収まる場合(last <= a_start) ウィンドウ1個 = 'pre'方式と同様。
+        それ以外はTRAIN_SPAN_WINDOW_STRIDE以下の間隔で区間を均等に分割し、
+        ウィンドウがTRAIN_SPAN_MAX_WINDOWSを超える場合は間隔を広げてその個数でカバーする。
         """
         if total > 0:
             last = min(last, total - self.clip_length)
@@ -272,7 +272,7 @@ class HitAndRunDataset(Dataset):
 
     @staticmethod
     def _video_meta(mp4_path):
-        """(총 프레임 수, fps). 메타데이터만 읽어 빠르다. 읽기 실패 시 fps는 30 가정."""
+        """(総フレーム数, fps)。メタデータのみ読み込むため高速。読み込み失敗時はfps 30と仮定。"""
         cap = cv2.VideoCapture(mp4_path)
         n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
         fps = float(cap.get(cv2.CAP_PROP_FPS) or 0.0)
@@ -328,28 +328,28 @@ class HitAndRunDataset(Dataset):
         return cv2.resize(cropped_frame, self.resize, interpolation=cv2.INTER_LINEAR)
 
     def _apply_augmentation(self, frames):
-        # 실제 주차장 CCTV 환경 대응 데이터 증강 — 세기·확률 근거는 config '기본 영상 증강 세기'(2026-11-05 조정)
-        # 변환 파라미터는 클립당 1회 샘플링해 모든 프레임에 동일 적용 (시간적 일관성 유지)
-        # 노이즈도 클립 내내 같은 잔무늬다(프레임마다 새로 뽑으면 픽셀이 깜빡여 미세한 흔들림을 덮는다 — 실제 압축 영상엔 없음)
+        # 実際の駐車場CCTV環境に対応するデータ増強 — 強度・確率の根拠はconfig「基本動画増強強度」(2026-11-05調整)
+        # 変換パラメータはクリップごとに1回サンプリングし、全フレームに同一適用(時間的一貫性を維持)
+        # ノイズもクリップ全体で同一パターン(フレームごとに再サンプリングすると画素がちらつき微細な揺れを隠蔽 — 実際の圧縮動画には存在しない)
 
         do_hflip = random.random() > 0.5
 
-        # 밝기·대비·채도·색조: 조명 변화, 날씨, 카메라 색감 차이 시뮬레이션
+        # 明度・コントラスト・彩度・色相: 照明変化、天候、カメラの色味の違いをシミュレート
         do_jitter = random.random() > 0.5
-        brightness = random.uniform(*getattr(config, 'TRAIN_AUG_BRIGHTNESS', (0.4, 1.4)))   # 야간·지하주차장 ~ 밝은 외부
-        contrast = random.uniform(0.7, 1.3)   # 저대비(흐린 날) ~ 고대비(직사광)
-        saturation = random.uniform(0.7, 1.3)   # 카메라별 채도 특성 차이
-        hue = random.uniform(-0.1, 0.1)  # 카메라 화이트밸런스·조명 색온도 차이
+        brightness = random.uniform(*getattr(config, 'TRAIN_AUG_BRIGHTNESS', (0.4, 1.4)))   # 夜間・地下駐車場 ~ 明るい屋外
+        contrast = random.uniform(0.7, 1.3)   # 低コントラスト(曇天) ~ 高コントラスト(直射日光)
+        saturation = random.uniform(0.7, 1.3)   # カメラごとの彩度特性の差異
+        hue = random.uniform(-0.1, 0.1)  # カメラのホワイトバランス・照明の色温度の差異
 
-        # 야간 적외선(IR) CCTV: 사실상 무채색 영상 → 색 없이도 동작 판별하도록 학습
+        # 夜間赤外線(IR) CCTV: 実質的に無彩色動画 → 色がなくても動作を判別できるよう学習
         do_gray = random.random() < getattr(config, 'TRAIN_AUG_GRAY_PROB', 0.2)
-        # 저화질 CCTV: 초점 흐림/압축 열화(블러), 야간 게인으로 생긴 잔무늬(압축돼 멈춰 있는 잡음) 시뮬레이션
+        # 低画質CCTV: ピントぼけ/圧縮劣化(ブラー)、夜間ゲインによる微細ノイズ(圧縮され静止したノイズ)をシミュレート
         do_blur = random.random() < 0.2
         do_noise = random.random() < getattr(config, 'TRAIN_AUG_NOISE_PROB', 0.2)
         noise_sigma = random.uniform(*getattr(config, 'TRAIN_AUG_NOISE_SIGMA', (2.0, 8.0)))
         grain = None
         if do_noise:
-            # 클립 내내 같은 잔무늬 — 흑백 클립은 밝기 잡음만(색 잡음이 끼면 적외선 영상답지 않다)
+            # クリップ全体で同一の微細ノイズ — モノクロクリップは明度ノイズのみ(カラーノイズが混ざると赤外線映像として不自然)
             h, w = frames[0].shape[:2]
             grain = np.random.normal(0.0, noise_sigma, (h, w, 1 if do_gray else 3)).astype(np.float32)
 
@@ -375,8 +375,8 @@ class HitAndRunDataset(Dataset):
         return aug_frames
 
     def _apply_light(self, frames):
-        """불빛 증강(config.TRAIN_LIGHT_AUG_PROB, 학습 전용 — 주석은 config). 사고·정상 구분 없이 같은 확률로, 클립마다
-        훑기·비추기 중 하나와 세기·크기·방향·색·시점을 하나씩 뽑는다. 확률 0 이면 난수를 쓰지 않는다."""
+        """光増強(config.TRAIN_LIGHT_AUG_PROB、学習専用 — コメントはconfig)。事故・正常を問わず同確率で、クリップごとに
+        スキャン・照射のいずれかと強度・サイズ・方向・色・タイミングを1つずつサンプリング。確率0なら乱数を使用しない。"""
         p = float(getattr(config, 'TRAIN_LIGHT_AUG_PROB', 0.0) or 0.0)
         if p <= 0 or random.random() >= p:
             return frames
@@ -390,8 +390,8 @@ class HitAndRunDataset(Dataset):
                          y=random.uniform(0.3, 0.8))
 
     def _apply_low_quality(self, frames, crop_side):
-        """저화질 증강(config.TRAIN_LQ_AUG_PROB, 학습 전용 — 주석은 config). 깨끗한 클립만 H.264 로 압축했다 풀고,
-        TRAIN_LQ_SIZE_PROB 비율은 먼저 작게 줄였다 다시 키운다. 값은 클립마다 하나(모든 프레임이 같은 영상)."""
+        """低画質増強(config.TRAIN_LQ_AUG_PROB、学習専用 — コメントはconfig)。鮮明なクリップのみH.264で圧縮・伸張し、
+        TRAIN_LQ_SIZE_PROBの割合で先に縮小してから再拡大。値はクリップごとに1つ(全フレームが同一動画)。"""
         p = float(getattr(config, 'TRAIN_LQ_AUG_PROB', 0.0) or 0.0)
         if (p <= 0 or self._lq_off or crop_side < getattr(config, 'TRAIN_LQ_MIN_CROP', 128)
                 or random.random() >= p):
@@ -400,24 +400,24 @@ class HitAndRunDataset(Dataset):
         size = None
         if random.random() < getattr(config, 'TRAIN_LQ_SIZE_PROB', 0.5):
             lo, hi = getattr(config, 'TRAIN_LQ_SIZE_RANGE', (48, 128))
-            hi = min(hi, int(crop_side * 0.75))      # 원래보다 확실히 작게만
+            hi = min(hi, int(crop_side * 0.75))      # 元サイズより確実に小さいサイズのみ
             if hi >= lo:
                 size = random.randint(lo // 2, hi // 2) * 2
         crf = random.randint(*getattr(config, 'TRAIN_LQ_CRF_RANGE', (28, 42)))
-        gop = random.choice((10, 15, 30, 60))         # CCTV 키프레임 간격(0.3~2초)
+        gop = random.choice((10, 15, 30, 60))         # CCTVキーフレーム間隔(0.3~2秒)
         src = [cv2.resize(f, (size, size), interpolation=cv2.INTER_AREA) for f in frames] if size else frames
         try:
             out = h264_roundtrip(src, crf, gop)
-        except Exception as e:                        # PyAV·libx264 없음 등 — 이 작업자는 증강 없이 계속
+        except Exception as e:                        # PyAV・libx264なし等 — このワーカーは増強なしで続行
             self._lq_off = True
-            print(f'⚠️ 저화질 증강을 쓸 수 없어 끄고 계속합니다: {type(e).__name__}: {e}')
+            print(f'⚠️ 低画質増強が使用できないため無効化して続行します: {type(e).__name__}: {e}')
             return frames
         if size:
             out = [cv2.resize(f, (w, h), interpolation=cv2.INTER_LINEAR) for f in out]
         return out
 
     def _read_frames(self, mp4_path, s0, n_read, bbox, r):
-        """s0 부터 n_read 프레임을 읽어 자르고 줄인 uint8 RGB 프레임 목록. 영상이 짧으면 마지막 프레임으로 채운다."""
+        """s0からn_readフレームを読み込んでクロップ・リサイズしたuint8 RGBフレームリスト。動画が短い場合は最終フレームで補完。"""
         cap = _open_video(mp4_path, self.cv2_threads)
         frames = []
         cap.set(cv2.CAP_PROP_POS_FRAMES, s0)
@@ -435,10 +435,10 @@ class HitAndRunDataset(Dataset):
                 frames[-1] if frames else np.zeros((self.resize[1], self.resize[0], 3), dtype=np.uint8))
         return frames
 
-    # ── 클립 저장본 (검증 전용, config.TRAIN_VAL_CACHE) ──
-    # 검증은 증강 없이 매 에포크 같은 클립이라, 자르고 줄인 uint8 프레임을 한 번 저장해 두고 읽는다.
-    # 키 = 클립 만드는 코드(_read_frames·_crop_and_pad)·OpenCV 버전 + 영상 파일(경로·크기·수정시각)
-    #      + 시작 프레임·길이·박스·r·크기 — 하나라도 바뀌면 다른 파일이 되어 새로 만든다.
+    # ── クリップキャッシュ (検証専用、config.TRAIN_VAL_CACHE) ──
+    # 検証は増強なしで毎エポック同一クリップのため、クロップ・リサイズ済みのuint8フレームを一度保存して再利用する。
+    # キー = クリップ生成コード(_read_frames・_crop_and_pad)・OpenCVバージョン + 動画ファイル(パス・サイズ・更新日時)
+    #      + 開始フレーム・長さ・バウンディングボックス・r・サイズ — 1つでも変更があれば別ファイルとして新規作成。
     _cache_code = None
 
     @classmethod
@@ -465,7 +465,7 @@ class HitAndRunDataset(Dataset):
         try:
             arr = np.load(path)
         except (OSError, ValueError):
-            return None                       # 읽을 수 없는 파일 — 새로 만들어 덮어쓴다
+            return None                       # 読み込めないファイル — 新規作成して上書き
         if arr.dtype != np.uint8 or arr.shape != (n_read, self.resize[1], self.resize[0], 3):
             return None
         return arr
@@ -478,18 +478,18 @@ class HitAndRunDataset(Dataset):
             path.parent.mkdir(parents=True, exist_ok=True)
             with open(tmp, 'wb') as f:
                 np.save(f, np.stack(frames, axis=0))
-            os.replace(tmp, path)   # 다 쓴 뒤 이름을 바꿔, 다른 작업자가 쓰다 만 파일을 읽지 않게
+            os.replace(tmp, path)   # 書き込み完了後にリネームし、他ワーカーが書き込み途中のファイルを読まないようにする
         except OSError as e:
-            # 디스크가 차는 등 — 이 작업자는 저장 없이 계속한다(검증 결과는 같다)
+            # ディスク容量不足等 — このワーカーはキャッシュ保存なしで続行(検証結果は同一)
             self._cache_off = True
-            print(f'⚠️ 검증 클립 저장본을 쓰지 못해 저장 없이 계속합니다: {e}')
+            print(f'⚠️ 検証クリップキャッシュを書き込めないため保存なしで続行します: {e}')
             try:
                 tmp.unlink(missing_ok=True)
             except OSError:
                 pass
 
     def cache_status(self, indices):
-        """저장본 상태 (이미 있는 클립 수, 클립 수, 다 만들었을 때 크기 GB) — 학습 시작 때 안내용."""
+        """キャッシュ状態 (既存クリップ数、全クリップ数、完了時の推定サイズ GB) — 学習開始時の案内用。"""
         have, size = 0, 0
         for i in indices:
             s = self.samples[i]
@@ -501,8 +501,8 @@ class HitAndRunDataset(Dataset):
         return have, len(indices), size / 2 ** 30
 
     def _fps_aug_stride(self, sample, starts):
-        """fps 증강(config.TRAIN_FPS_AUG_PROB, 학습 전용 — 주석은 config)으로 몇 장마다 한 장 고를지. 안 하면 1.
-        확률 0 이면 난수를 쓰지 않아 기존 학습과 같다."""
+        """fps増強(config.TRAIN_FPS_AUG_PROB、学習専用 — コメントはconfig)で何フレームごとに1枚サンプリングするか。非適用時は1。
+        確率0なら乱数を使用せず従来の学習と同一。"""
         p = float(getattr(config, 'TRAIN_FPS_AUG_PROB', 0.0) or 0.0)
         if p <= 0 or len(starts) != 1 or random.random() >= p:
             return 1
@@ -514,19 +514,19 @@ class HitAndRunDataset(Dataset):
         k = random.choice(ks)
         total = int(sample.get('total', 0) or 0)
         if total and total < (self.clip_length - 1) * k + 1:
-            return 1                           # 영상이 짧아 k배로 못 읽음 — 그대로
+            return 1                           # 動画が短くk倍で読み込めない — そのまま
         return k
 
     def _read_strided(self, sample, start, k, bbox, r):
-        """start 근처에서 (clip_length − 1)·k + 1 프레임을 읽어 k장마다 한 장 → clip_length 장.
-        사고 클립은 충돌 시작이 원래처럼 TRAIN_A_PRE_FRAMES 번째에 오게 앞쪽을 k배로 늘린다."""
+        """start付近から (clip_length − 1)·k + 1 フレームを読み込み、kフレームごとに1枚 → clip_length 枚。
+        事故クリップは衝突開始が従来通りTRAIN_A_PRE_FRAMES番目に位置するよう前方をk倍に拡張。"""
         n = (self.clip_length - 1) * k + 1
         s0 = start
         if sample['label'] == 1:
             s0 = start - int(getattr(config, 'TRAIN_A_PRE_FRAMES', 0)) * (k - 1)
         total = int(sample.get('total', 0) or 0)
         if total:
-            s0 = min(s0, total - n)            # 영상 끝을 넘지 않게
+            s0 = min(s0, total - n)            # 動画終端を超えないように制限
         s0 = max(0, s0)
         return self._read_frames(sample['mp4_path'], s0, n, bbox, r)[::k]
 
@@ -537,29 +537,29 @@ class HitAndRunDataset(Dataset):
 
     def __getitem__(self, idx):
         sample = self.samples[idx]
-        # 창 시작점들. 'pre' 모드와 비충돌 샘플은 창 1개다.
+        # ウィンドウ開始点群。'pre'モードおよび非衝突サンプルはウィンドウ1個。
         starts = list(sample.get('win_starts') or [sample['start_f']])
         bbox = sample['bbox']
 
         if self.augment:
-            # ① 시간 오프셋 지터: 학습 클립이 항상 '충돌 시작 = 윈도 첫 프레임'이면
-            #    추론(슬라이딩 윈도)에서 충돌이 윈도 중간에 걸릴 때 분포가 어긋난다.
-            #    시작점을 조금 앞으로 당겨 충돌 위치를 윈도 내에서 다양화.
-            #    ※ 폭을 '초' 기준으로 환산한다. 프레임 수로 고정하면 같은 증강이
-            #      fps에 따라 다른 의미가 된다(10프레임 = 30fps 0.33초, 10fps 1.0초).
-            #      기본 0.33초는 30fps에서 기존 동작(0~10프레임)과 동일하다.
-            #    ※ 양방향(±)으로 흔든다. 한쪽(앞으로만)이면 A 클립의 접근 구간이
-            #      TRAIN_A_PRE_FRAMES 보다 계속 길어져 충돌이 창 밖으로 밀린다.
+            # ① 時間オフセットジッター: 学習クリップが常に「衝突開始 = ウィンドウ先頭フレーム」の場合、
+            #    推論(スライディングウィンドウ)で衝突がウィンドウ途中に位置する際に分布の乖離が発生する。
+            #    開始点を少し手前にずらし、衝突位置をウィンドウ内で多様化させる。
+            #    ※ 幅を「秒」基準で換算する。フレーム数で固定すると同一の増強が
+            #      fpsによって異なる意味を持つことになる(10フレーム = 30fpsで0.33秒、10fpsで1.0秒)。
+            #      デフォルト0.33秒は30fpsにおける従来の挙動(0~10フレーム)と同一。
+            #    ※ 双方向(±)にジッターを付与。一方向(手前のみ)だとAクリップの接近区間が
+            #      TRAIN_A_PRE_FRAMESより長くなり続け、衝突がウィンドウ外に押し出される。
             jitter = int(round(sample.get('fps', 30.0)
                                * getattr(config, 'TRAIN_TIME_JITTER_SEC', 0.33)))
             if jitter > 0:
-                # span 창들은 간격을 지킨 채 통째로 민다(맨 앞 창이 0 아래로 가지 않게).
-                # 창 1개면 max(0, start_f + d) 와 같다.
+                # spanウィンドウ群は間隔を維持したまま全体をシフト(先頭ウィンドウが0未満にならないように制限)。
+                # ウィンドウ1個の場合は max(0, start_f + d) と等価。
                 d = max(random.randint(-jitter, jitter), -min(starts))
                 starts = [s + d for s in starts]
-            # ② bbox 지터: 서비스에서는 사용자가 마우스로 대충 박스를 그린다.
-            #    GT 좌표 그대로만 학습하면 손그림 박스와 분포가 어긋나므로
-            #    중심 이동(±5%)·크기 배율(0.9~1.15)로 부정확한 박스를 시뮬레이션.
+            # ② bboxジッター: 実運用ではユーザーがマウスでおおまかにボックスを描画する。
+            #    GT座標のみで学習すると手動バウンディングボックスとの分布乖離が生じるため、
+            #    中心移動(±5%)・サイズ倍率(0.9~1.15)により不正確なボックスをシミュレート。
             x1, y1, x2, y2 = bbox
             bw, bh = x2 - x1, y2 - y1
             cx = (x1 + x2) // 2 + int(bw * random.uniform(-0.05, 0.05))
@@ -568,11 +568,11 @@ class HitAndRunDataset(Dataset):
             hw, hh = int(bw * s / 2), int(bh * s / 2)
             bbox = [cx - hw, cy - hh, cx + hw, cy + hh]
 
-        # 크롭 배율은 학습·검증·서비스 모두 self.r_value(=config.R_VALUE, 1.0). 학습 중 r 을 넓히던 r 증강은 2026-11-05 삭제
+        # クロップ倍率は学習・検証・サービス共通で self.r_value(=config.R_VALUE, 1.0)。学習中にrを拡大していたr増強は2026-11-05削除
         r = self.r_value
 
-        # 첫 창 시작부터 마지막 창 끝까지 한 번에 읽는다(창 1개면 clip_length 프레임).
-        # 모든 창이 같은 박스·r·증강을 쓰게 되어, 같은 충돌의 다른 시점일 뿐이 된다.
+        # 最初のウィンドウ開始から最後のウィンドウ終了までを一度に読み込む(ウィンドウ1個ならclip_lengthフレーム)。
+        # すべてのウィンドウが同一のボックス・r・増強を使用するため、同一衝突の別視点として整合性が保たれる。
         s0 = min(starts)
         k = self._fps_aug_stride(sample, starts) if self.augment else 1
         if k > 1:
@@ -585,27 +585,27 @@ class HitAndRunDataset(Dataset):
                 frames = self._read_frames(sample['mp4_path'], s0, n_read, bbox, r)
                 self._cache_save(cache, frames)
 
-        # 증강은 학습 세트에만 적용 (검증 세트는 결정적이어야 val loss가 안정됨)
+        # 増強は学習セットにのみ適用 (検証セットは決定的でなければval lossが安定しない)
         if self.augment:
-            # 불빛 증강은 장면에 비치는 빛이라 색·노이즈·저화질보다 먼저(기본 끔 — config.TRAIN_LIGHT_AUG_PROB)
+            # 光増強はシーンに照射される光のため、色・ノイズ・低画質より先に適用(デフォルト無効 — config.TRAIN_LIGHT_AUG_PROB)
             frames = self._apply_light(frames)
             frames = self._apply_augmentation(frames)
-            # 저화질 증강은 색·노이즈 뒤에(찍은 뒤 저장할 때 압축되는 순서). 원본 프레임 크롭 한 변으로 대상을 고른다
+            # 低画質増強は色・ノイズの後に適用(撮影後に保存される際の圧縮順序)。元フレームクロップの一辺を基準に対象を選択
             frames = self._apply_low_quality(frames, max(bbox[2] - bbox[0], bbox[3] - bbox[1]) * r)
 
         video = self._frames_to_tensor(frames)
         label = torch.tensor(sample['label'], dtype=torch.long)
         if not self.span:
             return video, label
-        # (K, 3, T, H, W) — 구간을 덮는 창들
+        # (K, 3, T, H, W) — 区間をカバーするウィンドウ群
         return torch.stack([video[:, s - s0:s - s0 + self.clip_length]
                             for s in starts]), label
 
 
 def span_collate(batch):
-    """span 배치: 샘플마다 창 수가 달라 창들을 이어 붙이고 샘플별 창 수를 함께 준다.
+    """spanバッチ: サンプルごとにウィンドウ数が異なるためウィンドウを連結し、サンプルごとのウィンドウ数を併せて返す。
 
-    반환: (창들 (ΣK, 3, T, H, W), 샘플별 창 수 (B,), 라벨 (B,))
+    戻り値: (ウィンドウ群 (ΣK, 3, T, H, W), サンプルごとのウィンドウ数 (B,), ラベル (B,))
     """
     clips = torch.cat([b[0] for b in batch])
     sizes = torch.tensor([b[0].shape[0] for b in batch], dtype=torch.long)

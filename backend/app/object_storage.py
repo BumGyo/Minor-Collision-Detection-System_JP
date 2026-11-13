@@ -1,6 +1,6 @@
-"""로컬 또는 S3 호환 객체 저장소 추상화.
+"""ローカルまたはS3互換オブジェクトストレージの抽象化レイヤー。
 
-DB에는 이 모듈이 반환하는 object key만 저장하고, 원격 객체는 presigned URL로 제공한다.
+DBには本モジュールが返却するobject keyのみを保存し、リモートオブジェクトはpresigned URLで提供する。
 """
 from __future__ import annotations
 
@@ -92,7 +92,7 @@ class S3ObjectStorage:
         return boto3.client(
             "s3",
             **self._client_options,
-            # R2 연결이 멈춰도 개별 미디어 요청이 웹 워커를 무기한 점유하지 않게 한다.
+            # R2接続が停止しても個別のメディアリクエストがWebワーカーを無制限に占有しないように制限。
             config=Config(
                 connect_timeout=3,
                 read_timeout=5,
@@ -235,7 +235,7 @@ def get_storage():
 
 @contextmanager
 def materialize(storage, key: str, suffix: str = ""):
-    """객체를 OpenCV/모델이 읽을 수 있는 임시 로컬 파일로 준비한다."""
+    """オブジェクトをOpenCV/モデルが読み込み可能な一時ローカルファイルとして準備する。"""
     if isinstance(storage, LocalObjectStorage):
         yield storage.local_path(key)
         return

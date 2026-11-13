@@ -2,64 +2,64 @@ import torch
 
 
 def get_device(device_type):
-    """주어진 device_type("cuda"/"cpu")에 따라 적절한 디바이스를 반환합니다.
+    """指定された device_type("cuda"/"cpu") に応じて適切なデバイスを返却します。
 
-    학습은 config.TRAIN_DEVICE_TYPE, 추론은 config.INFER_DEVICE_TYPE 값을
-    인자로 전달합니다. NVIDIA CUDA와 AMD ROCm 모두 "cuda"로 설정합니다.
-    ROCm PyTorch 빌드에서는 torch.cuda.is_available() 이 True를 반환하므로
-    별도 분기 없이 동일하게 동작합니다.
+    学習時は config.TRAIN_DEVICE_TYPE、推論時は config.INFER_DEVICE_TYPE の値を
+    引数として渡します。NVIDIA CUDA と AMD ROCm の双方が "cuda" として設定されます。
+    ROCm PyTorch ビルドでは torch.cuda.is_available() が True を返すため、
+    個別の条件分岐を行わずに同様に動作します。
     """
     if device_type == "cuda":
         if torch.cuda.is_available():
             return torch.device("cuda")
         print(
-            "\n[경고] DEVICE_TYPE = 'cuda' 이지만 GPU를 찾을 수 없어 CPU로 실행합니다.\n"
-            "원인 및 해결 방법:\n"
-            "  1. ROCm PyTorch 미설치\n"
+            "\n[警告] DEVICE_TYPE = 'cuda' ですが GPU が検出されないため、CPU で実行します。\n"
+            "原因および対処方法:\n"
+            "  1. ROCm PyTorch が未インストール\n"
             "     → pip install torch torchvision "
             "--index-url https://download.pytorch.org/whl/rocm6.2\n"
-            "  2. CUDA PyTorch 미설치\n"
+            "  2. CUDA PyTorch が未インストール\n"
             "     → pip install torch torchvision "
             "--index-url https://download.pytorch.org/whl/cu121\n"
-            "  3. WSL2에서 GPU 패스스루 미설정\n"
-            "     → /proc/driver/nvidia 또는 /dev/dri 디바이스 존재 여부 확인\n"
-            "  설치 상태 확인: python -c \"import torch; print(torch.__version__, torch.cuda.is_available())\"\n"
+            "  3. WSL2 で GPU パススルーが未設定\n"
+            "     → /proc/driver/nvidia または /dev/dri デバイスの存在有無を確認\n"
+            "  インストール状態の確認: python -c \"import torch; print(torch.__version__, torch.cuda.is_available())\"\n"
         )
         return torch.device("cpu")
     return torch.device("cpu")
 
 
 def is_rocm() -> bool:
-    """현재 PyTorch 빌드가 ROCm(HIP) 기반인지 여부.
+    """現在の PyTorch ビルドが ROCm(HIP) ベースであるか否か。
 
-    ROCm 빌드에서는 torch.version.hip 이 버전 문자열을 반환하고,
-    NVIDIA CUDA 빌드에서는 None을 반환합니다.
+    ROCm ビルドでは torch.version.hip がバージョン文字列を返し、
+    NVIDIA CUDA ビルドでは None を返します。
     """
     return torch.version.hip is not None
 
 
 def predict_batch_size(device) -> int:
-    """서비스 추론 묶음 크기 — GPU 면 config.PREDICT_INFER_BATCH_SIZE_GPU, 그 밖(CPU)은 _CPU."""
+    """本番推論バッチサイズ — GPU は config.PREDICT_INFER_BATCH_SIZE_GPU、その他(CPU)は _CPU。"""
     import config
     size = config.PREDICT_INFER_BATCH_SIZE_GPU if is_cuda_like(device) else config.PREDICT_INFER_BATCH_SIZE_CPU
     return max(1, int(size))
 
 
 def is_cuda_like(device) -> bool:
-    """AMP·cuDNN·pin_memory 등 CUDA 계열 기능을 사용할 수 있는 디바이스인지 여부.
+    """AMP・cuDNN・pin_memory 等の CUDA 系機能を使用可能なデバイスであるか否か。
 
-    NVIDIA CUDA 와 ROCm(HIP) PyTorch 빌드 모두 device 이름이 "cuda" 이므로
-    True를 반환합니다. CPU는 False를 반환합니다.
+    NVIDIA CUDA および ROCm(HIP) PyTorch ビルドの双方でデバイス名が "cuda" となるため
+    True を返します。CPU の場合は False を返します。
     """
     return str(device).startswith("cuda")
 
 
 def is_channels_last_3d_supported(device) -> bool:
-    """channels_last_3d 메모리 포맷을 안전하게 사용할 수 있는지 여부.
+    """channels_last_3d メモリフォーマットを安全に使用可能であるか否か。
 
-    ROCm(HIP)은 channels_last_3d를 완전히 지원하지 않아
-    일부 연산에서 오류가 발생할 수 있으므로 비활성화합니다.
-    NVIDIA CUDA에서만 활성화합니다.
+    ROCm(HIP) は channels_last_3d を完全にはサポートしておらず、
+    一部の演算でエラーが発生する可能性があるため無効化します。
+    NVIDIA CUDA 環境でのみ有効化します。
     """
     if not is_cuda_like(device):
         return False

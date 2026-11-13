@@ -1,7 +1,7 @@
-"""Celery 인스턴스 — Redis 브로커/백엔드.
+"""Celery インスタンス — Redis ブローカー/バックエンド。
 
-워커 실행: cd backend && celery -A app.worker worker --loglevel=info
-(워커 환경에는 torch/opencv 등 ML 의존성이 설치돼 있어야 한다.)
+ワーカー実行: cd backend && celery -A app.worker worker --loglevel=info
+(ワーカー環境には torch/opencv などの ML 依存ライブラリがインストールされている必要があります。)
 """
 import os
 from datetime import datetime
@@ -13,10 +13,10 @@ from app.settings import settings
 
 
 def build_task_routes(gpu_queue: str) -> dict[str, dict[str, str]]:
-    """ML 사고 분석 태스크를 지정한 큐로만 보낸다.
+    """ML事故分析タスクを指定キューにのみルーティングする。
 
-    기본 큐(``celery``)를 쓰면 기존 CPU 워커와 완전히 호환된다. GPU VM을
-    준비한 뒤에만 ``GPU_TASK_QUEUE=gpu``를 지정한다.
+    デフォルトキュー(``celery``)を使用すると既存CPUワーカーと完全互換。GPU VMを
+    準備した後にのみ ``GPU_TASK_QUEUE=gpu`` を指定する。
     """
     queue = gpu_queue.strip() or "celery"
     return {
@@ -38,19 +38,19 @@ celery_app.conf.update(
     task_routes=build_task_routes(os.getenv("GPU_TASK_QUEUE", "celery")),
 )
 
-# 태스크 등록 (import 시 데코레이터가 celery_app에 바인딩)
+# タスク登録 (import 時にデコレーターが celery_app にバインド)
 from app import prediction_job, vehicle_job  # noqa: E402,F401
 
 
 @worker_ready.connect
 def _fail_interrupted_tasks(**_):
-    """워커가 (재)시작될 때, 이전 워커에서 처리 중(PROCESSING)이던 작업을 실패로 정리한다.
+    """ワーカーの(再)起動時に、以前のワーカーで処理中(PROCESSING)だったタスクを失敗として処理する。
 
-    처리 중이던 메시지는 시작 시점에 이미 확인(ack)돼 다시 배달되지 않으므로, 그대로
-    두면 DB 에 PROCESSING 이 영원히 남고 화면은 끝나길 계속 기다린다. 실패로 바꿔 두면
-    화면이 '다시 실행'을 안내한다.
-    ⚠️ 워커가 하나라는 전제다. 워커를 여러 대 띄우면 다른 워커가 실제로 처리 중인
-       작업까지 실패로 바꾸므로 이 정리 방식을 바꿔야 한다.
+    処理中のメッセージは起動時点で既に確認(ack)されており再配送されないため、そのまま放置すると
+    DB に PROCESSING が残り続け、画面側で無限待機状態となる。失敗ステータスに変更しておくことで、
+    画面側に「再実行」ボタンを表示できるようにする。
+    ⚠️ ワーカーが単一プロセスである前提。複数ワーカー運用の場合は他のワーカーが実際に処理中のタスクまで
+       失敗化してしまうため、このクリーンアップ方式を見直す必要がある。
     """
     from app.db_connection import SessionLocal
     from app import db_models
@@ -59,19 +59,19 @@ def _fail_interrupted_tasks(**_):
         n = (db.query(db_models.AnalysisTask)
              .filter(db_models.AnalysisTask.status == "PROCESSING")
              .update({"status": "FAILURE",
-                      "error_message": "분석 서버가 재시작되어 분석이 중단되었습니다. 다시 실행해 주세요."},
+                      "error_message": "分析サーバーが再起動したため分析が中断されました。再実行してください。"},
                      synchronize_session=False))
         db.commit()
         if n:
-            print(f"[worker] 재시작으로 중단된 분석 {n}건을 실패로 정리")
+            print(f"[worker] 再起動により中断された分析 {n}件を失敗として処理")
         detection_n = (db.query(db_models.VehicleDetectionTask)
                        .filter(db_models.VehicleDetectionTask.status == "PROCESSING")
                        .update({"status": "FAILURE",
-                                "error_message": "탐지 서버가 재시작되어 작업이 중단되었습니다. 다시 실행해 주세요.",
+                                "error_message": "検知サーバーの再起動によりタスクが中断されました。再度実行してください。",
                                 "finished_at": datetime.utcnow()},
                                synchronize_session=False))
         db.commit()
         if detection_n:
-            print(f"[worker] 재시작으로 중단된 차량 탐지 {detection_n}건을 실패로 정리")
+            print(f"[worker] 再起動により中断された車両検知 {detection_n}件を失敗としてクリーンアップ")
     finally:
         db.close()

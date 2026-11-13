@@ -1,26 +1,26 @@
-"""판정 기준·후처리·저fps 시간축 점검 — 창마다 P(A)를 한 번 재 두고, 서비스 판정을 여러 설정으로 다시 계산한다.
+"""判定閾値・後処理・低fps時間軸の点検 — ウィンドウごとにP(A)を一度算出し、サービス判定を多様な設定で再計算・検証する。
 
-    python -u -m model.postproc_check --weights <가중치1.pth> [<가중치2.pth> ...]   # GPU 권장(가중치당 약 10분)
-    python -u -m model.postproc_check --weights ... --no-val            # 평가 영상만
-    python -u -m model.postproc_check --again outputs/postproc_check/<시각>   # 저장한 P(A)로 집계만 다시(모델 안 씀)
+    python -u -m model.postproc_check --weights <重み1.pth> [<重み2.pth> ...]   # GPU推奨(重みあたり約10分)
+    python -u -m model.postproc_check --weights ... --no-val            # 評価動画のみ
+    python -u -m model.postproc_check --again outputs/postproc_check/<日時>   # 保存済みP(A)で再集計のみ(モデル不使用)
 
-바꿔 보는 것 (모든 조합을 summary.csv 에 남긴다)
-  · 판정 기준 A_THRESHOLD 0.2~0.7. 거친 탐색 기준은 config 기본식 min(0.3, 0.6×기준)
-  · 후처리 단위 — 'frame' 프레임 수 고정 · 'fps' 거친 탐색 간격(10)과 최소 길이의 연속 A 창 수(7)를 30fps 기준으로 보고
-    영상 fps 에 맞춤(inference.fps_scaled_event_params — 서비스와 같은 함수, config.PREDICT_FPS_SCALED_POSTPROC).
-    10fps 면 간격 3·연속 2창. 병합 간격은 이미 초 단위
-    (2026-10-30 첫 결과 261030_070150 의 'fps맞춤'은 최소 길이를 통째로 줄여 30fps 미만에선 필터가 꺼졌던 옛 계산)
-  · 최소 길이 35·32·30·29 = 연속 A 창 7·4·2·1(=필터 끔) (이벤트 길이 = 28 + 연속 창 수, fps 맞춤이면 30fps 기준)
-  · 거친 탐색 켬·끔(끄면 모든 창을 본다 — 거친 탐색이 놓치는 것)
-  · 저fps(20 미만) 영상 시간축 — none 그대로 · repeat 프레임 반복 · blend 이웃 프레임 섞기. round(30/fps)배로 늘려
-    창 하나(30프레임)가 학습 때처럼 약 1초가 되게 한다
-영상: 평가 영상(config.EVAL_FOLDER_PATH) + 검증 실제 영상(첫 가중치 회차의 split.json 검증 중 realdata — 학습에 안 쓴 영상).
-설정은 검증 영상으로 고르고 평가 영상으로 확인한다(평가 영상으로 고르면 점수가 부풀려짐). 사고는 구간 겹침으로 센다.
-서비스 판정(거친 탐색 → 의심 창 주변 촘촘히 → 상태머신 → 병합·최소 길이)은 inference.predict_events_and_clips 의
-이벤트 결정 부분을 옮겨 창별 P(A)로 다시 계산한다. 지금 설정 그대로인 경우는 실제 서비스 함수 결과와 영상별로
-맞는지 확인한다(서비스 재현 확인 — GPU FP16 은 묶음 구성에 따라 P(A)가 1e-3 쯤 달라 기준 바로 옆 창은 갈릴 수 있다).
-결과: outputs/postproc_check/<시각>/ — report.txt(화면과 같음) · summary.csv(설정 조합별 합계) · videos.csv(영상별 P(A)
-요약·이벤트) · probs/<가중치>/<eval|val>_<none|repeat|blend>/<영상>.npz(창별 P(A) — 다시 집계·화면 확인용)
+検証パラメータ（全組み合わせを summary.csv に保存）
+  ・判定閾値 A_THRESHOLD 0.2〜0.7。粗探索閾値は config 基本式 min(0.3, 0.6×閾値)
+  ・後処理単位 — 'frame' フレーム数固定 · 'fps' 粗探索間隔(10)と最小継続Aウィンドウ数(7)を30fps基準とし
+    動画fpsに合わせてスケーリング(inference.fps_scaled_event_params — 本番サービスと同一関数、config.PREDICT_FPS_SCALED_POSTPROC)。
+    10fpsの場合は間隔3・連続2ウィンドウ。マージ間隔は秒単位固定
+    (2026-10-30初回結果 261030_070150 の「fps合わせ」は最小長を過剰縮小し30fps未満でフィルタが無効化されていた旧仕様を修正)
+  ・最小長 35・32・30・29 = 連続Aウィンドウ数 7・4・2・1(=フィルタ無効) (イベント長 = 28 + 連続ウィンドウ数、fps合わせ時は30fps基準)
+  ・粗探索 有効・無効（無効化時は全ウィンドウ走査 — 粗探索での検出漏れリスクを検証）
+  ・低fps(20未満)動画の時間軸 — none そのまま · repeat フレーム複製 · blend 隣接フレームブレンド補間。round(30/fps)倍に拡張し
+    1ウィンドウ(30フレーム)が学習時と同様に約1秒間となるよう調整
+対象動画: 評価動画(config.EVAL_FOLDER_PATH) + 検証実車動画(第1重みセッションの split.json 検証データ中 realdata — 学習未使用動画)。
+パラメータ設定は検証動画で選定し評価動画で最終検証（評価動画で選定するとスコア過学習が発生するため）。事故は区間重複で計上。
+サービス判定（粗探索 → 疑いウィンドウ周辺詳細走査 → 状態遷移マシン → イベントマージ・最小長フィルタ）は inference.predict_events_and_clips の
+イベント決定ロジックを抽出しウィンドウ別P(A)で再計算。現在設定と完全一致するケースについては実際のサービス関数出力と動画単位で
+完全一致を照合（サービス再現性の検証 — GPU FP16はバッチ構成によりP(A)に1e-3程度の微差が生じ閾値近傍で分岐する可能性あり）。
+成果物: outputs/postproc_check/<日時>/ — report.txt(画面出力ログ) · summary.csv(設定組み合わせ別集計) · videos.csv(動画別P(A)
+サマリー・イベント) · probs/<重み>/<eval|val>_<none|repeat|blend>/<動画>.npz(ウィンドウ別P(A) — 再集計・可視化用)
 """
 import argparse
 import contextlib
@@ -48,15 +48,15 @@ LOW_FPS = 20.0
 RESAMPLES = ('none', 'repeat', 'blend')
 THRESHOLDS = (0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7)
 MIN_SPANS = (35, 32, 30, 29)
-SETS = (('eval', '평가'), ('val', '검증'))
+SETS = (('eval', '評価'), ('val', '検証'))
 
 
 def _now_post():
-    """지금 서비스의 후처리 단위."""
+    """現在のサービス後処理単位。"""
     return 'fps' if config.PREDICT_FPS_SCALED_POSTPROC else 'frame'
 
 
-# ── 영상 목록 ──────────────────────────────────────────────────────────────
+# ── 動画リスト ──────────────────────────────────────────────────────────────
 
 def _label(mp4):
     bboxes, sf, ef = _read_label(str(mp4.with_suffix('.txt')))
@@ -66,7 +66,7 @@ def _label(mp4):
 
 
 def _excluded(name):
-    """10fps 미만 영상(config.EXCLUDE_VIDEOS)인가 — 폴더에 남아 있어도·저장한 P(A)를 다시 집계해도 뺀다."""
+    """10fps未満の動画(config.EXCLUDE_VIDEOS)か否か — フォルダに残存していても、保存済みP(A)を再集計する場合も除外。"""
     return name in (getattr(config, 'EXCLUDE_VIDEOS', ()) or ())
 
 
@@ -82,7 +82,7 @@ def _folder_videos(folder):
 
 
 def _split_path(weights, arg):
-    """검증 영상 목록 — 지정한 split.json, 가중치 회차 폴더의 것, 없으면 가장 최근 학습의 것(분할은 seed 고정)."""
+    """検証動画リスト — 指定split.json、重みセッションフォルダのもの、未指定時は最新学習セッションのもの(分割seed固定)。"""
     if arg:
         return Path(arg)
     p = Path(weights).resolve().parent.parent / 'split.json'
@@ -100,7 +100,7 @@ def _val_videos(split):
         rel = rel.replace('\\', '/')
         if not rel.startswith('realdata/'):
             continue
-        # 검증 폴더(config.VAL_DATA_DIR, 11-04~)로 옮긴 영상도, 예전처럼 학습 폴더에 있는 영상도 찾는다
+        # 検証フォルダ(config.VAL_DATA_DIR, 11-04以降)へ移動済みの動画も、従来の学習フォルダ内の動画も探索
         roots = [Path(r) for r in (getattr(config, 'VAL_DATA_DIR', None), config.DATA_DIR) if r]
         mp4 = next((r / rel for r in roots if (r / rel).exists()), Path(config.DATA_DIR) / rel)
         if _excluded(mp4.stem):
@@ -111,10 +111,10 @@ def _val_videos(split):
     return out
 
 
-# ── 창별 P(A) ─────────────────────────────────────────────────────────────
+# ── ウィンドウ別 P(A) ─────────────────────────────────────────────────────────────
 
 def _read_crops(mp4, bbox):
-    """서비스와 같은 크롭(0번 차량 박스, r=config.R_VALUE, 224) — uint8 RGB 목록."""
+    """本番サービスと同一クロップ(0番車両ボックス, r=config.R_VALUE, 224) — uint8 RGB リスト。"""
     from inference import _crop_square_and_pad
     cap = cv2.VideoCapture(str(mp4))
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
@@ -131,7 +131,7 @@ def _read_crops(mp4, bbox):
 
 
 def _resample(frames, factor, mode):
-    """시간축을 factor 배로 — repeat: 프레임 반복, blend: 다음 프레임과 섞어 사이를 채움."""
+    """時間軸を factor 倍に拡張 — repeat: フレーム複製, blend: 次フレームとブレンド補間。"""
     if factor <= 1 or mode == 'none':
         return frames
     out = []
@@ -148,9 +148,9 @@ def _resample(frames, factor, mode):
 
 
 def _window_probs(runner, device, frames, batch):
-    """간격 1 모든 창의 P(A). 서비스 _clip 과 같은 정규화. 영상을 장치에 한 번 올려 창마다 잘라 쓴다."""
+    """ストライド1の全ウィンドウ P(A)。サービス _clip と同一の正規化。動画をデバイスに一括転送後スライシング。"""
     frames = list(frames)
-    while len(frames) < L:                       # 짧은 영상은 마지막 프레임 반복(서비스와 같음)
+    while len(frames) < L:                       # 短尺動画は最終フレームでパディング(本番サービス同様)
         frames.append(frames[-1])
     u8 = torch.from_numpy(np.stack(frames)).to(device)          # T,H,W,3
     mean = torch.tensor(config.NORM_MEAN, dtype=torch.float32, device=device).view(1, 3, 1, 1, 1)
@@ -171,23 +171,23 @@ def _window_probs(runner, device, frames, batch):
 
 
 def _measure(weights, sets, out_dir, batch_arg):
-    """가중치 하나로 영상 묶음마다 none·repeat·blend P(A)를 재서 npz 로 남긴다. 반환: (모델, 실행기 이름)."""
+    """1つの重みに対し動画セットごとに none・repeat・blend の P(A) を算出し npz 保存。返却: (モデル, ランナー名)。"""
     from infer_runtime import get_runner
     from main import _load_model
     model, device = _load_model(weights)
     model.eval()
     if is_cuda_like(device):
-        torch.backends.cudnn.benchmark = True      # 실행기를 고르기 전에 켠다(CLAUDE.md 참고)
+        torch.backends.cudnn.benchmark = True      # ランナー選定前に有効化(最適カーネル選定)
     runner = get_runner(model)
     batch = batch_arg or predict_batch_size(device)
     wtag = _wtag(weights)
-    print(f'\n[P(A) 재기] {wtag} · 장치 {device} · 실행기 {runner.name} · 묶음 {batch}', flush=True)
+    print(f'\n[P(A) 算出] {wtag} · デバイス {device} · ランナー {runner.name} · バッチ {batch}', flush=True)
     t0 = time.perf_counter()
     for set_key, vids in sets.items():
         for i, (mp4, bbox, sf, ef) in enumerate(vids):
             crops, fps, size = _read_crops(mp4, bbox)
             if not crops:
-                print(f'  [건너뜀] {mp4.name} — 프레임을 못 읽음')
+                print(f'  [スキップ] {mp4.name} — フレーム読み込み失敗')
                 continue
             factor = int(round(30.0 / fps)) if fps < LOW_FPS else 1
             msg = []
@@ -202,9 +202,9 @@ def _measure(weights, sets, out_dir, batch_arg):
                             width=size[0], height=size[1], bbox=[int(v) for v in bbox],
                             gt_sf=sf, gt_ef=ef, weights=str(weights))
                 np.savez(d / f'{mp4.stem}.npz', pa=pa, meta=json.dumps(meta))
-                msg.append(f'{mode} 최대 {pa.max():.2f}')
+                msg.append(f'{mode} 最大 {pa.max():.2f}')
             print(f'  {set_key} {i + 1}/{len(vids)} {mp4.name} {fps:.1f}fps · ' + ' · '.join(msg)
-                  + f' · {time.perf_counter() - t0:.0f}초', flush=True)
+                  + f' · {time.perf_counter() - t0:.0f}秒', flush=True)
     return model, runner.name
 
 
@@ -213,7 +213,7 @@ def _wtag(weights):
 
 
 def _load_probs(wdir, set_key, mode):
-    """{영상이름: (pa, meta)}. repeat·blend 폴더엔 저fps 영상만 있어 나머지는 none 으로 채운다."""
+    """{動画名: (pa, meta)}。repeat・blend フォルダは低fps動画のみ格納されるため他は none で補完。"""
     out = {}
     for m in ([mode, 'none'] if mode != 'none' else ['none']):
         for p in sorted((wdir / f'{set_key}_{m}').glob('*.npz')):
@@ -223,11 +223,11 @@ def _load_probs(wdir, set_key, mode):
     return dict(sorted(out.items()))
 
 
-# ── 서비스 판정 다시 계산 ────────────────────────────────────────────────────
+# ── サービス判定の再計算 ────────────────────────────────────────────────────
 
 def _events(pa, meta, t, *, coarse_prob=None, fps_scale=None, min_span=None, use_coarse=None):
-    """inference.predict_events_and_clips 의 이벤트 결정(창 간격 1). 반환: [(시작, 끝)] 원본 프레임, 평가한 창 수.
-    fps_scale None 이면 지금 서비스 설정(config.PREDICT_FPS_SCALED_POSTPROC)."""
+    """inference.predict_events_and_clips のイベント判定ロジック(ストライド1)。返却: [(開始, 終了)] 元フレーム番号, 評価ウィンドウ数。
+    fps_scale が None の場合は現在のサービス設定(config.PREDICT_FPS_SCALED_POSTPROC)。"""
     coarse_pad = config.PREDICT_COARSE_PAD
     min_span = config.PREDICT_MIN_EVENT_SPAN_FRAMES if min_span is None else min_span
     use_coarse = config.PREDICT_USE_COARSE_SCAN if use_coarse is None else use_coarse
@@ -243,16 +243,16 @@ def _events(pa, meta, t, *, coarse_prob=None, fps_scale=None, min_span=None, use
     if grid > 1:
         ev = np.zeros(nw, dtype=bool)
         ev[::grid] = True
-        ev[last] = True                          # 영상 끝 창이 격자에 없으면 거친 창으로 붙인다
+        ev[last] = True                          # 動画終端ウィンドウがグリッド外の場合は粗探索対象に追加
         hot = np.nonzero(ev & (pa > coarse_prob))[0]
-        if len(hot):                             # 의심 창 주변 ±pad 를 모두 본다
+        if len(hot):                             # 疑いウィンドウ周辺 ±pad を全探索
             cover = np.zeros(nw + 1, dtype=np.int32)
             np.add.at(cover, np.maximum(0, hot - coarse_pad), 1)
             np.add.at(cover, np.minimum(nw, hot + coarse_pad + 1), -1)
             ev |= np.cumsum(cover[:nw]) > 0
     else:
         ev = np.ones(nw, dtype=bool)
-    pred = ev & (pa > t)                         # 평가 안 한 창은 비사고
+    pred = ev & (pa > t)                         # 未評価ウィンドウは非事故扱い
     d = np.diff(np.concatenate(([0], pred.astype(np.int8), [0])))
     starts, ends = np.nonzero(d == 1)[0], np.nonzero(d == -1)[0]
     events = [[int(s), int(e) + L - 2 if e < nw else n_real - 1] for s, e in zip(starts, ends)]
@@ -269,7 +269,7 @@ def _events(pa, meta, t, *, coarse_prob=None, fps_scale=None, min_span=None, use
 
 
 def _score(data, t, **kw):
-    """사고는 구간 겹침으로 잡았는지, 오탐 이벤트 = 정상 영상의 이벤트 + 사고 영상에서 충돌과 안 겹친 이벤트."""
+    """事故は区間重複で検出判定、誤検知イベント = 正常動画の全イベント + 事故動画で正解区間と重複しないイベント。"""
     rows = []
     for name, (pa, m) in data.items():
         evs, _ = _events(pa, m, t, **kw)
@@ -296,14 +296,14 @@ def _short(name):
     return name.split('_', 1)[1] if '_' in name else name
 
 
-# ── 서비스 재현 확인 ────────────────────────────────────────────────────────
+# ── サービス再現性の検証 ────────────────────────────────────────────────────────
 
 def _service_check(model, wtag, sets, probs_root):
-    """지금 설정 그대로의 다시 계산이 실제 서비스 함수(predict_events_and_clips)와 같은지 영상별로."""
+    """現在設定のまま再計算した結果が実際のサービス関数(predict_events_and_clips)と一致するか動画ごとに照合。"""
     from inference import predict_events_and_clips
     tmp = Path(tempfile.mkdtemp(prefix='postproc_check_'))
-    print(f'\n[서비스 재현 확인] {wtag} — 지금 설정(기준 {config.A_THRESHOLD:g}, 거친 탐색 {config.PREDICT_COARSE_PROB:g}, '
-          f'최소 길이 {config.PREDICT_MIN_EVENT_SPAN_FRAMES}, 후처리 {_now_post()})으로 실제 서비스 함수와 비교')
+    print(f'\n[サービス再現性検証] {wtag} — 現在設定(閾値 {config.A_THRESHOLD:g}, 粗探索 {config.PREDICT_COARSE_PROB:g}, '
+          f'最小長 {config.PREDICT_MIN_EVENT_SPAN_FRAMES}, 後処理 {_now_post()})で実際のサービス関数と比較')
     bad = total = 0
     for set_key, vids in sets.items():
         data = _load_probs(probs_root / wtag, set_key, 'none')
@@ -320,14 +320,14 @@ def _service_check(model, wtag, sets, probs_root):
             if svc != mine:
                 bad += 1
                 near = float(np.abs(pa - config.A_THRESHOLD).min())
-                print(f'  다름 {set_key} {mp4.name}: 서비스 {svc} · 다시 계산 {mine} '
-                      f'(기준과 가장 가까운 창 P(A) 차이 {near:.4f})')
-    print(f'  → {total}개 중 {total - bad}개 같음' + ('' if not bad else
-          ' — 다른 영상은 기준 바로 옆 창이 FP16 묶음 차이로 갈린 것인지 위 P(A) 차이로 확인'))
+                print(f'  相違 {set_key} {mp4.name}: サービス {svc} · 再計算 {mine} '
+                      f'(閾値最近傍ウィンドウ P(A) 差分 {near:.4f})')
+    print(f'  → {total}件中 {total - bad}件 一致' + ('' if not bad else
+          ' — 不一致の動画は閾値境界のウィンドウがFP16バッチ差分で分岐したか上記のP(A)差分で確認'))
     return bad, total
 
 
-# ── 집계·보고 ───────────────────────────────────────────────────────────────
+# ── 集計・レポート出力 ───────────────────────────────────────────────────────
 
 def _grid():
     for mode in RESAMPLES:
@@ -339,26 +339,26 @@ def _grid():
 
 
 def _cfg_name(mode, post, ms, coarse, t):
-    """지금 설정과 다른 것만 이름에 붙인다."""
-    parts = [f'기준 {t:g}']
+    """現在設定と異なるパラメータのみ名称に付与。"""
+    parts = [f'閾値 {t:g}']
     if post != _now_post():
-        parts.append('fps맞춤' if post == 'fps' else '프레임고정')
+        parts.append('fps合わせ' if post == 'fps' else 'フレーム固定')
     if ms != config.PREDICT_MIN_EVENT_SPAN_FRAMES:
-        parts.append(f'최소 {ms}(연속 {ms - (L - 2)}창)' if ms > L - 1 else f'최소 {ms}(끔)')
+        parts.append(f'最小 {ms}(連続 {ms - (L - 2)}窓)' if ms > L - 1 else f'最小 {ms}(無効)')
     if not coarse:
-        parts.append('거친탐색 끔')
+        parts.append('粗探索 無効')
     if mode != 'none':
-        parts.append(f'시간축 {mode}')
+        parts.append(f'時間軸 {mode}')
     return ' + '.join(parts)
 
 
 def _fmt(tot):
-    return (f"놓침 {tot['miss']:>2}/{tot['n_A']} · 오탐영상 {tot['fa']:>2}/{tot['n_S']} · 오탐이벤트 {tot['false_ev']:>2} · "
-            f"정확도 {tot['acc'] * 100:5.1f}% (①놓침 {tot['base_miss']}·오탐 {tot['base_fa']})")
+    return (f"見落とし {tot['miss']:>2}/{tot['n_A']} · 誤検知動画 {tot['fa']:>2}/{tot['n_S']} · 誤検知イベント {tot['false_ev']:>2} · "
+            f"正解率 {tot['acc'] * 100:5.1f}% (①見落とし {tot['base_miss']}·誤検知 {tot['base_fa']})")
 
 
 def _lists(tot):
-    return f"놓침 {' '.join(_short(x) for x in tot['miss_list']) or '-'} | 오탐 {' '.join(_short(x) for x in tot['fa_list']) or '-'}"
+    return f"見落とし {' '.join(_short(x) for x in tot['miss_list']) or '-'} | 誤検知 {' '.join(_short(x) for x in tot['fa_list']) or '-'}"
 
 
 def _aggregate(out_dir, probs_root, suffix=''):
@@ -398,7 +398,7 @@ def _aggregate(out_dir, probs_root, suffix=''):
 
 
 def _videos_csv(path, wdir, cache, write_header):
-    """영상별 — P(A) 최대·위치, 충돌 구간 창/바깥 창 최대, 지금 기준·최소 길이에서 프레임 고정·fps 맞춤 후처리의 이벤트."""
+    """動画別 — P(A) 最大値・位置、衝突区間窓/対象外窓の最大値、現在閾値・最小長におけるフレーム固定・fps合わせ後処理のイベント。"""
     cols = ['weights', 'set', 'resample', 'file', 'gt', 'fps', 'factor', 'width', 'height', 'box_w', 'box_h',
             'gt_start', 'gt_end', 'n_windows', 'p_max', 'p_max_frame', 'p_max_gt', 'p_max_outside',
             'events_frame', 'caught_frame', 'events_fps', 'caught_fps']
@@ -409,10 +409,10 @@ def _videos_csv(path, wdir, cache, write_header):
         for (set_key, mode), data in cache.items():
             for name, (pa, m) in data.items():
                 if mode != 'none' and m['resample'] == 'none':
-                    continue                         # repeat·blend 묶음에 채워 넣은 원본 영상은 none 줄과 같다
+                    continue                         # repeat・blend セットで補完された元動画は none 行と同等
                 f_ = m['factor']
                 ws = np.arange(len(pa))
-                lo, hi = ws // f_, (ws + L - 1) // f_    # 창이 덮는 원본 프레임
+                lo, hi = ws // f_, (ws + L - 1) // f_    # ウィンドウがカバーする元動画フレーム範囲
                 if m['gt_sf'] is not None:
                     in_gt = (lo <= m['gt_ef']) & (hi >= m['gt_sf'])
                     p_gt = f'{pa[in_gt].max():.4f}' if in_gt.any() else ''
@@ -433,9 +433,9 @@ def _videos_csv(path, wdir, cache, write_header):
 
 
 def _wrong_now(wtag, cache):
-    """지금 설정에서 틀린 영상 — 모델이 못 본 것(P(A) 낮음)인지 후처리가 지운 것인지 가르려고 P(A) 최대를 함께."""
-    print(f'\n[{wtag}] 지금 설정(기준 {config.A_THRESHOLD:g}, 후처리 {_now_post()})에서 틀린 영상 — fps · 박스 · '
-          f'P(A) 최대(사고는 충돌 구간 창 / 그 밖 창)')
+    """現在設定で誤判定となった動画 — モデルが検出できなかった(P(A)不足)のか後処理で除外されたのかを区別するためP(A)最大値を併記。"""
+    print(f'\n[{wtag}] 現在設定(閾値 {config.A_THRESHOLD:g}, 後処理 {_now_post()})で誤判定の動画 — fps · ボックス · '
+          f'P(A) 最大値(事故は衝突区間内窓 / 区間外窓)')
     for set_key, set_name in SETS:
         data = cache.get((set_key, 'none')) or {}
         if not data:
@@ -444,11 +444,11 @@ def _wrong_now(wtag, cache):
         wrong = [r for r in rows if (r['gt'] == 'A' and not r['caught']) or (r['gt'] == 'S' and r['events'])]
         night = getattr(config, 'NIGHT_VIDEOS', ()) or ()
         nr = [r for r in rows if r['name'] in night]
-        if nr:     # 야간 영상만 따로(불빛 오탐 추적, config.NIGHT_VIDEOS)
+        if nr:     # 夜間動画のみ抽出(照明起因の誤検知分析, config.NIGHT_VIDEOS)
             na = [r for r in nr if r['gt'] == 'A']
             ns = [r for r in nr if r['gt'] == 'S']
-            print(f'  {set_name} 야간 {len(nr)}개: 사고 {len(na)}개 중 잡음 {sum(1 for r in na if r["caught"])}개 · '
-                  f'정상 {len(ns)}개 중 오탐 {sum(1 for r in ns if r["events"])}개')
+            print(f'  {set_name} 夜間 {len(nr)}件: 事故 {len(na)}件中 検出 {sum(1 for r in na if r["caught"])}件 · '
+                  f'正常 {len(ns)}件中 誤検知 {sum(1 for r in ns if r["events"])}件')
         for r in wrong:
             pa, m = data[r['name']]
             box = f"{m['bbox'][2] - m['bbox'][0]}x{m['bbox'][3] - m['bbox'][1]}"
@@ -457,12 +457,12 @@ def _wrong_now(wtag, cache):
                 in_gt = (ws <= m['gt_ef']) & (ws + L - 1 >= m['gt_sf'])
                 p_gt = pa[in_gt].max() if in_gt.any() else float('nan')
                 p_out = pa[~in_gt].max() if (~in_gt).any() else float('nan')
-                why = '모델이 못 봄' if p_gt <= config.A_THRESHOLD else '모델은 반응 — 후처리·거친 탐색에서 빠짐'
-                print(f'  {set_name} 놓침 {_short(r["name"]):<9}{"[야간]" if r["name"] in night else ""} {m["fps"]:5.1f}fps 박스 {box:<8} 충돌 구간 최대 {p_gt:.2f} '
-                      f'· 그 밖 {p_out:.2f} · 이벤트 {r["events"] or "-"} — {why}')
+                why = 'モデル未検出' if p_gt <= config.A_THRESHOLD else 'モデル反応あり — 後処理・粗探索で除外'
+                print(f'  {set_name} 見落とし {_short(r["name"]):<9}{"[夜間]" if r["name"] in night else ""} {m["fps"]:5.1f}fps ボックス {box:<8} 衝突区間最大 {p_gt:.2f} '
+                      f'· 区間外 {p_out:.2f} · イベント {r["events"] or "-"} — {why}')
             else:
-                print(f'  {set_name} 오탐 {_short(r["name"]):<9}{"[야간]" if r["name"] in night else ""} {m["fps"]:5.1f}fps 박스 {box:<8} 최대 {pa.max():.2f}'
-                      f'(창 {int(pa.argmax())}) · 이벤트 {r["events"]}')
+                print(f'  {set_name} 誤検知 {_short(r["name"]):<9}{"[夜間]" if r["name"] in night else ""} {m["fps"]:5.1f}fps ボックス {box:<8} 最大 {pa.max():.2f}'
+                      f'(窓 {int(pa.argmax())}) · イベント {r["events"]}')
 
 
 def _report(results, wtags):
@@ -475,7 +475,7 @@ def _report(results, wtags):
             if not rows:
                 continue
             n = rows[0][1]
-            print(f'\n── {set_name} 영상 {n["n"]}개 (사고 {n["n_A"]} · 정상 {n["n_S"]}) ──')
+            print(f'\n── {set_name} 動画 {n["n"]}件 (事故 {n["n_A"]} · 正常 {n["n_S"]}) ──')
             show = []
             for t in (0.3, 0.4, 0.5, 0.6, 0.7):
                 show.append(('none', post, ms_now, True, t))
@@ -492,14 +492,14 @@ def _report(results, wtags):
                 tot = results.get((wtag, *cfg), {}).get(set_key)
                 if tot:
                     print(f'  {_cfg_name(*cfg):<38} {_fmt(tot)}  {_lists(tot)}')
-        # 검증 영상으로 고른 설정 → 평가 영상에서 확인
+        # 検証動画で選定した最適設定 → 評価動画で検証確認
         both = [(k, v) for k, v in results.items() if k[0] == wtag and 'val' in v and 'eval' in v]
         if not both:
             continue
         cur = results.get((wtag, 'none', post, ms_now, True, config.A_THRESHOLD), {})
-        print(f'\n── 검증 영상으로 고른 설정 상위 8 (놓침 → 오탐영상 → 오탐이벤트 순, 같으면 지금 설정에 가까운 쪽) → 평가 영상 결과 ──')
+        print(f'\n── 検証動画で選定した上位8設定 (見落とし → 誤検知動画 → 誤検知イベント順、同等の場合は現在設定に近い方) → 評価動画検証 ──')
         if cur:
-            print(f'  {"지금 설정":<38} 검증 {_fmt(cur["val"])}\n  {"":<38} 평가 {_fmt(cur["eval"])}')
+            print(f'  {"現在設定":<38} 検証 {_fmt(cur["val"])}\n  {"":<38} 評価 {_fmt(cur["eval"])}')
 
         def _rank(kv):
             k, v = kv
@@ -507,28 +507,28 @@ def _report(results, wtags):
             change = (k[1] != 'none') + (k[2] != post) + (k[3] != ms_now) + (not k[4]) + abs(k[5] - config.A_THRESHOLD)
             return (t['miss'], t['fa'], t['false_ev'], change)
         for k, v in sorted(both, key=_rank)[:8]:
-            print(f'  {_cfg_name(*k[1:]):<38} 검증 {_fmt(v["val"])}\n  {"":<38} 평가 {_fmt(v["eval"])}  {_lists(v["eval"])}')
-    print('\n· 정확도 = (구간이 겹친 사고 영상 + 이벤트 없는 정상 영상) / 전체. ①은 창 하나라도 기준을 넘으면 사고로 본 판정.')
-    print('· 모든 조합은 summary.csv, 영상별 P(A)·이벤트는 videos.csv, 창별 P(A)는 probs/ 에 있다.')
+            print(f'  {_cfg_name(*k[1:]):<38} 検証 {_fmt(v["val"])}\n  {"":<38} 評価 {_fmt(v["eval"])}  {_lists(v["eval"])}')
+    print('\n· 正解率 = (区間重複した事故動画 + イベントなし正常動画) / 全体。①は1ウィンドウでも閾値超過で事故と判定した簡易結果。')
+    print('· 全組み合わせは summary.csv、動画別 P(A)・イベントは videos.csv、ウィンドウ別 P(A) は probs/ に保存。')
 
 
-# ── 실행 ────────────────────────────────────────────────────────────────────
+# ── 実行エントリーポイント ────────────────────────────────────────────────────
 
 def main():
-    ap = argparse.ArgumentParser(description='판정 기준·후처리·저fps 시간축 점검')
-    ap.add_argument('--weights', nargs='+', help='점검할 가중치(여러 개 가능)')
-    ap.add_argument('--folder', default=str(config.EVAL_FOLDER_PATH), help='평가 영상 폴더(mp4 + txt)')
-    ap.add_argument('--split', help='검증 영상 목록 split.json(기본: 첫 가중치 회차 폴더의 것)')
-    ap.add_argument('--no-val', action='store_true', help='검증 실제 영상은 빼고 평가 영상만')
-    ap.add_argument('--no-service-check', action='store_true', help='실제 서비스 함수와의 재현 확인을 건너뜀')
-    ap.add_argument('--batch', type=int, default=0, help='추론 묶음(0 = 서비스와 같게 GPU 8 · CPU 1)')
-    ap.add_argument('--again', help='이전 결과 폴더 — 저장한 P(A)로 집계만 다시(모델 안 씀)')
-    ap.add_argument('--videos', type=int, default=0, help='묶음마다 사고·정상 절반씩 이 수만(0 = 전부, 코드 점검용)')
+    ap = argparse.ArgumentParser(description='判定閾値・後処理・低fps時間軸の点検')
+    ap.add_argument('--weights', nargs='+', help='検証する重みパス(複数指定可能)')
+    ap.add_argument('--folder', default=str(config.EVAL_FOLDER_PATH), help='評価動画フォルダ(mp4 + txt)')
+    ap.add_argument('--split', help='検証動画リスト split.json(デフォルト: 第1重みセッションフォルダのもの)')
+    ap.add_argument('--no-val', action='store_true', help='検証実車動画を除外して評価動画のみ実行')
+    ap.add_argument('--no-service-check', action='store_true', help='本番サービス関数との再現性照合をスキップ')
+    ap.add_argument('--batch', type=int, default=0, help='推論バッチサイズ(0 = 本番準拠 GPU 8 · CPU 1)')
+    ap.add_argument('--again', help='過去結果フォルダ — 保存済み P(A) で再集計のみ実行(モデル不使用)')
+    ap.add_argument('--videos', type=int, default=0, help='各セットから事故・正常を均等に指定件数のみ抽出(0 = 全件, テスト用)')
     args = ap.parse_args()
     if not args.weights and not args.again:
-        ap.error('--weights 또는 --again 이 필요합니다')
+        ap.error('--weights または --again が必要です')
     if int(config.PREDICT_WINDOW_STRIDE) != 1:
-        print(f'⚠️ PREDICT_WINDOW_STRIDE={config.PREDICT_WINDOW_STRIDE} — 이 점검은 간격 1 기준으로 다시 계산한다')
+        print(f'⚠️ PREDICT_WINDOW_STRIDE={config.PREDICT_WINDOW_STRIDE} — 本点検はストライド1基準で再計算します')
 
     if args.again:
         out_dir = Path(args.again)
@@ -544,38 +544,38 @@ def main():
     finally:
         sys.stdout = tee.stdout
         tee.close()
-        print(f'\n[저장] {out_dir}')
+        print(f'\n[保存] {out_dir}')
 
 
 def _run(args, out_dir, suffix):
-    print(f'[판정 기준·후처리 점검] {datetime.now():%Y-%m-%d %H:%M}')
-    print(f'지금 설정: 판정 기준 {config.A_THRESHOLD:g} · 거친 탐색 간격 {config.PREDICT_COARSE_STEP}·기준 '
-          f'{config.PREDICT_COARSE_PROB:g}·주변 ±{config.PREDICT_COARSE_PAD} · 병합 {config.PREDICT_EVENT_MERGE_GAP_SEC:g}초 · '
-          f'최소 길이 {config.PREDICT_MIN_EVENT_SPAN_FRAMES}프레임 · 후처리 fps 맞춤 '
-          f'{"켬" if config.PREDICT_FPS_SCALED_POSTPROC else "끔"} · r {config.R_VALUE:g}')
+    print(f'[判定閾値・後処理点検] {datetime.now():%Y-%m-%d %H:%M}')
+    print(f'現在設定: 判定閾値 {config.A_THRESHOLD:g} · 粗探索間隔 {config.PREDICT_COARSE_STEP}·閾値 '
+          f'{config.PREDICT_COARSE_PROB:g}·周辺 ±{config.PREDICT_COARSE_PAD} · マージ {config.PREDICT_EVENT_MERGE_GAP_SEC:g}秒 · '
+          f'最小長 {config.PREDICT_MIN_EVENT_SPAN_FRAMES}フレーム · 後処理 fps合わせ '
+          f'{"有効" if config.PREDICT_FPS_SCALED_POSTPROC else "無効"} · r {config.R_VALUE:g}')
     probs_root = out_dir / 'probs'
     if not args.again:
         sets = {'eval': _folder_videos(args.folder)}
-        print(f'평가 영상: {args.folder} — {len(sets["eval"])}개')
+        print(f'評価動画: {args.folder} — {len(sets["eval"])}件')
         if not args.no_val:
-            # 가중치마다 회차의 검증 영상이 다를 수 있어(TRAIN_FORCE_TRAIN_VIDEOS 등) 모두의 검증에 공통인 영상만 쓴다
+            # 重みごとにセッション検証動画が異なる場合があるため、全重みの検証に共通する動画のみを使用
             splits = ([Path(args.split)] if args.split else
                       list(dict.fromkeys(p for p in (_split_path(w, None) for w in args.weights) if p)))
             if not splits:
-                print('검증 영상: split.json 을 못 찾아 건너뜀(--split 으로 지정)')
+                print('検証動画: split.json が見つからないためスキップ(--split で明示指定可能)')
             else:
                 per = [_val_videos(p) for p in splits]
                 common = set.intersection(*({str(v[0]) for v in vs} for vs in per))
                 sets['val'] = [v for v in per[0] if str(v[0]) in common]
                 dropped = sorted({v[0].stem for vs in per for v in vs} - {Path(c).stem for c in common})
-                print(f'검증 영상: {" · ".join(str(p) for p in splits)} 의 검증 중 실제 영상 {len(sets["val"])}개 '
-                      f'(학습에 안 쓴 영상' + (f' — 어느 회차에선 학습에 쓴 {", ".join(dropped)} 는 뺌)' if dropped else ')'))
+                print(f'検証動画: {" · ".join(str(p) for p in splits)} の検証中 実車動画 {len(sets["val"])}件 '
+                      f'(学習未使用動画' + (f' — 一部セッションで学習に使用された {", ".join(dropped)} は除外)' if dropped else ')'))
         if args.videos:
             for k, vids in sets.items():
                 sets[k] = ([v for v in vids if v[2] is not None][:(args.videos + 1) // 2]
                            + [v for v in vids if v[2] is None][:args.videos // 2])
-            print(f'코드 점검: 묶음마다 {args.videos}개만')
-        print('가중치: ' + ' · '.join(str(w) for w in args.weights))
+            print(f'コード点検: セットごとに {args.videos}件のみ')
+        print('重み: ' + ' · '.join(str(w) for w in args.weights))
         t0 = time.perf_counter()
         for weights in args.weights:
             model, _ = _measure(weights, sets, out_dir, args.batch)
@@ -584,7 +584,7 @@ def _run(args, out_dir, suffix):
             del model
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
-        print(f'\nP(A) 재기 끝 — {time.perf_counter() - t0:.0f}초')
+        print(f'\nP(A) 算出完了 — {time.perf_counter() - t0:.0f}秒')
     _aggregate(out_dir, probs_root, suffix)
     return 0
 

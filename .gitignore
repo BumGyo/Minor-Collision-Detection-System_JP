@@ -17,12 +17,12 @@ node_modules/
 dist/
 dist-ssr/
 
-# 로그인 토큰 서명 키(서버마다 따로 생성 — 절대 커밋하지 않는다)
+# ログインCookie(JWT)署名鍵(サーバーごとに個別生成 — コミット厳禁)
 backend/.auth_secret
 
 # This branch's local database credentials.
 backend/.env
-# 서버 배포 환경 변수(Supabase·R2 비밀값 포함)
+# サーバー本番環境変数(Supabase・R2 のシークレット値を含む)
 .env
 
 # Runtime uploads and generated media
@@ -30,27 +30,27 @@ storage/
 data/
 data/train/*.mp4
 
-# 진단·디버그 산출물(탐지 결과 이미지 등)
+# 診断・デバッグ生成物(検知結果画像等)
 outputs/
 
-# 로컬 라벨링 도구 — 개인 작업용이라 커밋하지 않는다
+# ローカルアノテーションツール — 個人作業用のためコミット対象外
 labeling/
 
-# 서비스 모델은 model/(x3d). 이전 s3d 백본은 로컬 비교용으로만 보관
+# 本番モデルは model/(x3d)。過去の s3d バックボーンはローカル比較用として保持
 s3d model/
 
-# Model weights (대용량 바이너리 — git에서 제외)
+# Model weights (大容量バイナリ — git除外)
 weights/
 
-# YOLO / torch 체크포인트 (대용량 — 첫 실행 시 자동 다운로드)
+# YOLO / torch チェックポイント (大容量 — 初回実行時に自動ダウンロード)
 *.pt
 
 # Local notebooks and docs
 *.ipynb
 *.md
-# 팀원 온보딩 문서(README)는 저장소에 포함
+# 開発者向けオンボーディングドキュメント(README)はリポジトリに含める
 !README.md
-# 서버 배포 안내는 저장소에 포함
+# サーバーデプロイガイドはリポジトリに含める
 !deploy/DEPLOY.md
 
 # Local editor and OS files

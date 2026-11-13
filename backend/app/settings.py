@@ -1,7 +1,7 @@
-"""애플리케이션 설정 — DB/Redis 접속 정보, 로컬 저장소 경로.
+"""アプリケーション設定 — DB/Redis接続情報、ローカルストレージパス。
 
-GPU·대용량 스토리지 서버가 없는 환경을 가정한다.
-영상/클립은 프로젝트 루트의 storage/ 폴더(로컬 파일시스템)에 저장한다.
+GPU・大容量ストレージサーバーが存在しない環境を想定。
+動画およびクリップはプロジェクトルートの storage/ ディレクトリ (ローカルファイルシステム) に保存する。
 """
 import functools
 import os
@@ -138,12 +138,12 @@ def _cors_origins() -> list[str]:
     return configured or ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 
-# 사용할 백본 → 모델 코드 폴더. 폴더마다 config.py / hitandrun_model.py 가
-# 같은 이름으로 들어 있고, prediction_job 이 sys.path 에 얹어 임포트한다.
-# ⚠️ 모듈명(config, hitandrun_model)이 폴더마다 동일하므로 한 프로세스에는
-#    한 백본만 올릴 수 있다. 다른 백본을 쓰려면 워커를 따로 띄운다.
-# 서비스 모델은 model/(x3d). "s3d model/" 은 git 에서 제외된 로컬 비교용이라
-# 그 폴더가 있는 PC 에서만 MODEL_VARIANT=s3d 로 쓸 수 있다.
+# 使用するバックボーン → モデルコードフォルダ。フォルダごとに config.py / hitandrun_model.py が
+# 同名で配置されており、prediction_job が sys.path に追加してインポートする。
+# ⚠️ モジュール名(config, hitandrun_model)がフォルダごとに同一であるため1プロセスには
+#    1つのバックボーンのみロード可能。別のバックボーンを使用する場合はワーカーを個別に起動する。
+# 本番モデルは model/(x3d)。"s3d model/" はgit除外のローカル比較用であるため
+# そのフォルダが存在するPCでのみ MODEL_VARIANT=s3d として利用可能。
 MODEL_VARIANT_DIRS = {
     "x3d": "model",
     "s3d": "s3d model",
@@ -155,14 +155,14 @@ class Settings:
     # capstone-26/backend/app/settings.py → parents[2] == capstone-26
     BASE_DIR: Path = _BASE_DIR
 
-    # MODEL_VARIANT=s3d|x3d|slowfast (기본 x3d)
+    # MODEL_VARIANT=s3d|x3d|slowfast (デフォルト x3d)
     MODEL_VARIANT: str = _env("MODEL_VARIANT", "x3d").lower()
     if MODEL_VARIANT not in MODEL_VARIANT_DIRS:
         raise ValueError(
-            f"MODEL_VARIANT='{MODEL_VARIANT}' 는 지원하지 않습니다. "
-            f"가능한 값: {', '.join(MODEL_VARIANT_DIRS)}")
+            f"MODEL_VARIANT='{MODEL_VARIANT}' はサポートされていません。 "
+            f"利用可能な値: {', '.join(MODEL_VARIANT_DIRS)}")
     MODEL_DIR: Path = BASE_DIR / MODEL_VARIANT_DIRS[MODEL_VARIANT]
-    # 배포 가중치 경로는 각 폴더의 config.py 의 SERVICE_WEIGHTS_PATH 에서 관리한다.
+    # 本番重みファイルのパスは各ディレクトリの config.py 内の SERVICE_WEIGHTS_PATH で管理する。
 
     STORAGE_DIR: Path = _storage_dir()
     UPLOAD_DIR: Path = STORAGE_DIR / "uploads"
@@ -188,34 +188,34 @@ class Settings:
     S3_REGION: str = _env("S3_REGION", "auto")
     S3_PRESIGNED_URL_EXPIRES: int = _env_int("S3_PRESIGNED_URL_EXPIRES", 3600)
 
-    # 로그인 토큰(JWT) 서명 키 · 유효 시간.
-    # 키는 환경변수 AUTH_SECRET_KEY 를 우선 쓰고, 없으면 backend/.auth_secret 에 한 번 만들어
-    # 두고 계속 쓴다(재시작해도 로그인이 유지되도록). 이 파일은 git 에서 제외한다.
-    # 기본 8시간(하루 근무) — CCTV 영상(개인정보)을 다루므로 로그인 유지 시간을 짧게 둔다.
-    # 개발할 때 자주 다시 로그인하기 싫으면: AUTH_TOKEN_TTL_HOURS=72 ./dev.sh
+    # ログインCookie(JWT)署名鍵 · 有効時間。
+    # 鍵は環境変数 AUTH_SECRET_KEY を優先使用し、未設定時は backend/.auth_secret に一度生成して
+    # 永続利用する(再起動後もログインを維持するため)。本ファイルはgitから除外。
+    # デフォルト8時間(1日の勤務時間) — CCTV動画(個人情報)を取り扱うためセッション維持時間を短めに設定。
+    # 開発時に頻繁な再ログインを避ける場合: AUTH_TOKEN_TTL_HOURS=72 ./dev.sh
     AUTH_TOKEN_TTL_HOURS: float = _env_float("AUTH_TOKEN_TTL_HOURS", 8)
 
-    # 업로드한 지 이만큼 지난 영상·클립·분석 이력을 정리한다. 0 이하면 비활성화.
+    # アップロードからこの期間が経過した動画・クリップ・分析履歴をクリーンアップ。0以下の場合は無効。
     VIDEO_RETENTION_DAYS: int = _env_int("VIDEO_RETENTION_DAYS", 90)
-    # 탐지 디버그 이미지는 원본 영상 보관 기간과 다르게 남을 수 있으므로 기본 비활성화.
+    # 検知デバッグ画像は元動画の保持期間とは別に残る可能性があるためデフォルト無効。
     DETECT_DEBUG_IMAGES: bool = _env("DETECT_DEBUG_IMAGES").lower() in ("1", "true", "yes")
 
-    # CORS 허용 오리진 (Vite 개발 서버)
+    # CORS許可オリジン (Vite開発サーバー)
     CORS_ORIGINS = _cors_origins()
 
     def abs_path(self, rel_path: str) -> Path:
-        """storage 기준 상대경로 → 절대경로"""
+        """storage 基準の相対パス → 絶対パス"""
         return self.STORAGE_DIR / rel_path
 
     def rel_path(self, abs_path) -> str:
-        """절대경로 → storage 기준 상대경로 (DB 저장용)"""
+        """絶対パス → storage 基準の相対パス (DB保存用)"""
         return str(Path(abs_path).resolve().relative_to(self.STORAGE_DIR))
 
 
 @functools.lru_cache(maxsize=1)
 def auth_secret_key() -> str:
-    """JWT 서명 키. 토큰을 쓰는 웹 서버가 처음 필요할 때만 읽거나 만든다
-    (워커가 import 만으로 키 파일을 만들지 않게 — 동시에 뜨면 키가 갈릴 수 있다)."""
+    """JWT署名鍵。トークンを扱うWebサーバーが初回必要時のみ読み取りまたは生成する
+    (ワーカーがimportのみで鍵ファイルを生成しないようにする — 同時起動時の鍵の不一致を防止)。"""
     key = os.getenv("AUTH_SECRET_KEY", "").strip()
     if key:
         return key
@@ -236,7 +236,7 @@ def auth_secret_key() -> str:
 
 settings = Settings()
 
-# 저장소 폴더 보장
+# ストレージディレクトリの作成を保証
 settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 settings.CLIP_DIR.mkdir(parents=True, exist_ok=True)
 settings.THUMBNAIL_DIR.mkdir(parents=True, exist_ok=True)

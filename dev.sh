@@ -1,28 +1,28 @@
 #!/usr/bin/env bash
-# 개발용 서비스 한 번에 켜기/끄기 — tmux 세션 하나에 백엔드·워커·UI를 칸 3개로 띄운다.
+# 開発用サービス一括起動/停止 — tmux セッション1つにバックエンド・ワーカー・UIを3ペインで起動。
 #
-# 데이터베이스는 backend/.env의 Supabase 설정을 사용한다. 이 스크립트는 로컬 SQL을
-# 기동하거나 관리하지 않으며, Celery 브로커/결과 저장소인 Redis만 확인·기동한다.
+# データベースは backend/.env の Supabase 設定を使用。本スクリプトはローカル SQL の
+# 起動・管理は行わず、Celery ブローカー/結果ストレージである Redis のみ確認・起動する。
 #
-#   ./dev.sh            서비스 시작(이미 떠 있으면 그 화면으로 들어감)
-#   ./dev.sh stop       서비스 모두 종료
-#   ./dev.sh restart    종료 후 다시 시작
-#   ./dev.sh status     상태 확인
-#   ./dev.sh attach     떠 있는 화면으로 들어가기
+#   ./dev.sh            サービス起動(起動済みの場合はその画面にアタッチ)
+#   ./dev.sh stop       サービス全停止
+#   ./dev.sh restart    停止後に再起動
+#   ./dev.sh status     ステータス確認
+#   ./dev.sh attach     起動中の画面にアタッチ
 #
-# tmux 종료 방법:
-#   ./dev.sh stop               이 스크립트가 만든 서비스 세션을 정상 종료
-#   tmux kill-session -t capstone  capstone 세션을 직접 강제 종료
-#   tmux kill-server            실행 중인 모든 tmux 세션을 종료
+# tmux 終了方法:
+#   ./dev.sh stop               本スクリプトが作成したサービスセッションを正常終了
+#   tmux kill-session -t capstone  capstone セッションを直接強制終了
+#   tmux kill-server            実行中の全 tmux セッションを終了
 #
-# 코드를 저장하면 자동으로 반영된다(껐다 켤 필요 없음):
-#   · 백엔드  : backend/app 의 .py 저장 → uvicorn --reload 가 재시작
-#   · 워커    : backend/app · model 의 .py 저장 → watchfiles 가 재시작
-#              ⚠️ 분석이 돌던 중이면 그 분석은 중단된다('서버 재시작으로 중단' → 다시 실행)
-#   · UI     : Vite 가 저장 즉시 반영
+# コード保存時に自動反映(再起動不要):
+#   · バックエンド: backend/app の .py 保存 → uvicorn --reload が再起動
+#   · ワーカー    : backend/app · model の .py 保存 → watchfiles が再起動
+#              ⚠️ 分析実行中の場合はその分析は中断(「サーバー再起動により中断」→ 再実行)
+#   · UI         : Vite が保存即座にホットリロード
 #
-# tmux 조작: Ctrl+b 후 방향키 = 칸 이동 · Ctrl+b d = 화면에서 나오기(서비스는 계속 돔)
-#            Ctrl+b [ = 로그 위로 스크롤(q 로 종료)
+# tmux 操作: Ctrl+b の後に方向キー = ペイン移動 · Ctrl+b d = デタッチ(サービスは継続稼働)
+#            Ctrl+b [ = ログを上にスクロール(q で終了)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -35,7 +35,7 @@ log() { printf '\033[1;36m[dev]\033[0m %s\n' "$*"; }
 err() { printf '\033[1;31m[dev]\033[0m %s\n' "$*" >&2; }
 
 port_in_use() {
-  # macOS에는 ss가 기본 설치되어 있지 않으므로 lsof를 먼저 쓴다.
+  # macOS には ss が標準インストールされていないため lsof を先に使用。
   if command -v lsof >/dev/null 2>&1; then
     lsof -nP -iTCP:$1 -sTCP:LISTEN >/dev/null 2>&1
   elif command -v ss >/dev/null 2>&1; then
@@ -47,18 +47,18 @@ port_in_use() {
 
 ensure_redis() {
   if port_in_use 6379; then
-    log "Redis 확인 — localhost:6379 사용 중"
+    log "Redis 確認 — localhost:6379 稼働中"
     return 0
   fi
 
   command -v docker >/dev/null 2>&1 || {
-    err "Redis가 꺼져 있고 Docker를 찾을 수 없습니다. Redis를 6379 포트에서 먼저 실행하세요."
+    err "Redis が停止しており Docker が見つかりません。Redis を 6379 ポートで先に起動してください。"
     return 1
   }
 
-  log "Redis 기동"
+  log "Redis 起動"
   if ! (cd "$ROOT" && docker compose up -d redis); then
-    err "Redis 기동 실패 — Docker Desktop이 켜져 있는지 확인하세요."
+    err "Redis 起動失敗 — Docker Desktop が起動しているか確認してください。"
     return 1
   fi
 
@@ -66,18 +66,18 @@ ensure_redis() {
     port_in_use 6379 && return 0
     sleep 0.5
   done
-  err "Redis가 localhost:6379에서 준비되지 않았습니다."
+  err "Redis が localhost:6379 で準備完了しませんでした。"
   return 1
 }
 
-# 워커 감싸개: watchfiles 가 재시작하려고 보내는 SIGINT 를 Celery 의 즉시 종료(SIGQUIT)로
-# 바꿔 전달한다. SIGINT 를 그대로 받으면 Celery 는 진행 중 분석이 끝날 때까지 기다리는
-# '정상 종료'를 해서, 코드를 고쳐도 반영이 늦고 강제 종료 시 하위 프로세스가 남을 수 있다.
+# ワーカーラッパー: watchfiles が再起動用に送信する SIGINT を Celery の即時終了(SIGQUIT)に
+# 変換して伝達。SIGINT をそのまま受信すると Celery は進行中分析の完了を待機する
+# 「正常終了」を行い、コード修正の反映が遅延し強制終了時に子プロセスが残存する可能性がある。
 run_worker() {
   cd "$ROOT/backend"
-  # macOS에서는 PyTorch/ONNX/OpenCV 런타임을 Celery prefork 자식 프로세스에서
-  # 초기화할 때 SIGSEGV가 발생할 수 있다. 분석은 단일 워커로 순차 처리하므로
-  # 포크하지 않는 solo 풀을 사용해 모델 런타임을 한 프로세스에서 유지한다.
+  # macOS では PyTorch/ONNX/OpenCV ランタイムを Celery prefork 子プロセスで
+  # 初期化する際に SIGSEGV が発生する可能性がある。分析は単一ワーカーで順次処理するため
+  # フォークを行わない solo プールを使用してモデルランタイムを1プロセス内で維持。
   "$PY/celery" -A app.worker worker --pool=solo --concurrency=1 --loglevel=info &
   local pid=$!
   trap 'kill -QUIT "$pid" 2>/dev/null || true' INT TERM
@@ -88,41 +88,41 @@ run_worker() {
 
 start() {
   if tmux has-session -t "$SESSION" 2>/dev/null; then
-    log "이미 실행 중입니다 — 화면으로 들어갑니다 (나오기: Ctrl+b d)"
+    log "既に実行中です — 画面にアタッチします (離脱: Ctrl+b d)"
     exec tmux attach -t "$SESSION"
   fi
 
-  # 준비물 확인
-  [[ -x "$PY/python" ]] || { err "venv311 이 없습니다. CLAUDE.md 의 '실행 방법 0)' 으로 먼저 만드세요."; exit 1; }
+  # 前提条件の確認
+  [[ -x "$PY/python" ]] || { err "venv311 が存在しません。先に作成してください。"; exit 1; }
   for p in "$BACKEND_PORT" "$UI_PORT"; do
     if port_in_use "$p"; then
-      err "포트 $p 를 이미 다른 프로그램이 쓰고 있습니다(예전에 따로 띄운 서버?). 먼저 끄고 다시 실행하세요."
+      err "ポート $p は既に他のプログラムが使用しています。停止後に再実行してください。"
       exit 1
     fi
   done
   if [[ ! -d "$ROOT/ui/node_modules" ]]; then
-    log "ui/node_modules 가 없어 npm install 을 먼저 실행합니다"
+    log "ui/node_modules が存在しないため npm install を先に実行します"
     (cd "$ROOT/ui" && npm install)
   fi
 
   ensure_redis
 
-  log "tmux 세션 '$SESSION' 에 백엔드·워커·UI 를 띄웁니다"
-  # 먼저 빈 세션을 만든다. 백엔드가 즉시 종료돼도 세션을 남겨 오류 로그를 볼 수 있도록
-  # 실행 명령보다 remain-on-exit을 먼저 설정한다.
+  log "tmux セッション '$SESSION' にバックエンド・ワーカー・UI を起動します"
+  # 先に空のセッションを作成。バックエンドが即時終了してもセッションを維持してエラーログを確認できるよう
+  # 実行コマンドより先に remain-on-exit を設定。
   tmux new-session -d -s "$SESSION" -n services -c "$ROOT/backend"
-  # 프로그램이 죽어도 칸을 닫지 않아 오류 로그를 볼 수 있게
+  # プログラムが異常終了してもペインを閉じずエラーログを確認できるように設定
   tmux set-option -t "$SESSION:services" remain-on-exit on
   tmux set-option -t "$SESSION:services" pane-border-status top
   tmux set-option -t "$SESSION" mouse on
   tmux respawn-pane -k -t "$SESSION:services.0" -c "$ROOT/backend" \
     "exec \"$PY/python\" -m uvicorn app.main:app --port $BACKEND_PORT --reload --reload-dir app"
-  tmux select-pane -t "$SESSION:services.0" -T "백엔드 :$BACKEND_PORT (자동 재시작)"
+  tmux select-pane -t "$SESSION:services.0" -T "バックエンド :$BACKEND_PORT (自動再起動)"
 
-  # 백엔드가 준비되기 전에 UI가 /api/auth/me 를 호출하면 Vite 프록시가
-  # ECONNREFUSED 를 기록한다. 워커와 UI는 백엔드 헬스체크가 성공한 뒤
-  # 시작하여 초기 기동 순서를 보장한다.
-  log "백엔드 준비 대기 중…"
+  # バックエンドの準備完了前に UI が /api/auth/me を呼び出すと Vite プロキシが
+  # ECONNREFUSED を記録する。ワーカーと UI はバックエンドのヘルスチェック成功後に
+  # 起動し初期起動順序を保証する。
+  log "バックエンドの準備待機中…"
   backend_ready=0
   for _ in $(seq 1 60); do
     if curl -fsS --max-time 1 "http://127.0.0.1:$BACKEND_PORT/" >/dev/null 2>&1; then
@@ -132,22 +132,22 @@ start() {
     sleep 0.5
   done
   if [[ "$backend_ready" != "1" ]]; then
-    err "백엔드가 30초 안에 준비되지 않았습니다. 백엔드 창의 로그를 확인하세요."
+    err "バックエンドが30秒以内に準備完了しませんでした。バックエンド画面のログを確認してください。"
     tmux kill-session -t "$SESSION" 2>/dev/null || true
     exit 1
   fi
-  log "백엔드 준비 완료"
+  log "バックエンド準備完了"
 
   tmux split-window -v -t "$SESSION:services" -c "$ROOT/backend" \
     "exec \"$PY/watchfiles\" --filter python --sigint-timeout 15 '\"$ROOT/dev.sh\" _worker' app ../model"
-  tmux select-pane -t "$SESSION:services.1" -T "Celery 워커 (자동 재시작)"
+  tmux select-pane -t "$SESSION:services.1" -T "Celery ワーカー (自動再起動)"
 
   tmux split-window -v -t "$SESSION:services" -c "$ROOT/ui" "npm run dev -- --port $UI_PORT --strictPort"
   tmux select-pane -t "$SESSION:services.2" -T "UI :$UI_PORT"
   tmux select-layout -t "$SESSION:services" even-vertical
 
-  log "실행 완료 — UI: http://localhost:$UI_PORT · 백엔드: http://localhost:$BACKEND_PORT/docs"
-  log "끄기: ./dev.sh stop · 화면에서 나오기: Ctrl+b d"
+  log "起動完了 — UI: http://localhost:$UI_PORT · バックエンド: http://localhost:$BACKEND_PORT/docs"
+  log "停止: ./dev.sh stop · デタッチ: Ctrl+b d"
   if [[ -t 1 ]]; then
     exec tmux attach -t "$SESSION"
   fi
@@ -155,11 +155,11 @@ start() {
 
 stop() {
   if ! tmux has-session -t "$SESSION" 2>/dev/null; then
-    log "실행 중인 서비스가 없습니다"
+    log "実行中のサービスはありません"
     return 0
   fi
-  log "서비스 종료 중…"
-  # 각 칸에 Ctrl+C 를 보내 정상 종료를 시도하고, 끝나길 잠깐 기다린 뒤 세션을 닫는다
+  log "サービス停止中…"
+  # 各ペインに Ctrl+C を送信して正常終了を試み、終了を待機した後にセッションを閉じる
   for pane in $(tmux list-panes -t "$SESSION" -F '#{pane_id}'); do
     tmux send-keys -t "$pane" C-c 2>/dev/null || true
   done
@@ -169,22 +169,22 @@ stop() {
     sleep 0.5
   done
   tmux kill-session -t "$SESSION" 2>/dev/null || true
-  log "종료했습니다 (Supabase/R2와 Redis는 계속 사용 가능합니다)"
+  log "停止しました (Supabase/R2 と Redis は継続利用可能です)"
 }
 
 status() {
   if tmux has-session -t "$SESSION" 2>/dev/null; then
-    log "tmux 세션 '$SESSION' 실행 중"
-    tmux list-panes -t "$SESSION" -F '  · #{pane_title} — #{?pane_dead,종료됨,동작 중}'
+    log "tmux セッション '$SESSION' 実行中"
+    tmux list-panes -t "$SESSION" -F '  · #{pane_title} — #{?pane_dead,停止,動作中}'
   else
-    log "tmux 세션 없음(서비스 꺼짐)"
+    log "tmux セッションなし(サービス停止中)"
   fi
   code=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:$BACKEND_PORT/docs" || true)
-  log "백엔드 응답: ${code:-없음}"
+  log "バックエンド応答: ${code:-なし}"
   if port_in_use 6379; then
-    log "Redis 응답: localhost:6379 수신 중"
+    log "Redis 応答: localhost:6379 受信中"
   else
-    log "Redis 응답: 수신하지 않음 (Celery 작업은 실행할 수 없음)"
+    log "Redis 応答: 受信なし (Celery タスクは実行不可)"
   fi
 }
 
@@ -194,6 +194,6 @@ case "${1:-start}" in
   restart) stop; start ;;
   status)  status ;;
   attach)  exec tmux attach -t "$SESSION" ;;
-  _worker) run_worker ;;   # 내부용: watchfiles 가 워커를 띄울 때 쓴다
-  *) echo "사용법: ./dev.sh [start|stop|restart|status|attach]"; exit 1 ;;
+  _worker) run_worker ;;   # 内部用: watchfiles がワーカーを起動する際に使用
+  *) echo "使用法: ./dev.sh [start|stop|restart|status|attach]"; exit 1 ;;
 esac

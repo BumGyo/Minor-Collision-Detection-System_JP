@@ -1,7 +1,7 @@
-"""Celery 태스크 — AI 추론 + 사고구간 CAM 클립 생성.
+"""Celery タスク — AI 推論 + 事故区間 CAM クリップ生成。
 
-torch/opencv/모델 임포트는 모두 **태스크 내부에서 지연 로딩**한다.
-→ FastAPI 웹 프로세스는 ML 의존성 없이도 이 모듈을 임포트(.delay 호출)할 수 있다.
+torch/opencv/モデルのインポートはすべて**タスク内部で遅延ロード**。
+→ FastAPI Web プロセスは ML 依存関係なしでもこのモジュールをインポート (.delay 呼び出し) 可能。
 """
 import tempfile
 from datetime import datetime
@@ -13,7 +13,7 @@ from app.db_connection import SessionLocal
 from app import db_models
 from app.object_storage import get_storage, materialize
 
-# 워커 프로세스당 모델 1회 로드 후 재사용
+# ワーカープロセスごとにモデルを1回ロードして再利用
 _model = None
 
 
@@ -23,8 +23,8 @@ def _get_model():
         return _model
 
     import sys
-    # 선택된 백본 폴더를 path에 추가 — 내부 절대 임포트(import config 등) 지원.
-    # 폴더는 settings.MODEL_VARIANT(환경변수)가 고른다.
+    # 選択されたバックボーンフォルダをpathに追加 — 内部絶対インポート(import config 等)に対応。
+    # フォルダは settings.MODEL_VARIANT(環境変数)により決定。
     sys.path.insert(0, str(settings.MODEL_DIR))
 
     import torch
@@ -32,44 +32,44 @@ def _get_model():
     from hitandrun_model import HitAndRun3DCNN
     from device_utils import get_device, is_channels_last_3d_supported
 
-    # 추론 디바이스(config.INFER_DEVICE_TYPE="cuda") — GPU 가 없으면 get_device 가
-    # 경고를 찍고 CPU 로 자동 전환한다. 실제 디바이스는 아래 '모델 로드 완료' 로그로 확인.
+    # 推論デバイス(config.INFER_DEVICE_TYPE="cuda") — GPUが存在しない場合は get_device が
+    # 警告を出力してCPUへ自動切り替え。実際のデバイスは後続の「モデルロード完了」ログで確認。
     device = get_device(model_config.INFER_DEVICE_TYPE)
     model = HitAndRun3DCNN(num_classes=model_config.MODEL_NUM_CLASSES).to(device)
     if is_channels_last_3d_supported(device) and model_config.USE_CHANNELS_LAST:
         model = model.to(memory_format=torch.channels_last_3d)
-    # 배포 가중치 경로는 model/config.py 에서 관리 (SERVICE_WEIGHTS_PATH)
-    # 224 아닌 입력 크기(_s256)·avg 아닌 헤드 풀링(_top3 등)으로 학습한 가중치면 서버 .env 에 INPUT_SIZE·
-    # HEAD_TEMPORAL_POOL 을 같이 맞춰야 한다 — 다르면 여기서 멈춘다
+    # 本番重みファイルのパスは model/config.py で管理 (SERVICE_WEIGHTS_PATH)
+    # 224以外の入力サイズ(_s256)・avg以外のヘッド時間プーリング(_top3 等)で学習した重みの場合はサーバー .env の INPUT_SIZE・
+    # HEAD_TEMPORAL_POOL を適合させる必要がある — 不一致時はここで停止
     from hitandrun_model import check_weights
     check_weights(model_config.SERVICE_WEIGHTS_PATH)
     state_dict = torch.load(
         str(model_config.SERVICE_WEIGHTS_PATH), map_location="cpu", weights_only=True)
     model.load_state_dict(state_dict)
     model.eval()
-    print(f"[worker] 모델 로드 완료 — {getattr(model_config, 'MODEL_NAME', '?')} "
+    print(f"[worker] モデルロード完了 — {getattr(model_config, 'MODEL_NAME', '?')} "
           f"(device={device}, weights={model_config.SERVICE_WEIGHTS_PATH.name})")
-    # 추론 실행 방식을 모델 로드 때 정해 둔다(이 컴퓨터에서 처음이면 자가 검사, 이후엔 저장된 결과).
-    # 실패해도 분석은 PyTorch로 돌아야 하므로 여기서 예외를 막는다.
+    # 推論実行ランナーをモデルロード時に確定(本PCで初回時は自己診断、以降は保存済み結果)。
+    # 失敗時も分析はPyTorchで実行する必要があるためここで例外を捕捉。
     try:
         from infer_runtime import get_runner
         get_runner(model)
     except Exception as exc:  # noqa: BLE001
-        print(f"[worker] 추론 실행 방식 선택 실패 — PyTorch로 진행: {exc}")
+        print(f"[worker] 推論実行ランナーの選択に失敗 — PyTorchで続行: {exc}")
     _model = model
     return _model
 
 
 @celery_app.task(bind=True)
 def run_prediction_task(self, task_id: int):
-    """AnalysisTask를 받아 추론 → 사고구간 클립 생성 → CrashEvent 저장."""
+    """AnalysisTask を受信して推論 → 事故区間クリップ生成 → CrashEvent 保存。"""
     db = SessionLocal()
     try:
         task = db.get(db_models.AnalysisTask, task_id)
         if task is None:
             return {"error": f"task {task_id} not found"}
-        # 취소 표시는 워커 메모리(revoke)에만 있어서 워커가 재시작되면 사라지고,
-        # 대기 중이던 메시지가 다시 배달될 수 있다 → DB 상태로 한 번 더 거른다.
+        # キャンセル表示はワーカーメモリ(revoke)のみに存在するためワーカー再起動時に消失し、
+        # 待機中だったメッセージが再配信される可能性がある → DB状態により二重チェック。
         if task.status != "PENDING":
             return {"task_id": task_id, "skipped": task.status}
 
@@ -83,12 +83,12 @@ def run_prediction_task(self, task_id: int):
         try:
             from inference import predict_events_and_clips
         except ImportError:
-            # 이전 백본 폴더("s3d model" 등, MODEL_VARIANT)는 옛 파일명 그대로다.
+            # 過去のバックボーンフォルダ("s3d model" 等、MODEL_VARIANT)は旧ファイル名のまま維持。
             from predict_cam import predict_events_and_clips
 
-        # 진행률(%)과 남은 시간(초)을 Celery 상태(Redis)에 기록 → /tasks 가 읽어 화면에 전달.
-        # 진행률은 0~99 — 100%는 작업 완료(SUCCESS)로만 표시한다. 남은 시간은 분석 함수가
-        # 실제로 잰 속도로 계산해 주며, 진행률이 그대로여도 1.5초마다 갱신해 준다.
+        # 進捗率(%)と残り時間(秒)をCelery状態(Redis)に記録 → /tasks が読み取りUIへ伝達。
+        # 進捗率は 0〜99 — 100%はタスク完了(SUCCESS)でのみ表示。残り時間は分析関数が
+        # 実測した速度で算出し、進捗率が同一であっても1.5秒間隔で更新する。
         import time as _time
         _last = {"pct": -1, "t": 0.0}
 
@@ -114,7 +114,7 @@ def run_prediction_task(self, task_id: int):
                 bbox=(task.bbox_xmin, task.bbox_ymin, task.bbox_xmax, task.bbox_ymax),
                 output_dir=Path(output_dir),
                 progress_callback=_on_progress,
-                # 분석마다 고유한 이름을 써 이전 분석의 클립을 덮어쓰지 않는다.
+                # 分析ごとに一意な名前を使用し、前回の分析クリップを上書きしないようにする。
                 clip_name=f"{Path(video.video_path).stem}_t{task.id}",
             )
 
@@ -142,7 +142,7 @@ def run_prediction_task(self, task_id: int):
                     clip_start_sec=r.get("clip_start_sec"),
                 ))
 
-        # 분석 도중 취소됐는데(revoke 실패 등) 끝까지 돌았다면 결과를 버린다
+        # 分析途中でキャンセルされたにもかかわらず(revoke失敗等)最後まで実行された場合は結果を破棄
         task.status = "SUCCESS"
         task.finished_at = datetime.utcnow()
         task.event_count = len(results)

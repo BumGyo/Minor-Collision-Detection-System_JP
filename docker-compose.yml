@@ -7,11 +7,11 @@ services:
     ports:
       # Loopback only; MYSQL_PORT defaults to the port in the local DB URL.
       - "127.0.0.1:${MYSQL_PORT:-3307}:3306"
-    # 데이터 영구 보존: named volume을 MySQL 데이터 디렉터리에 마운트
-    # (컨테이너를 삭제·재생성해도 mysql_data 볼륨에 데이터가 유지됨)
+    # データ永続化: named volume を MySQL データディレクトリにマウント
+    # (コンテナを削除・再作成しても mysql_data ボリュームにデータが維持される)
     volumes:
       - mysql_data:/var/lib/mysql
-    # Docker(데몬/Desktop) 시작 시 자동 기동 — 재부팅 후에도 수동 실행 불필요
+    # Docker(デーモン/Desktop)起動時に自動起動 — 再起動後も手動実行不要
     restart: unless-stopped
 
   redis:

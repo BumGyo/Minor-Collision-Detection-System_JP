@@ -1,182 +1,182 @@
-# SIOT 서버 배포 (시연용)
+# SIOT サーバーデプロイ手順 (デモ環境用)
 
-화면·백엔드·분석 워커를 실행하고 Supabase/Azure PostgreSQL과 Redis URL, Cloudflare R2(S3 호환) 또는 로컬 저장소를 환경변수로 선택한다.
+UI・バックエンド・分析ワーカーを起動し、Supabase/Azure PostgreSQL と Redis URL、Cloudflare R2(S3互換)またはローカルストレージを環境変数で選択する。
 
 ```
-브라우저 ──HTTPS──▶ nginx (80·443)
-                     ├─ 화면 파일 (/var/www/siot ← ui/dist)
-                     └─ /api ──▶ 백엔드 uvicorn (127.0.0.1:8000) ──┐
-                                                                  ├─▶ PostgreSQL (Supabase/Azure 또는 MySQL)
-                                 분석 워커 Celery ─────────────────┘
-                                 (Redis URL, 영상·클립: R2 또는 storage/)
+ブラウザ ──HTTPS──▶ nginx (80・443)
+                     ├─ UI 静的ファイル (/var/www/siot ← ui/dist)
+                     └─ /api ──▶ バックエンド uvicorn (127.0.0.1:8000) ──┐
+                                                                         ├─▶ PostgreSQL (Supabase/Azure または MySQL)
+                                 分析ワーカー Celery ────────────────────┘
+                                 (Redis URL, 動画・クリップ: R2 または storage/)
 ```
 
-- 대상: **Ubuntu 22.04 또는 24.04** — Oracle Cloud(ARM, CPU 추론) / AWS 등(x86, NVIDIA GPU 추론) 모두 같은 순서
-- 서버에 넣는 파일: 이 폴더(`deploy/`)의 nginx·systemd 설정을 `install.sh` 가 설치한다
-- 개발용 `dev.sh` 는 그대로 쓰면 된다(서버 설정은 `.env` 가 있을 때만 적용)
-- 보안: 모든 API 가 로그인을 확인한다(영상·썸네일·클립은 로그인 때 받는 HttpOnly 쿠키로, 본인 것만).
-  비밀번호는 PBKDF2(소금+60만 회)로 저장하고, nginx 가 로그인·가입을 같은 IP 분당 10번으로 제한한다
-- 영상 보관: 업로드한 지 90일(`VIDEO_RETENTION_DAYS`)이 지나면 영상과 사고 클립·원본 클립·썸네일·분석 기록을
-  모두 지운다(백엔드가 켜질 때 한 번, 그 뒤 1시간마다). 목록 카드에 '○일 뒤 만료'로 보인다
+- 対象環境: **Ubuntu 22.04 または 24.04** — Oracle Cloud(ARM, CPU 推論) / AWS 等(x86, NVIDIA GPU 推論) 共通手順
+- サーバー配置ファイル: 本ディレクトリ(`deploy/`)の nginx・systemd 設定を `install.sh` が自動配置
+- 開発用 `dev.sh` はそのまま使用可能(サーバー設定は `.env` が存在する場合のみ適用)
+- セキュリティ: 全 API で認証を検証(動画・サムネイル・クリップはログイン時に発行される HttpOnly Cookie により自身のリソースのみアクセス可能)。
+  パスワードは PBKDF2(ソルト+60万回)でハッシュ化し、nginx が同一 IP からのログイン・登録を毎分10回に制限
+- 動画保存期間: アップロードから90日(`VIDEO_RETENTION_DAYS`)経過した動画および事故クリップ・原本クリップ・サムネイル・分析履歴を
+  自動削除(バックエンド起動時に1回、以降1時間ごと)。リストカード上に「○日後に失効」と表示
 
 ---
 
-## 0. 서버 만들 때
+## 0. インフラ構築時の準備
 
-- **디스크**: 영상이 쌓이므로 100GB 이상
-- **포트**: 22(SSH), 80, 443 을 연다
-  - Oracle: VCN 보안 목록(Security List)에 80·443 인바운드 추가 **+ 서버 안 방화벽도** 열어야 한다(Oracle Ubuntu 이미지는 SSH 말고 다 막혀 있다)
+- **ディスク容量**: 動画が蓄積されるため 100GB 以上を推奨
+- **ポート開放**: 22(SSH), 80, 443 を開放
+  - Oracle: VCN セキュリティリストに 80・443 のインバウンドルールを追加 **+ サーバー内部ファイアウォールも** 開放必須(Oracle Ubuntu イメージは SSH 以外初期拒否設定)
     ```bash
     sudo iptables -I INPUT -p tcp -m multiport --dports 80,443 -m state --state NEW -j ACCEPT
     sudo netfilter-persistent save
     ```
-  - AWS: 보안 그룹 인바운드에 22(내 IP), 80, 443
-- **도메인**(HTTPS 용): DuckDNS 같은 무료 주소에 서버 공인 IP 를 연결해 둔다. 없으면 `http://<IP>` 로만 접속(분석 완료 브라우저 알림은 HTTPS 에서만 된다)
+  - AWS: セキュリティグループのインバウンドに 22(自身のIP), 80, 443 を設定
+- **ドメイン**(HTTPS 用): DuckDNS 等の無料 DNS でサーバーのパブリック IP を紐付ける。未設定時は `http://<IP>` でのアクセス(分析完了のブラウザ通知は HTTPS 環境のみ動作)
 
-## 1. 기본 프로그램 (sudo)
+## 1. 依存パッケージのインストール (sudo)
 
 ```bash
 sudo apt update
 sudo apt install -y git curl rsync nginx certbot python3-certbot-nginx ffmpeg libgl1 libglib2.0-0
 curl -fsSL https://get.docker.com | sudo sh
-sudo usermod -aG docker $USER          # 다시 로그인하면 sudo 없이 docker
+sudo usermod -aG docker $USER          # 再ログイン後に sudo なしで docker 実行可能
 
-# 화면 빌드용 Node 22 — 서버에서 빌드할 때만. (로컬에서 npm run build 한 ui/dist 를 복사해도 된다)
+# UI ビルド用 Node 22 — サーバー上でビルドする場合のみ。(ローカルで npm run build した ui/dist をコピーしても可)
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs
 ```
 
-GPU 서버만: NVIDIA 드라이버가 있어야 한다 — `nvidia-smi` 가 GPU 를 보여 주면 된다
-(AWS Deep Learning AMI 는 이미 설치돼 있음. 아니면 `sudo ubuntu-drivers install` 후 재부팅).
+GPU サーバーのみ: NVIDIA ドライバの導入が必須 — `nvidia-smi` で GPU が正常認識されることを確認
+(AWS Deep Learning AMI は導入済み。未導入時は `sudo ubuntu-drivers install` 後に再起動)。
 
-## 2. 코드와 Python 환경
+## 2. ソースコードの取得と Python 環境構築
 
 ```bash
-git clone <저장소 주소> ~/capstone-26 && cd ~/capstone-26
-git checkout <배포할 브랜치>
+git clone <リポジトリURL> ~/capstone-26 && cd ~/capstone-26
+git checkout <デプロイ対象ブランチ>
 
 curl -LsSf https://astral.sh/uv/install.sh | sh && source ~/.local/bin/env
 uv venv --python 3.11 venv311
 
-# torch 를 먼저 — 서버에 맞는 줄 하나만
-uv pip install --python venv311 --index-url https://download.pytorch.org/whl/cpu   torch==2.12.0 torchvision==0.27.0   # CPU 서버(Oracle ARM 등)
-uv pip install --python venv311 --index-url https://download.pytorch.org/whl/cu126 torch==2.12.0 torchvision==0.27.0   # NVIDIA GPU (nvidia-smi 의 CUDA Version 12.6 이상. 13.0 이상이면 cu130 도 됨)
+# torch を先行インストール — サーバー環境に適合する1行のみ実行
+uv pip install --python venv311 --index-url https://download.pytorch.org/whl/cpu   torch==2.12.0 torchvision==0.27.0   # CPU サーバー(Oracle ARM 等)
+uv pip install --python venv311 --index-url https://download.pytorch.org/whl/cu126 torch==2.12.0 torchvision==0.27.0   # NVIDIA GPU (nvidia-smi の CUDA Version 12.6以上。13.0以上なら cu130 も対応)
 
 uv pip install --python venv311 -r requirements.txt
 ```
 
-torch 를 먼저 깔아야 `requirements.txt` 가 다른 torch(수 GB)를 한 번 더 받지 않는다.
-2026-10-18 확인: Ubuntu 22.04 이상이면 ARM·x86 모두 필요한 패키지가 다 있다(torch 2.12.0 은 cu128 판이 없다).
+torch を先行インストールすることで `requirements.txt` 実行時に別バージョンの torch(数GB)の重複ダウンロードを防止。
+2026-10-18 確認済み: Ubuntu 22.04 以上であれば ARM・x86 双方とも必要なパッケージが提供されています(torch 2.12.0 に cu128 版は未提供)。
 
-## 3. 가중치 (로컬 PC → 서버)
+## 3. 重みファイルの配置 (ローカル PC → サーバー)
 
-git 에 없는 파일이라 직접 복사한다.
+git 管理外のファイルであるため手動で転送します。
 
 ```bash
-# 로컬 PC 의 capstone-26 폴더에서
-scp weights/hitandrun_x3d_260922_33ep_earlyY_ptY_0.1999.pth <계정>@<서버>:~/capstone-26/weights/
-scp yolo11x.pt <계정>@<서버>:~/capstone-26/        # 없으면 첫 차량 탐지 때 자동으로 받는다
+# ローカル PC の capstone-26 ディレクトリで実行
+scp weights/hitandrun_x3d_260922_33ep_earlyY_ptY_0.1999.pth <アカウント>@<サーバー>:~/capstone-26/weights/
+scp yolo11x.pt <アカウント>@<サーバー>:~/capstone-26/        # 未配置時は初回の車両検知時に自動ダウンロード
 ```
 
-다른 가중치를 쓰려면 파일을 복사하고 `.env` 의 `SERVICE_WEIGHTS` 에 경로를 적는다.
+別の重みファイルを使用する場合は転送後に `.env` の `SERVICE_WEIGHTS` にパスを指定。
 
-## 4. 설정 파일 `.env`
+## 4. 設定ファイル `.env` の構成
 
 ```bash
 cp deploy/env.example .env
 nano .env
 ```
 
-| 값 | 넣을 것 |
+| 項目 | 設定値 |
 |---|---|
-| `DOMAIN` | 도메인(없으면 비움) |
-| `DATABASE_URL` | Supabase/Azure PostgreSQL URL. 비우면 loopback 전용 로컬 MySQL을 사용한다 |
-| `REDIS_URL` | 로컬 Redis 또는 Azure Cache URL. Azure는 `rediss://`와 TLS 포트를 사용한다 |
-| `STORAGE_BACKEND` | `s3`(Cloudflare R2/S3) 또는 `local`. R2는 endpoint·bucket·두 키를 모두 입력한다 |
-| `AUTH_SECRET_KEY` | `openssl rand -hex 32` 결과 |
+| `DOMAIN` | ドメイン名(未設定時は空) |
+| `DATABASE_URL` | Supabase/Azure PostgreSQL URL。空の場合は loopback 専用ローカル MySQL を使用 |
+| `REDIS_URL` | ローカル Redis または Azure Cache URL。Azure は `rediss://` と TLS ポートを使用 |
+| `STORAGE_BACKEND` | `s3`(Cloudflare R2/S3) または `local`。R2 は endpoint・bucket・各アクセスキーを全設定 |
+| `AUTH_SECRET_KEY` | `openssl rand -hex 32` の生成結果 |
 
-URL에 비밀번호를 넣을 때 `@`, `#`, `/`, `:` 같은 문자는 percent-encode 해야 한다. 로컬 MySQL·Redis 컨테이너는 loopback 주소에만 포트를 연다.
+URL内にパスワードを含める際、`@`, `#`, `/`, `:` 等の記号は percent-encode が必要です。ローカル MySQL・Redis コンテナは loopback アドレスにのみポートを開放します。
 
-## 5. 설치 — 처음에도, 코드 갱신 후에도 이것 하나
+## 5. インストール — 初回およびコード更新時共通の単一コマンド
 
 ```bash
 sudo ./deploy/install.sh
 ```
 
-하는 일: 화면 빌드 → `/var/www/siot` 복사 → Redis(docker) 켜기 → 백엔드·워커를 서비스로 등록·재시작 →
-nginx 설정·재시작 → 백엔드 응답 확인. 끝나면 접속 주소를 알려 준다.
-설치 전에 만들어질 파일만 보고 싶으면 `./deploy/install.sh --dry-run /tmp/siot-check`.
+処理内容: UI ビルド → `/var/www/siot` コピー → Redis(docker) 起動 → バックエンド・ワーカーを systemd 登録・再起動 →
+nginx 設定・再起動 → バックエンドヘルスチェック。完了時にアクセス URL を表示。
+インストール前に生成される設定ファイルのみを確認する場合: `./deploy/install.sh --dry-run /tmp/siot-check`。
 
-분석 실행 방식 미리 검사(안 해도 첫 분석 때 저절로 한다 — 미리 하면 첫 분석이 빨라진다):
+推論ランナーの事前ベンチマーク(未実行でも初回分析時に自動実行 — 事前実行で初回分析を高速化):
 
 ```bash
 set -a; . ./.env; set +a
 venv311/bin/python -m model.main --mode check-backend
 ```
 
-## 6. HTTPS (도메인이 있을 때)
+## 6. HTTPS 化 (ドメイン運用時)
 
 ```bash
-sudo certbot certonly --nginx -d <도메인> --deploy-hook "systemctl reload nginx"
-sudo ./deploy/install.sh        # 인증서를 찾아 HTTPS 설정으로 바꾼다(http 는 https 로 넘김)
+sudo certbot certonly --nginx -d <ドメイン> --deploy-hook "systemctl reload nginx"
+sudo ./deploy/install.sh        # 証明書を検出し HTTPS 設定へ自動切り替え(HTTP は HTTPS へリダイレクト)
 ```
 
-인증서 갱신은 certbot 이 자동으로 한다.
+証明書の自動更新は certbot により自動実行されます。
 
-## 7. 확인
+## 7. 動作確認チェックリスト
 
-- 서버 밖(휴대폰 LTE 등)에서 접속 → 회원가입 → 업로드 → 차량 지정 → 분석 → 클립 재생
-- Windows(Chrome·Edge), Mac(Safari) 에서 영상 재생
-- `sudo reboot` 후에도 저절로 다시 뜨는지
+- サーバー外部(携帯電話の4G/5G回線等)からのアクセス → ユーザー登録 → アップロード → 車両指定 → 分析 → クリップ再生
+- Windows(Chrome・Edge), Mac(Safari) での動画再生
+- `sudo reboot` 後の自動復旧確認
 
 ```bash
 systemctl status siot-backend siot-worker nginx
-journalctl -u siot-backend -f        # 백엔드 로그
-journalctl -u siot-worker -f         # 분석 워커 로그
+journalctl -u siot-backend -f        # バックエンドログ確認
+journalctl -u siot-worker -f         # 分析ワーカーログ確認
 sudo tail -f /var/log/nginx/error.log
 ```
 
-## 8. 코드 갱신
+## 8. コード更新手順
 
 ```bash
 cd ~/capstone-26 && git pull
-uv pip install --python venv311 -r requirements.txt     # requirements.txt 가 바뀌었을 때만
+uv pip install --python venv311 -r requirements.txt     # requirements.txt 変更時のみ
 sudo ./deploy/install.sh
 ```
 
-진행 중이던 분석은 재시작 때 끊기고 '실패'로 바뀐다 — 화면에서 다시 실행하면 된다.
+実行中だった分析はサービス再起動時に中断され「失敗」に遷移します — UI から再実行してください。
 
-### 기존 영상의 썸네일 준비
+### 既存動画のサムネイルキャッシュ事前生成
 
-기존 큰 JPEG를 최대 640×360 미리보기로 바꾸고 서버 캐시에 미리 채우려면 실행한다.
+既存の大サイズ JPEG を最大 640×360 プレビューにリサイズしサーバーキャッシュに事前投入する場合に実行。
 
 ```bash
 cd ~/capstone-26/backend
 ../venv311/bin/python -B -m app.backfill_thumbnails
 ```
 
-미리보기는 R2의 `thumbnails/preview-v1/`와 서버의
-`STORAGE_DIR/thumbnails/preview-v1/`에 저장한다. 새 업로드는 자동 생성하며,
-서버 캐시가 비었으면 첫 요청에서 복구한다. 영상 삭제·보관 기간 정리 시 함께 지운다.
-썸네일 API는 매번 소유권을 확인하고, 브라우저의 ETag가 같으면 304로 재사용한다.
-R2 연결은 전송 중인 작업이 없고 2분 이상 사용하지 않았으면 다음 작업 전에 갱신한다.
+プレビューは R2 の `thumbnails/preview-v1/` およびサーバーの
+`STORAGE_DIR/thumbnails/preview-v1/` に保存されます。新規アップロード時は自動生成され、
+サーバーキャッシュが空の場合は初回リクエスト時に復元されます。動画削除・保存期間満了クリーンアップ時に同期削除。
+サムネイル API はリクエストごとに所有権を検証し、ブラウザの ETag が一致する場合は 304 で再利用。
+R2 接続はアクティブタスクが存在せず2分以上アイドル状態の場合、次回タスク実行前に再接続します。
 
-## 문제 해결
+## トラブルシューティング
 
-| 증상 | 확인할 것 |
+| 現象 | 確認項目 |
 |---|---|
-| 접속이 안 됨 | 0단계 포트(Oracle 은 보안 목록 + 서버 iptables 둘 다), `systemctl status nginx` |
-| 502 Bad Gateway | 백엔드가 꺼짐 → `journalctl -u siot-backend -n 50` |
-| PostgreSQL 연결 실패 | DATABASE_URL의 비밀번호 인코딩·SSL 설정, Supabase/Azure 방화벽과 허용 IP 확인 |
-| R2 업로드·재생 실패 | STORAGE_BACKEND=s3, endpoint·bucket·Access Key·Secret Key 확인 |
-| 분석이 '대기'에서 안 넘어감 | `journalctl -u siot-worker -n 50` |
-| 업로드 413 | nginx 설정이 안 들어감 → `sudo ./deploy/install.sh` 다시. Cloudflare 등을 거치면 무료 플랜은 100MB 제한 |
-| `libGL.so.1` 오류 | 1단계 `libgl1 libglib2.0-0` 설치 |
-| 분석이 느림 | CPU 서버는 느리다. `check-backend` 결과(고른 실행 방식)와 `journalctl -u siot-worker` 의 속도 확인 |
-| 로그인이 '요청이 너무 많습니다' | 같은 IP 에서 로그인·가입을 몰아서 시도함 — 1분쯤 기다리면 풀린다(siot-http/https.conf 의 rate) |
-| 썸네일·영상이 안 나옴(401) | 영상 쿠키가 없음 — 다시 로그인. HTTPS 로 받은 쿠키는 HTTP 주소에선 안 실린다 |
+| 接続できない | ステップ0のポート開放(Oracle はセキュリティリスト + OSファイアウォール双方が必要), `systemctl status nginx` |
+| 502 Bad Gateway | バックエンド停止 → `journalctl -u siot-backend -n 50` |
+| PostgreSQL 接続失敗 | DATABASE_URL のパスワードエンコード・SSL 設定、Supabase/Azure ファイアウォール許可 IP を確認 |
+| R2 アップロード・再生失敗 | STORAGE_BACKEND=s3, endpoint・bucket・Access Key・Secret Key を確認 |
+| 分析が「待機」から遷移しない | `journalctl -u siot-worker -n 50` |
+| アップロード 413 | nginx 設定が未反映 → `sudo ./deploy/install.sh` 再実行。Cloudflare 経由時は Free プラン 100MB 制限に注意 |
+| `libGL.so.1` エラー | ステップ1の `libgl1 libglib2.0-0` をインストール |
+| 分析が遅い | CPU サーバーは推論負荷が高くなります。`check-backend` の選定ランナーおよび `journalctl -u siot-worker` の処理速度を確認 |
+| ログイン時に「リクエストが多すぎます」 | 同一 IP からの短時間での連続試行 — 1分程度待機すると解除されます(siot-http/https.conf の rate 設定) |
+| サムネイル・動画が表示されない(401) | 動画 Cookie の欠落 — 再ログイン。HTTPS で発行された Cookie は HTTP 接続では送信されません |
 
-## 시연 뒤 보완할 것
+## デモ後の追加推奨タスク
 
-- DB 백업(`docker exec ... mysqldump`)과 `storage/` 백업
-- 업로드 크기 제한이 없다(로그인한 사용자가 디스크를 채울 수 있음) · 회원가입이 누구에게나 열려 있다
+- DB バックアップ(`docker exec ... mysqldump`)と `storage/` バックアップの自動化
+- アップロード容量制限の実装(認証済みユーザーによるディスク圧迫防止) · ユーザー登録の招待制化

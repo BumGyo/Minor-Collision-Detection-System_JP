@@ -1,18 +1,18 @@
-"""학습 곡선 CSV → PNG 그래프.
+"""学習曲線CSV → PNGグラフ生成。
 
-train.py 가 매 에포크 끝에 호출해 `outputs/trainlogs/<회차>/<로그이름>.png` 를 갱신한다
-(학습이 중간에 끊겨도 그때까지의 곡선이 남는다). 지난 로그도 그릴 수 있다:
+train.py が毎エポック終了時に呼び出し `outputs/trainlogs/<セッション>/<ログ名>.png` を更新する
+（学習が途中で中断しても、その時点までの曲線が保存される）。過去ログの再描画も可能:
 
     python trainplot.py ../outputs/trainlogs/*/*.csv
 
-세 칸으로 그린다 (x축 = 에포크, 칸마다 y축 하나):
-  1) 손실 — train / val_rc / val_real, 그리고 best 판단 지표(있으면)
-  2) 검증 충돌(A) recall(실선)·precision(점선) — val_real / val_rc
-  3) 헤드 학습률(로그 스케일) — ReduceLROnPlateau 가 언제 깎았는지
-best 에포크는 실선, 후보 에포크는 점선 세로줄로 표시한다.
+3分割プロット（x軸 = エポック、各区画にy軸1つ）:
+  1) 損失 — train / val_rc / val_real、および best 評価指標（存在する場合）
+  2) 検証衝突(A) recall(実線)・precision(点線) — val_real / val_rc
+  3) ヘッド学習率(対数スケール) — ReduceLROnPlateau による減衰タイミング
+best エポックは実線、候補エポックは点線の垂直線で強調表示。
 
-그래프 안 글자는 한글로 쓴다. 한글 글꼴(맑은 고딕·애플 SD 고딕 Neo·나눔고딕·Noto Sans CJK)이
-없는 컴퓨터(예: 글꼴을 깔지 않은 리눅스 서버)에선 글자가 네모로 깨지므로 영문으로 쓴다.
+グラフ内ラベルは日本語で描画。日本語フォント（メイリオ・Yu Gothic・Noto Sans CJK JP等）が
+未インストールの環境（例: Linuxサーバー）では文字化けを防ぐため英字で代替描画。
 """
 from __future__ import annotations
 
@@ -22,35 +22,35 @@ import math
 import sys
 from pathlib import Path
 
-# 색은 '대상'을 따른다 — 세 칸 모두 같은 대상은 같은 색.
-# (검증된 기본 범주 팔레트 1~3번. 3번 청록은 배경 대비가 2.7:1 로 낮아 선 끝에
-#  이름을 직접 붙여 보완한다.)
-C_REAL = '#2a78d6'    # val_real — 서비스 대상(실차)이라 가장 먼저
+# 配色は「対象」に従う — 3区画共通で同一対象には同一色を適用。
+# （検証済み基本カテゴリパレット1〜3番。3番シアンは背景対比が2.7:1と低いため、プロット端に
+#  名称を直接付与して視認性を確保。）
+C_REAL = '#2a78d6'    # val_real — サービス対象(実車)のため最優先
 C_RC = '#eb6834'      # val_rc
 C_TRAIN = '#1baf7a'   # train
-INK = '#0b0b0b'       # 글자·best 표시
-INK2 = '#52514e'      # 보조 글자·후보 표시·학습률
+INK = '#0b0b0b'       # 文字・best 表示
+INK2 = '#52514e'      # 補助文字・候補表示・学習率
 GRID = '#e4e3df'
 SURFACE = '#fcfcfb'
 
-# 한글 글꼴 — 앞에서부터 찾는다(Windows → macOS → 리눅스)
+# 日本語フォント — 先頭から順に検索（Windows → macOS → Linux）
 KO_FONTS = ('Malgun Gothic', 'Apple SD Gothic Neo', 'AppleGothic',
             'NanumGothic', 'Noto Sans CJK KR', 'Noto Sans KR', 'Noto Sans CJK JP')
-# WSL 은 Windows 글꼴이 자동 등록되지 않아 파일로 직접 넣는다
+# WSL は Windows フォントが自動登録されない場合があるためファイルパスを直接追加
 KO_FONT_FILES = ('/mnt/c/Windows/Fonts/malgun.ttf',)
 
-# 그래프 안 글자 — 한글 글꼴이 있으면 KO, 없으면 EN
+# グラフ内ラベル — 日本語フォントがあれば KO/JA、なければ EN
 LABELS = {
     'ko': {
-        'train': '학습 (증강, 드롭아웃 켬)', 'train_end': '학습',
-        'val_rc': 'RC 검증', 'val_real': '실제 검증',
-        'monitor': '판단 지표: 실제 검증 균형 손실 이동평균',
-        'loss': '손실', 'recall': '{} 재현율', 'precision': '{} 정밀도',
-        'collision': '충돌(A) 판정\n임계값 0.5', 'lr': '헤드 학습률', 'epoch': '에포크',
-        'best': 'best {}에포크', 'cand': '후보 {}에포크', 'early_stop': '조기 종료',
-        'why_metric': '판단 지표 최소',
-        'why_old_real': '옛 기준: 실제 검증 손실 최소',
-        'why_old_rc': '옛 기준: RC 검증 손실 최소',
+        'train': '学習 (拡張・ドロップアウト適用)', 'train_end': '学習',
+        'val_rc': 'RC検証', 'val_real': '実車検証',
+        'monitor': '評価指標: 実車検証バランス損失移動平均',
+        'loss': '損失', 'recall': '{} 再現率', 'precision': '{} 適合率',
+        'collision': '衝突(A)判定\n閾値 0.5', 'lr': 'ヘッド学習率', 'epoch': 'エポック',
+        'best': 'best {}エポック', 'cand': '候補 {}エポック', 'early_stop': '早期終了',
+        'why_metric': '評価指標最小',
+        'why_old_real': '旧基準: 実車検証損失最小',
+        'why_old_rc': '旧基準: RC検証損失最小',
     },
     'en': {
         'train': 'train (aug + dropout on)', 'train_end': 'train',
@@ -67,7 +67,7 @@ LABELS = {
 
 
 def _korean_font():
-    """쓸 수 있는 한글 글꼴 이름. 없으면 None."""
+    """利用可能な日本語フォント名。見つからない場合は None。"""
     from matplotlib import font_manager as fm
     names = {f.name for f in fm.fontManager.ttflist}
     for name in KO_FONTS:
@@ -94,8 +94,8 @@ def _load(csv_path: Path):
 
 
 def _pick_best(rows, col, result):
-    """best 에포크: 학습 결과 파일(.result.json) → 판단 지표 열 → 옛 기준 순으로.
-    (에포크, 근거 'metric'|'old_real'|'old_rc') 를 돌려준다."""
+    """best エポック: 学習結果ファイル(.result.json) → 評価指標列 → 旧基準の順で決定。
+    (エポック番号, 決定根拠 'metric'|'old_real'|'old_rc') を返却。"""
     if result.get('best_epoch'):
         return int(result['best_epoch']), 'metric'
     ep = [int(r['epoch']) for r in rows]
@@ -110,7 +110,7 @@ def _pick_best(rows, col, result):
 
 
 def _end_label(ax, xs, ys, text, color):
-    """선 끝에 이름을 붙인다(범례와 함께 — 색만으로 구분하지 않게)."""
+    """折れ線の終端にラベルを付与（凡例と併用 — 色覚多様性に配慮）。"""
     pts = [(x, y) for x, y in zip(xs, ys) if not math.isnan(y)]
     if not pts:
         return
@@ -121,7 +121,7 @@ def _end_label(ax, xs, ys, text, color):
 
 
 def plot_trainlog(csv_path, out_path=None):
-    """CSV 하나를 그려 PNG 경로를 돌려준다. 행이 없으면 None."""
+    """CSV1件を描画しPNGパスを返却。データ行がない場合は None。"""
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
@@ -141,7 +141,7 @@ def plot_trainlog(csv_path, out_path=None):
 
     font = _korean_font()
     L = LABELS['ko' if font else 'en']
-    # 한글 글꼴에 없는 글자(수식 등)는 DejaVu Sans 로 채운다. 마이너스는 글꼴마다 없을 수 있어 '-' 로.
+    # フォントに含まれない特殊記号（数式等）は DejaVu Sans で補完。マイナス記号の文字化け防止のためハイフンを使用。
     rc = {'font.family': [font, 'DejaVu Sans'], 'axes.unicode_minus': False} if font else {}
     with plt.rc_context(rc):
         fig = _draw(plt, L, csv_path, rows, col, ep, best, best_why, cands, result)
@@ -156,7 +156,7 @@ def _draw(plt, L, csv_path, rows, col, ep, best, best_why, cands, result):
         gridspec_kw={'height_ratios': [3, 2, 1.1], 'hspace': 0.22})
     fig.patch.set_facecolor(SURFACE)
 
-    # ── 1) 손실 ──
+    # ── 1) 損失 ──
     ax1.plot(ep, col('train_loss'), color=C_TRAIN, lw=2, label=L['train'])
     ax1.plot(ep, col('val_rc_loss'), color=C_RC, lw=2, label=L['val_rc'])
     ax1.plot(ep, col('val_real_loss'), color=C_REAL, lw=2, label=L['val_real'])
@@ -170,28 +170,28 @@ def _draw(plt, L, csv_path, rows, col, ep, best, best_why, cands, result):
     ax1.legend(loc='lower left', bbox_to_anchor=(0, 1.0), ncol=4, fontsize=8.5,
                frameon=False, labelcolor=INK2, handlelength=2.6, columnspacing=1.4)
 
-    # ── 2) 검증 충돌 recall / precision (0.5 임계값) ──
+    # ── 2) 検証衝突 recall / precision (0.5 閾値) ──
     for key, color in (('val_real', C_REAL), ('val_rc', C_RC)):
         ax2.plot(ep, col(f'{key}_recallA'), color=color, lw=2,
                  label=L['recall'].format(L[key]))
         ax2.plot(ep, col(f'{key}_precA'), color=color, lw=1.6, ls=(0, (2, 2)),
                  label=L['precision'].format(L[key]))
     ax2.set_ylim(-0.03, 1.05)
-    ax2.set_ylabel(L['collision'], color=INK2, linespacing=1.6)  # 한글 글꼴은 두 줄이 겹쳐서
+    ax2.set_ylabel(L['collision'], color=INK2, linespacing=1.6)  # 日本語フォントの2行重なり防止
     ax2.legend(loc='lower left', bbox_to_anchor=(0, 1.0), ncol=4, fontsize=8.5,
                frameon=False, labelcolor=INK2, handlelength=2.6, columnspacing=1.4)
 
-    # ── 3) 학습률 ──
+    # ── 3) 学習率 ──
     ax3.step(ep, col('lr'), where='post', color=INK2, lw=1.8)
     ax3.set_yscale('log')
-    # 눈금 숫자는 '3e-5' 로 — 기본(3×10⁻⁵ 수식)은 한글 글꼴에 수식용 마이너스가 없어 깨진다
+    # 目盛り数値は '3e-5' 形式で — デフォルトの数式表記(3×10⁻⁵)はマイナス記号の文字化けリスクがあるため回避
     from matplotlib.ticker import LogFormatter
     ax3.yaxis.set_major_formatter(LogFormatter(labelOnlyBase=False))
     ax3.yaxis.set_minor_formatter(LogFormatter(labelOnlyBase=False))
     ax3.set_ylabel(L['lr'], color=INK2)
     ax3.set_xlabel(L['epoch'], color=INK2)
 
-    # ── best / 후보 표시 ──
+    # ── best / 候補 表示 ──
     for ax in (ax1, ax2, ax3):
         ax.set_facecolor(SURFACE)
         ax.grid(True, color=GRID, lw=0.8)
@@ -228,4 +228,4 @@ if __name__ == '__main__':
         raise SystemExit(1)
     for p in sys.argv[1:]:
         out = plot_trainlog(p)
-        print(f'{p} → {out}' if out else f'{p}: 행 없음, 건너뜀')
+        print(f'{p} → {out}' if out else f'{p}: データ行なし、スキップ')

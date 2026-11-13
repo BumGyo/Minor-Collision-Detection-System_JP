@@ -1,16 +1,16 @@
-/* 다크 모드 통일 — 새 대시보드 디자인(incident-ui.css · premium-ui.css)의 색을 다크 모드에서도 그대로 쓴다.
-   App.css 의 예전 다크 규칙(body.dark-mode .X)이 새 규칙(.dashboard-layout .X)보다 우선순위가 높아,
-   다크 모드에서만 예전 색이 섞여 보였다. 새 규칙의 색 관련 값(배경·테두리·글자·그림자)을
-   'body.dark-mode .dashboard-layout ...' 로 한 번 더 적용해 이기게 한다.
-   - 값은 대부분 --incident-* 변수라 다크 모드에선 저절로 어두운 값이 된다
-   - 새 디자인이 다크 값을 따로 정해 둔 곳은 건드리지 않는다
-   - 라이트 전용으로 밝게 적힌 값(밝은 배경·어두운 글자)은 옮기지 않는다 — 그 자리는 App.css 의 다크 규칙
-     (새 팔레트로 색만 바꿈)이 그대로 쓰인다
-   이 파일은 premium-ui.css 다음에 불러와야 한다(App.jsx). */
+/* ダークモード統一 — 新ダッシュボードデザイン(incident-ui.css · premium-ui.css)の配色をダークモードでもそのまま適用。
+   App.css の旧ダークモードルール(body.dark-mode .X)が新ルール(.dashboard-layout .X)より優先度が高く、
+   ダークモード時のみ古い色が混在して表示されていた。新ルールの色関連値(背景・ボーダー・文字・影)を
+   'body.dark-mode .dashboard-layout ...' で再適用して上書きする。
+   - 値の大半は --incident-* 変数のためダークモード時は自動的に暗色値となる
+   - 新デザインがダークモード値を個別に指定している箇所は変更しない
+   - ライト専用に明色で指定された値(明るい背景・暗い文字)は移動しない — その箇所は App.css のダークルール
+     (新パレットへ色のみ変更)がそのまま適用される
+   本ファイルは premium-ui.css の後にインポートする必要がある(App.jsx)。 */
 
 body.dark-mode .dashboard-layout .top-navbar { border-color: var(--incident-line); box-shadow: 0 4px 24px #0c253507; }
-/* 왼쪽 위 글자 로고 — App.css 의 예전 로고 버튼 다크 규칙(.nav-logo: 검은 글자 #10151b, 어두운 배경, 청록 그림자)이
-   남아 있어 S·I·T 가 배경에 묻혔다. 새 디자인 값(글자 = --incident-ink, 배경·그림자 없음)으로 되돌린다. */
+/* 左上テキストロゴ — App.css の旧ロゴボタンのダークルール(.nav-logo: 黒文字 #10151b, 暗い背景, シアン系の影)が
+   残存しており S・I・T が背景に埋もれていた。新デザインの値(文字 = --incident-ink, 背景・影なし)に復元。 */
 body.dark-mode .dashboard-layout .nav-home-btn,
 body.dark-mode .dashboard-layout .nav-home-btn:hover { color: var(--incident-ink); background: transparent; box-shadow: none; }
 body.dark-mode .dashboard-layout .analysis-idle-text { color: var(--incident-muted); }
@@ -79,7 +79,7 @@ body.dark-mode .dashboard-layout .sidebar-calendar-container .calendar-day.selec
 body.dark-mode .dashboard-layout .analysis-status-box:not(.analysis-status-idle) { box-shadow: none; }
 body.dark-mode .dashboard-layout .analysis-jobs-dropdown { border-color: var(--incident-line); background: var(--incident-surface); }
 
-/* 클립 항목 왼쪽 주황 강조선 — 위 'border' 재적용이 왼쪽 선까지 덮지 않게 다크에서도 유지 */
+/* クリップ項目の左アクセント線 */
 body.dark-mode .dashboard-layout .event-item { border-left: 3px solid #db9a58; }
 
 /* Mobile video review: keep titles, controls and review steps readable at narrow widths. */
@@ -500,7 +500,7 @@ body.dark-mode .dashboard-layout .event-item { border-left: 3px solid #db9a58; }
   .theater-mobile-exit span { font-size: 18px; line-height: 1; }
 }
 
-/* Fullscreen API가 지원되지 않으면 플레이어를 현재 화면에 고정한다. */
+/* Fullscreen API非対応時はプレーヤーを現在の画面に固定する。 */
 .dashboard-layout .player-container.is-viewport-fullscreen {
   position: fixed;
   inset: 0;

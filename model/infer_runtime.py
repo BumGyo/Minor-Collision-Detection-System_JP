@@ -1,26 +1,26 @@
-"""추론 실행기 — 서버 컴퓨터에서 쓸 수 있는 가장 빠른 방식으로 3D-CNN 을 돌린다.
+"""推論実行エンジン — サーバー環境で利用可能な最高速のバックエンドで 3D-CNN を実行する。
 
-서비스와 평가는 모델을 직접 부르지 않고 get_runner(model) 이 돌려주는 실행기로 추론한다.
-실행기는 logits 를 돌려주고, runner.with_cam(clips) 는 logits 와 칸별 클래스 지도(CAM)를 함께
-돌려준다. 변환 모델(ONNX·OpenVINO)이 두 출력을 한 번의 추론에서 함께 내므로 CAM 을 켜도 빠른 방식을
-그대로 쓴다(예전엔 logits 만 내보내 CAM 을 켜면 전체 탐색이 PyTorch 로 돌아 CPU 에서 약 4배 느렸다).
+本番サービスおよび評価スクリプトはモデルを直接呼び出さず、get_runner(model) が返却するランナー経由で推論を行う。
+ランナーは logits を返却し、runner.with_cam(clips) は logits と位置別クラスマップ(CAM)を同時に
+返却する。変換モデル(ONNX・OpenVINO)は双出力を単一推論で同時生成するため、CAM 有効時も高速推論を
+そのまま維持可能（従来は logits のみ出力可能で CAM 使用時は PyTorch にフォールバックし CPU で約4倍低速化していた）。
 
-방식 (config.INFER_BACKEND):
-  auto        : 쓸 수 있는 방식을 처음 한 번 자가 검사하고, 통과한 것 중 가장 빠른 것(기본)
-  torch       : PyTorch 그대로(예전 방식). 모델이 GPU 에 있으면 GPU.
-  openvino    : OpenVINO (CPU) — Intel CPU 에서 빠르다
+バックエンド種別 (config.INFER_BACKEND):
+  auto        : 利用可能なバックエンドを初回に自己診断し、検証をパスした最高速のものを自動選択(デフォルト)
+  torch       : PyTorch ネイティブ実行。モデルが GPU 上にあれば GPU で実行。
+  openvino    : OpenVINO (CPU) — Intel CPU 環境で大幅に高速化
   onnxruntime : ONNX Runtime (CPU)
-모델이 GPU(CUDA)에 있으면 auto 는 PyTorch GPU 를 쓴다(CPU 방식들보다 빠르다). FP16 은
-config.INFER_FP16 을 켰을 때만, Tensor Core 가 있는 NVIDIA GPU 에서 자가 검사를 거쳐 쓴다.
+モデルが GPU(CUDA)上にある場合、auto は PyTorch GPU を選択する(CPU バックエンドより高速)。FP16 は
+config.INFER_FP16 が有効かつ Tensor Core 搭載の NVIDIA GPU において自己診断を通過した場合のみ適用される。
 
-자가 검사: 같은 입력으로 PyTorch(FP32) 와 P(A)·logits·CAM 을 비교한다. 설치 안 됨·변환 실패·
-검사 불통과면 그 방식은 버리고 다음 방식(최후엔 PyTorch)으로 넘어간다. 그래서 어느 OS·
-하드웨어에서든 기능은 동작하고, 결과는 PyTorch 와 같다(정밀도는 FP32 그대로).
+自己診断: 同一入力で PyTorch(FP32) と P(A)・logits・CAM を比較。未インストール・変換失敗・
+許容誤差超過の場合は当該バックエンドを破棄し次の候補（最終的には PyTorch）へフォールバックする。そのため任意の OS・
+ハードウェア環境で確実に機能し、出力結果は PyTorch と数学的に同等（FP32 精度維持）となる。
 
-검사 결과와 변환 파일(ONNX)은 config.INFER_CACHE_DIR 에 저장한다. 가중치·패키지 버전·
-CPU/GPU·OS 가 같으면 다음부터는 속도를 다시 재지 않고, 서버(워커)를 띄울 때마다 창 1개로
-결과만 PyTorch 와 빠르게 비교한다(수 초). 처음 한 번의 전체 검사는 수십 초 걸릴 수 있다.
-설치 직후 미리 해 두려면:  python -m model.main --mode check-backend
+診断結果および変換ファイル(ONNX)は config.INFER_CACHE_DIR にキャッシュされる。重み・パッケージバージョン・
+CPU/GPU・OS が同一であれば次回以降はベンチマークを再実行せず、サーバー起動時に1ウィンドウで
+出力結果のみを PyTorch と高速照合（数秒）。初回セットアップ時の全診断は約数十秒を要する場合がある。
+セットアップ直後に事前診断を実行する場合:  python -m model.main --mode check-backend
 """
 import gc
 import hashlib
@@ -41,14 +41,14 @@ import torch.nn.functional as F
 import config
 from device_utils import is_cuda_like, predict_batch_size
 
-# 검사·변환 방식이 바뀌면 올린다 → 저장된 결과·변환 파일을 새로 만든다
-# (2: 변환 모델이 logits 와 함께 칸별 클래스 지도(CAM)도 내보낸다)
+# 診断・変換仕様の変更時にバージョンをインクリメント → キャッシュ・変換ファイルを自動再生成
+# (2: 変換モデルが logits と共に位置別クラスマップ(CAM)も同時出力)
 RUNTIME_VERSION = 2
 
 
 class Runner:
-    """추론 실행기. runner(clips (B, 3, T, H, W)) → logits (B, C) float32.
-    runner.with_cam(clips) → (logits, cam (B, C, 7, 7)) — 같은 한 번의 추론에서 함께 나온다."""
+    """推論ランナー。runner(clips (B, 3, T, H, W)) → logits (B, C) float32。
+    runner.with_cam(clips) → (logits, cam (B, C, 7, 7)) — 単一の推論パスで同時算出。"""
 
     def __init__(self, name, fn, detail='', cam_fn=None):
         self.name = name        # 'torch' | 'torch-fp16' | 'openvino' | 'onnxruntime'
@@ -66,10 +66,10 @@ class Runner:
         return f'Runner({self.name}{", " + self.detail if self.detail else ""})'
 
 
-# ── 공통 ────────────────────────────────────────────────────────────
+# ── 共通ユーティリティ ────────────────────────────────────────────────────────────
 
 def _log(msg):
-    print(f'[추론 실행기] {msg}', flush=True)
+    print(f'[推論エンジン] {msg}', flush=True)
 
 
 def _pkg_version(name):
@@ -80,7 +80,7 @@ def _pkg_version(name):
 
 
 def cpu_brand():
-    """CPU 이름 — OS마다 읽는 곳이 다르다(Linux /proc/cpuinfo, macOS sysctl, Windows 레지스트리)."""
+    """CPU ブランド名 — OS ごとに取得元が異なる（Linux /proc/cpuinfo, macOS sysctl, Windows レジストリ）。"""
     system = platform.system()
     try:
         if system == 'Linux':
@@ -98,7 +98,7 @@ def cpu_brand():
             key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
                                  r'HARDWARE\DESCRIPTION\System\CentralProcessor\0')
             return str(winreg.QueryValueEx(key, 'ProcessorNameString')[0]).strip()
-    except Exception:  # noqa: BLE001 — 이름을 못 읽어도 동작에는 지장 없다
+    except Exception:  # noqa: BLE001 — 名称取得に失敗しても動作に影響なし
         pass
     return platform.processor() or platform.machine()
 
@@ -115,7 +115,7 @@ def cpu_vendor():
 
 
 def _state_hash(model):
-    """가중치 내용의 지문 — 같은 가중치면 변환 파일·검사 결과를 재사용한다."""
+    """重みデータのフィンガープリント — 同一重みであれば変換ファイル・診断結果を再利用。"""
     h = hashlib.sha1()
     for k, v in model.state_dict().items():
         h.update(k.encode())
@@ -129,14 +129,14 @@ def _check_input(clip_shape, n):
 
 
 def _compare(ref, out):
-    """기준 logits vs 비교 logits → (P(A) 최대 차이, logits 최대 차이)"""
+    """基準 logits vs 比較対象 logits → (P(A) 最大差分, logits 最大差分)"""
     ref, out = ref.float().cpu(), out.float().cpu()
     d_prob = float((F.softmax(ref, 1)[:, 1] - F.softmax(out, 1)[:, 1]).abs().max())
     return d_prob, float((ref - out).abs().max())
 
 
 def _check_against(ref_runner, runner, x):
-    """PyTorch 기준과 결과 비교 → (P(A) 최대 차이, logits·CAM 중 큰 최대 차이). 통과 여부는 _passes."""
+    """PyTorch 基準と推論結果の比較 → (P(A) 最大差分, logits・CAM 中の最大差分)。合否判定は _passes。"""
     ref, ref_cam = ref_runner.with_cam(x)
     out, cam = runner.with_cam(x)
     d_prob, d_logit = _compare(ref, out)
@@ -149,7 +149,7 @@ def _passes(d_prob, d_logit):
 
 
 def _time_per_clip(runner, x, reps=2):
-    runner(x)                                   # 첫 호출(초기화) 제외
+    runner(x)                                   # 初回呼び出し（ウォームアップ）は計測除外
     sync = torch.cuda.synchronize if x.is_cuda else (lambda: None)
     sync()
     t0 = time.perf_counter()
@@ -159,7 +159,7 @@ def _time_per_clip(runner, x, reps=2):
     return (time.perf_counter() - t0) / (reps * x.shape[0])
 
 
-# ── 방식별 실행기 ───────────────────────────────────────────────────
+# ── バックエンド別ランナー ───────────────────────────────────────────────────
 
 def _torch_runner(model, fp16=False):
     dev = next(model.parameters()).device
@@ -176,14 +176,14 @@ def _torch_runner(model, fp16=False):
 
 
 class _TimeMean(torch.nn.Module):
-    """AdaptiveAvgPool3d((1, None, None)) 와 같은 연산(시간축 평균). ONNX 가 앞의 것을 못 바꾼다."""
+    """AdaptiveAvgPool3d((1, None, None)) と等価な演算（時間軸平均）。ONNX が動的 AvgPool3d を置換できないため使用。"""
 
     def forward(self, x):
         return x.mean(dim=2, keepdim=True)
 
 
 class _WithCam(torch.nn.Module):
-    """변환용 — forward_with_cam 을 forward 로 내보낸다(출력 두 개: logits, cam)."""
+    """変換用ラッパー — forward_with_cam を forward として公開（出力2件: logits, cam）。"""
 
     def __init__(self, m):
         super().__init__()
@@ -194,19 +194,19 @@ class _WithCam(torch.nn.Module):
 
 
 def _export_copy(model):
-    """변환용 CPU 복사본 — 모델 객체를 복제하지 않고 가중치만 옮겨 새로 만든다(출력 logits, cam)."""
+    """変換用 CPU コピー — モデルオブジェクトを複製せず重みのみを転送して新規インスタンス化（出力: logits, cam）。"""
     from hitandrun_model import HitAndRun3DCNN
     pool = getattr(model, 'temporal_pool', 'avg')
     m = HitAndRun3DCNN(num_classes=model.head_conv.out_channels, temporal_pool=pool)
     m.load_state_dict({k: v.detach().cpu() for k, v in model.state_dict().items()})
     m.eval()
     if pool == 'avg':
-        m.head_pool.pool = _TimeMean()      # top3·avgtop3 의 TemporalPool 은 mean·topk 라 그대로 바뀐다
+        m.head_pool.pool = _TimeMean()      # top3・avgtop3 の TemporalPool は mean・topk のためそのまま変換可能
     return _WithCam(m).eval()
 
 
 def _pool_tag():
-    """헤드 시간 풀링이 avg 가 아니면 변환 파일·검사 지문에 붙일 표시(avg 는 예전 이름 그대로 — 저장해 둔 것 재사용)."""
+    """ヘッド時間プーリングが avg 以外の場合に変換ファイル・キャッシュ名へ付与するサフィックス。"""
     pool = getattr(config, 'HEAD_TEMPORAL_POOL', 'avg')
     return '' if pool == 'avg' else f'_{pool}'
 
@@ -216,7 +216,7 @@ def _onnx_path(state_hash):
 
 
 def _ensure_onnx(model, state_hash, clip_shape):
-    """ONNX 변환 파일 — 있으면 그대로, 없으면 만든다(같은 가중치면 한 번만)."""
+    """ONNX 変換モデル — キャッシュが存在すればロード、なければ新規エクスポート（同一重みでは初回のみ実行）。"""
     path = _onnx_path(state_hash)
     if path.exists():
         return path
@@ -229,9 +229,9 @@ def _ensure_onnx(model, state_hash, clip_shape):
         warnings.simplefilter('ignore')
         try:
             torch.onnx.export(_export_copy(model), (sample,), str(tmp), dynamo=False, **kw)
-        except TypeError:          # dynamo 인자가 없는 옛 torch
+        except TypeError:          # dynamo 引数を持たない旧バージョン torch
             torch.onnx.export(_export_copy(model), (sample,), str(tmp), **kw)
-    os.replace(tmp, path)          # 다른 프로세스가 반쯤 쓴 파일을 읽지 않게 다 쓴 뒤 바꿔 넣는다
+    os.replace(tmp, path)          # 他プロセスが書き込み途中のファイルを誤読しないようアトミック置換
     return path
 
 
@@ -240,24 +240,24 @@ def _openvino_runner(model, state_hash, clip_shape):
     core = ov.Core()
     try:
         om = core.read_model(str(_ensure_onnx(model, state_hash, clip_shape)))
-    except Exception:  # noqa: BLE001 — ONNX 를 못 만들면 PyTorch 모델에서 바로 바꾼다
+    except Exception:  # noqa: BLE001 — ONNX 変換に失敗した場合は PyTorch モデルから直接変換を試行
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             om = ov.convert_model(_export_copy(model), example_input=torch.zeros((1, *clip_shape)))
     om.reshape({om.inputs[0]: ov.PartialShape([-1, *clip_shape])})
-    # FP32 고정 — AMX 등이 있는 CPU 에서 OpenVINO 기본값은 BF16 이라 결과가 달라질 수 있다
+    # FP32 固定 — AMX 等を搭載した CPU では OpenVINO のデフォルトが BF16 となり数値差分が生じるのを防止
     cm = core.compile_model(om, 'CPU', {'PERFORMANCE_HINT': 'LATENCY',
                                         'INFERENCE_PRECISION_HINT': 'f32'})
     req = cm.create_infer_request()
-    out, out_cam = cm.outputs[0], cm.outputs[1]     # 변환 순서대로 logits, cam
+    out, out_cam = cm.outputs[0], cm.outputs[1]     # 変換順序通り logits, cam
 
     def run_cam(x):
         r = req.infer({0: x.detach().cpu().float().contiguous().numpy()})
-        # 결과 버퍼는 다음 호출에서 덮어쓰이니 복사
+        # 出力バッファは次回呼び出しで上書きされるためコピーを保持
         return torch.from_numpy(np.array(r[out])), torch.from_numpy(np.array(r[out_cam]))
 
     def run(x):
-        return run_cam(x)[0]    # CAM 도 같은 추론에서 이미 계산된다(1×1 곱셈 49칸이라 비용은 거의 없음)
+        return run_cam(x)[0]    # CAM も同一推論で既に算出済み（1×1 乗算 49 グリッドのため追加コストは極小）
     return Runner('openvino', run, 'CPU f32', run_cam)
 
 
@@ -281,13 +281,13 @@ _CPU_BUILDERS = {'openvino': _openvino_runner, 'onnxruntime': _onnxruntime_runne
 
 
 def _cpu_candidates():
-    """CPU 후보 순서(같은 속도면 앞의 것). auto 는 어차피 전부 재서 가장 빠른 걸 고른다."""
+    """CPU 候補の探索優先順位（同一速度であれば先頭を優先）。auto は全件ベンチマーク後に最高速を選択。"""
     if cpu_vendor() == 'intel':
         return ['openvino', 'onnxruntime']
     return ['onnxruntime', 'openvino']
 
 
-# ── 검사 결과 저장 ──────────────────────────────────────────────────
+# ── 自己診断結果キャッシュ ──────────────────────────────────────────────────
 
 def _cache_file():
     return Path(config.INFER_CACHE_DIR) / 'backend_choice.json'
@@ -309,8 +309,8 @@ def _save_cache(key, entry):
         tmp = f.with_name(f'{f.name}.tmp{os.getpid()}')
         tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding='utf-8')
         os.replace(tmp, f)
-    except Exception as exc:  # noqa: BLE001 — 저장 못 해도 이번 실행은 그대로 동작
-        _log(f'검사 결과를 저장하지 못했습니다(다음 실행 때 다시 검사): {exc}')
+    except Exception as exc:  # noqa: BLE001 — 保存失敗時も今回の推論実行自体は継続
+        _log(f'自己診断結果の保存に失敗しました(次回起動時に再診断): {exc}')
 
 
 def _fingerprint(state_hash, clip_shape, batch):
@@ -325,10 +325,10 @@ def _fingerprint(state_hash, clip_shape, batch):
     }
 
 
-# ── 고르기 ──────────────────────────────────────────────────────────
+# ── 最適バックエンド選定 ──────────────────────────────────────────────────────────
 
 def _fp16_supported(dev):
-    """Tensor Core 가 있는 NVIDIA GPU(연산능력 7.0 이상)만 FP16 이 빠르다. AMD(ROCm)는 제외."""
+    """Tensor Core 搭載の NVIDIA GPU（演算能力 7.0 以上）のみ FP16 が高速化。AMD(ROCm) は除外。"""
     if dev.type != 'cuda' or torch.version.hip is not None:
         return False
     return torch.cuda.get_device_capability(dev) >= (7, 0)
@@ -336,9 +336,9 @@ def _fp16_supported(dev):
 
 def _select_gpu(model, clip_shape, batch):
     dev = next(model.parameters()).device
-    # cuDNN 은 입력 모양마다 처음 정한 계산 방식을 기억해 두고, benchmark 를 나중에 켜도 다시 재지 않는다.
-    # 아래 FP16 자가 검사가 서비스 묶음 크기로 모델을 처음 돌리므로 그 전에 켜야 서비스가 빠른 방식을 쓴다
-    # (2026-10-22 fp16_check: 꺼진 채 먼저 돌려 FP32 가 41.6 → 28.1창/초로 묶였다).
+    # cuDNN は入力形状ごとに初回決定した計算カーネルをキャッシュし、後から benchmark を有効化しても再計測しない。
+    # 下記の FP16 自己診断が本番バッチサイズで初回実行されるため、その前に有効化しておくことで最速カーネルが選定される。
+    # (2026-10-22 fp16_check: 無効のまま先行実行され FP32 が 41.6 → 28.1窓/秒に縛られた事象に対応)。
     if is_cuda_like(dev):
         torch.backends.cudnn.benchmark = True
     base = _torch_runner(model)
@@ -346,15 +346,15 @@ def _select_gpu(model, clip_shape, batch):
         _log(f'PyTorch GPU ({torch.cuda.get_device_name(dev)}) — FP32')
         return base
     if not _fp16_supported(dev):
-        _log(f'FP16 을 켰지만 이 GPU({torch.cuda.get_device_name(dev)})는 FP16 이 빠르지 않아 FP32 로 합니다')
+        _log(f'FP16 が有効化されましたが、このGPU({torch.cuda.get_device_name(dev)})はFP16高速化対象外のため FP32 で実行します')
         return base
     x = _check_input(clip_shape, batch).to(dev)
     half = _torch_runner(model, fp16=True)
     d_prob, _ = _compare(base(x), half(x))
     if d_prob <= config.INFER_FP16_MAX_PROB_DIFF:
-        _log(f'PyTorch GPU ({torch.cuda.get_device_name(dev)}) — FP16 (자가 검사 통과: P(A) 차이 {d_prob:.1e})')
+        _log(f'PyTorch GPU ({torch.cuda.get_device_name(dev)}) — FP16 (自己診断通過: P(A) 差分 {d_prob:.1e})')
         return half
-    _log(f'FP16 자가 검사 불통과(P(A) 차이 {d_prob:.1e} > {config.INFER_FP16_MAX_PROB_DIFF}) → FP32 로 합니다')
+    _log(f'FP16 自己診断不合格(P(A) 差分 {d_prob:.1e} > {config.INFER_FP16_MAX_PROB_DIFF}) → FP32 で実行します')
     return base
 
 
@@ -364,15 +364,15 @@ def _select_cpu(model, clip_shape, batch, force=False):
         _log('PyTorch CPU (config.INFER_BACKEND=torch)')
         return _torch_runner(model)
     if cfg not in ('auto', *_CPU_BUILDERS):
-        _log(f"알 수 없는 INFER_BACKEND '{cfg}' → auto 로 고릅니다")
+        _log(f"不明な INFER_BACKEND '{cfg}' → auto に切り替えます")
         cfg = 'auto'
 
     state_hash = _state_hash(model)
     fp = _fingerprint(state_hash, clip_shape, batch)
     key = hashlib.sha1(json.dumps(fp, sort_keys=True).encode()).hexdigest()
 
-    # ① 저장된 검사 결과가 있으면 속도는 다시 재지 않고, 창 1개로 결과만 빠르게 확인한다.
-    #    저장 정보로는 안 잡히는 변화(설치가 깨짐 등)도 서버를 띄울 때마다 걸러낸다.
+    # ① キャッシュされた診断結果が存在する場合、速度ベンチマークはスキップし、1ウィンドウで出力結果のみを高速検証。
+    #    キャッシュ情報では検知できない環境変化（パッケージの破損等）もサーバー起動時に確実に排除。
     saved = None if force else _load_cache().get(key)
     if saved:
         name = saved['choice']
@@ -384,16 +384,16 @@ def _select_cpu(model, clip_shape, batch, force=False):
                 x1 = _check_input(clip_shape, 1)
                 d_prob, d_logit = _check_against(_torch_runner(model), runner, x1)
                 if not _passes(d_prob, d_logit):
-                    raise RuntimeError(f'빠른 확인 불통과(P(A) 차이 {d_prob:.1e}, logits·CAM 차이 {d_logit:.1e})')
-                note = f', 빠른 확인 통과(P(A) 차이 {d_prob:.1e})'
-            _log(f"{name} — 저장된 자가 검사 결과 사용({saved.get('checked_at', '?')}, "
+                    raise RuntimeError(f'クイック検証不合格(P(A) 差分 {d_prob:.1e}, logits・CAM 差分 {d_logit:.1e})')
+                note = f', クイック検証合格(P(A) 差分 {d_prob:.1e})'
+            _log(f"{name} — キャッシュされた診断結果を適用({saved.get('checked_at', '?')}, "
                  f"{saved.get('summary', '')}){note}")
             return runner
         except Exception as exc:  # noqa: BLE001
-            _log(f'저장된 방식 {name} 이(가) 지금은 맞지 않아 다시 검사합니다: {exc}')
+            _log(f'キャッシュされた方式 {name} が現環境と不整合のため再診断を実行します: {exc}')
 
-    # ② 자가 검사: PyTorch 결과를 기준으로 후보마다 결과 비교 + 속도
-    _log(f'이 컴퓨터에서 처음 쓰는 조합이라 자가 검사를 합니다(한 번만) — CPU: {cpu_brand()}')
+    # ② 自己診断: PyTorch 出力を基準として各候補の数値精度比較 + 実行速度計測
+    _log(f'この環境で初めて実行される構成のため自己診断を実行します(初回のみ) — CPU: {cpu_brand()}')
     x = _check_input(clip_shape, batch)
     ref_runner = _torch_runner(model)
     results = {'torch': {'ok': True, 'sec_per_clip': _time_per_clip(ref_runner, x)}}
@@ -412,8 +412,8 @@ def _select_cpu(model, clip_shape, batch, force=False):
                 del runner
             results[name] = res
         except ModuleNotFoundError as exc:
-            results[name] = {'ok': False, 'error': f'설치 안 됨 ({exc.name})'}
-        except Exception as exc:  # noqa: BLE001 — 어떤 실패든 그 방식만 버린다
+            results[name] = {'ok': False, 'error': f'未インストール ({exc.name})'}
+        except Exception as exc:  # noqa: BLE001 — 個別の失敗時は当該方式のみ破棄
             results[name] = {'ok': False, 'error': f'{type(exc).__name__}: {str(exc)[:200]}'}
         gc.collect()
 
@@ -429,14 +429,14 @@ def _select_cpu(model, clip_shape, batch, force=False):
 
     for n, r in results.items():
         if r['ok']:
-            extra = (f", P(A) 차이 {r['prob_diff']:.1e}" if 'prob_diff' in r else ' (기준)')
-            _log(f"  {n:12s} 통과  창 1개 {r['sec_per_clip']:.3f}초{extra}")
+            extra = (f", P(A) 差分 {r['prob_diff']:.1e}" if 'prob_diff' in r else ' (基準)')
+            _log(f"  {n:12s} 合格  1窓 {r['sec_per_clip']:.3f}秒{extra}")
         else:
-            why = r.get('error') or f"결과가 다름(P(A) 차이 {r['prob_diff']:.1e}, logits·CAM 차이 {r['logit_diff']:.1e})"
-            _log(f'  {n:12s} 제외  {why}')
+            why = r.get('error') or f"出力差分超過(P(A) 差分 {r['prob_diff']:.1e}, logits・CAM 差分 {r['logit_diff']:.1e})"
+            _log(f'  {n:12s} 除外  {why}')
     t = results[choice]['sec_per_clip']
-    summary = f"창 1개 {t:.3f}초, PyTorch 대비 ×{results['torch']['sec_per_clip'] / t:.2f}"
-    _log(f'→ {choice} 선택 ({summary})')
+    summary = f"1窓 {t:.3f}秒, PyTorch比 ×{results['torch']['sec_per_clip'] / t:.2f}"
+    _log(f'→ {choice} を選択 ({summary})')
     _save_cache(key, {'choice': choice, 'summary': summary,
                       'checked_at': datetime.now().strftime('%Y-%m-%d %H:%M'),
                       'fingerprint': fp, 'results': results})
@@ -444,9 +444,9 @@ def _select_cpu(model, clip_shape, batch, force=False):
 
 
 def get_runner(model, clip_shape=None, force_check=False):
-    """model 에 맞는 실행기. 처음 한 번만 고르고 model 에 붙여 두어 재사용한다.
+    """model に適した推論ランナーを取得。初回のみ選定を行い model インスタンスにアタッチして再利用。
 
-    force_check=True 면 저장된 검사 결과를 무시하고 다시 검사한다(check-backend 명령).
+    force_check=True の場合はキャッシュを無視して再診断を実行(check-backend コマンド)。
     """
     clip_shape = tuple(clip_shape or (3, config.CLIP_LENGTH, config.RESIZE[1], config.RESIZE[0]))
     key = ((config.INFER_BACKEND or 'auto').lower(), bool(config.INFER_FP16), clip_shape)
@@ -455,7 +455,7 @@ def get_runner(model, clip_shape=None, force_check=False):
         return cached[1]
     model.eval()
     dev = next(model.parameters()).device
-    batch = predict_batch_size(dev)     # 서비스가 실제로 쓰는 묶음 크기로 고른다(CPU 1 · GPU 8)
+    batch = predict_batch_size(dev)     # サービスが実際に使用するバッチサイズで選定(CPU 1 · GPU 8)
     if dev.type == 'cpu':
         runner = _select_cpu(model, clip_shape, batch, force=force_check)
     else:

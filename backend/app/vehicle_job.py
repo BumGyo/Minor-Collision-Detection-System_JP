@@ -1,6 +1,6 @@
-"""Celery 차량 탐지 작업.
+"""Celery 車両検知タスク。
 
-웹 프로세스는 작업 등록만 하고, 프레임 다운로드·YOLO 추론·결과 저장은 ML 워커가 맡는다.
+Webプロセスはタスク登録のみを行い、フレームダウンロード・YOLO推論・結果保存はMLワーカーが担当。
 """
 import json
 from datetime import datetime
@@ -27,7 +27,7 @@ def _detection_rows(detections) -> list[dict]:
 
 @celery_app.task(bind=True)
 def run_vehicle_detection_task(self, detection_task_id: int):
-    """원격 저장소의 영상 한 프레임에서 차량을 찾아 DB에 결과를 저장한다."""
+    """リモートストレージの動画1フレームから車両を検出しDBに結果を保存する。"""
     db = SessionLocal()
     task = None
     try:
@@ -43,11 +43,11 @@ def run_vehicle_detection_task(self, detection_task_id: int):
 
         video = db.get(db_models.Video, task.video_id)
         if video is None:
-            raise RuntimeError("대상 영상을 찾을 수 없습니다.")
+            raise RuntimeError("対象動画が見つかりません。")
 
         storage = get_storage()
         if not storage.exists(video.video_path):
-            raise RuntimeError("영상 파일이 없습니다.")
+            raise RuntimeError("動画ファイルが存在しません。")
 
         from app.vehicle_detector import get_detector, read_source_frame
 
@@ -83,15 +83,15 @@ def run_vehicle_detection_task(self, detection_task_id: int):
                 output_dir.mkdir(parents=True, exist_ok=True)
                 output_path = output_dir / f"detect_{Path(video.video_name).stem}_f{frame_index}.jpg"
                 if not cv2.imwrite(str(output_path), debug_frame):
-                    raise RuntimeError("탐지 디버그 이미지를 저장하지 못했습니다.")
+                    raise RuntimeError("検知デバッグ画像を保存できませんでした。")
             except Exception as debug_exc:  # Debug output must not fail an otherwise successful detection.
-                print(f"[detect] 디버그 이미지 저장 실패(무시): {debug_exc}")
+                print(f"[detect] デバッグ画像の保存失敗(無視): {debug_exc}")
 
         result_json = json.dumps(rows, ensure_ascii=False)
         task.result_json = result_json
         task.status = "SUCCESS"
         task.finished_at = datetime.utcnow()
-        # 기존 UI·분석 경로와의 호환성을 위해 최신 탐지 결과도 영상 행에 유지한다.
+        # 既存UI・分析パスとの互換性維持のため最新の検知結果も動画行に保持。
         video.detected_vehicles = result_json
         db.commit()
         return {"task_id": task.id, "video_id": video.id, "detections": rows}

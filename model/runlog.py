@@ -1,17 +1,17 @@
-"""학습·평가 1회분 산출물 폴더.
+"""学習・評価1回分の成果物フォルダ。
 
-학습이나 평가를 한 번 돌릴 때마다 `<부모>/<YYMMDD_HHMM>_<모델>_<ptY|ptN>` 폴더를
-새로 만들어 그 회차의 산출물을 모두 넣는다. 폴더 이름만 보고 언제·어떤 모델로
-돌린 결과인지 알 수 있고, 다른 회차의 파일과 섞이지 않는다.
+学習や評価を1回実行するたびに `<親フォルダ>/<YYMMDD_HHMM>_<モデル名>_<ptY|ptN>` フォルダを
+新規作成し、その実行回の成果物をすべて格納する。フォルダ名のみで実行日時・モデル種別を
+把握可能とし、他セッションのファイルとの混在を防止する。
 """
 from datetime import datetime
 from pathlib import Path
 
 
 def make_run_dir(parent, model_name, tag, when=None):
-    """회차 폴더를 만들어 (폴더 경로, 'YYMMDD_HHMM' 문자열)을 돌려준다.
+    """セッションフォルダを作成し、(フォルダパス, 'YYMMDD_HHMM' 文字列) を返却する。
 
-    같은 분에 두 번 돌리면 `_2`, `_3` 을 붙여 이전 회차를 덮어쓰지 않는다.
+    同一分内に複数回実行した場合は `_2`, `_3` などの連番を付与し、既存セッションの上書きを防止する。
     """
     when = when or datetime.now()
     stamp = when.strftime('%y%m%d_%H%M')
@@ -19,8 +19,8 @@ def make_run_dir(parent, model_name, tag, when=None):
     base.parent.mkdir(parents=True, exist_ok=True)
     path, n = base, 1
     while True:
-        # 있는지 본 뒤 만드는 대신 '만들어 보고 이미 있으면 다음 번호'로 한다.
-        # 두 학습이 같은 순간에 시작해도 같은 폴더를 함께 쓰는 일이 없다.
+        # 存在確認後に作成するのではなく、「作成を試行し、既に存在する場合は連番を進める」方式を採用。
+        # 2つの学習プロセスが同一時刻に開始されても、同一フォルダを共用する衝突を防止する。
         try:
             path.mkdir()
             return path, stamp
@@ -30,10 +30,10 @@ def make_run_dir(parent, model_name, tag, when=None):
 
 
 def write_run_info(run_dir, items):
-    """회차 폴더에 run_info.txt 를 쓴다(이미 있으면 새 내용으로 바꾼다).
+    """セッションフォルダに run_info.txt を出力する（既存の場合は最新内容に更新）。
 
-    items 는 (항목, 값) 순서쌍 목록. 어떤 모델로 언제 돌렸고 어떤 가중치가
-    나왔는지(또는 썼는지)를 폴더만 열어 바로 볼 수 있게 한다.
+    items は (項目名, 設定値) のタプルリスト。適用モデル、実行日時、出力重みファイル等の
+    メタ情報を、フォルダを開くだけで即座に確認可能にする。
     """
     lines = [f'{k}: {"" if v is None else v}' for k, v in items]
     Path(run_dir, 'run_info.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')

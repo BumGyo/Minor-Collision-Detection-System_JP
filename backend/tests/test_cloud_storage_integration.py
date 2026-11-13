@@ -1,4 +1,4 @@
-"""Supabase 스키마와 R2 저장소 경로가 어긋나지 않게 하는 회귀 검사."""
+"""SupabaseスキーマとR2ストレージパスの不整合を防止する回帰テスト。"""
 import unittest
 from types import SimpleNamespace
 

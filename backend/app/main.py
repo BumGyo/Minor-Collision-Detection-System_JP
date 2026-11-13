@@ -1,4 +1,4 @@
-"""FastAPI 진입점 — CORS, 라우터 등록, 시작 시 테이블 생성, 보관 기간 지난 영상 정리."""
+"""FastAPI エントリーポイント — CORS、ルーター登録、起動時テーブル作成、保存期間経過動画のクリーンアップ。"""
 import asyncio
 from contextlib import asynccontextmanager
 
@@ -6,21 +6,21 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db_connection import engine, Base
-from app import db_models  # noqa: F401  (테이블 등록을 위해 임포트)
+from app import db_models  # noqa: F401  (テーブル登録のためにインポート)
 from app.settings import settings
 from app.routers import auth, videos, analysis
 
 
 async def _retention_loop():
-    """보관 기간(VIDEO_RETENTION_DAYS)이 지난 영상을 서버가 켜질 때 한 번, 그 뒤 1시간마다 지운다."""
+    """保存期間 (VIDEO_RETENTION_DAYS) を経過した動画をサーバー起動時に1回、その後1時間ごとに削除する。"""
     from app.retention import CHECK_INTERVAL_SEC, delete_expired_videos
     while True:
         try:
             deleted = await asyncio.to_thread(delete_expired_videos)
             if deleted:
-                print(f"[보관기간] {settings.VIDEO_RETENTION_DAYS}일 지난 영상 {len(deleted)}개를 지웠습니다: {deleted}", flush=True)
-        except Exception as exc:  # noqa: BLE001 — 정리에 실패해도 서버는 계속 돈다(다음 회차에 다시)
-            print(f"[보관기간] 정리 실패(다음에 다시): {exc}", flush=True)
+                print(f"[保存期間] {settings.VIDEO_RETENTION_DAYS}日を経過した動画 {len(deleted)}件を削除しました: {deleted}", flush=True)
+        except Exception as exc:  # noqa: BLE001 — クリーンアップ失敗時もサーバーは継続稼働(次回再試行)
+            print(f"[保存期間] クリーンアップ失敗 (次回再試行): {exc}", flush=True)
         await asyncio.sleep(CHECK_INTERVAL_SEC)
 
 
@@ -31,7 +31,7 @@ async def lifespan(_app):
     task.cancel()
 
 
-app = FastAPI(title="물피도주 자동감지 API", lifespan=lifespan)
+app = FastAPI(title="当て逃げ・軽衝突自動検知API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,11 +42,11 @@ app.add_middleware(
 )
 
 def _wait_for_db(timeout_sec=60):
-    """DB(MySQL)가 연결을 받을 때까지 기다린다.
+    """DB (MySQL) が接続可能になるまで待機する。
 
-    DB 컨테이너를 막 띄운 직후엔 MySQL 이 준비되기 전이라 첫 연결이 끊기고, 예전엔 그때
-    백엔드가 바로 죽어 화면에서 로그인이 502 가 났다. 바로 죽지 않고 잠깐씩 다시 시도한다
-    (어떤 OS·실행 방법으로 띄워도 같다).
+    DBコンテナの起動直後はMySQLが準備中であるため初回の接続が切断され、以前はその際に
+    バックエンドが即時終了してUIのログインが502となっていた。即時終了せず短時間リトライを行う
+    (どのようなOS・実行環境であっても共通)。
     """
     import time
     from sqlalchemy import text
@@ -60,17 +60,17 @@ def _wait_for_db(timeout_sec=60):
         except OperationalError as exc:
             if time.monotonic() > deadline:
                 raise
-            print(f"[backend] DB 연결 대기 중(최대 {timeout_sec}초): {getattr(exc, 'orig', exc)}", flush=True)
+            print(f"[backend] DB接続待機中 (最大 {timeout_sec}秒): {getattr(exc, 'orig', exc)}", flush=True)
             time.sleep(2)
 
 
-# 서버 시작 시 테이블이 없으면 자동 생성 — DB 가 준비될 때까지 기다린 뒤
+# サーバー起動時にテーブルが存在しなければ自動作成 — DB準備完了を待機後
 _wait_for_db()
 Base.metadata.create_all(bind=engine)
 
 def _ensure_column(table, column_ddl):
-    """나중에 추가한 컬럼을 기존 테이블에도 넣는다 (create_all 은 이미 있는 테이블을 고치지 않는다).
-    이미 있으면 MySQL 이 오류를 내므로 그냥 넘어간다."""
+    """後から追加されたカラムを既存テーブルに追加 (create_all は既存テーブルを変更しないため)。
+    既に存在する場合はMySQLがエラーを返すためスキップ。"""
     from sqlalchemy import text
     with engine.connect() as conn:
         try:
@@ -81,15 +81,15 @@ def _ensure_column(table, column_ddl):
 
 
 _ensure_column("videos", "detected_vehicles TEXT NULL")
-_ensure_column("videos", "title VARCHAR(100) NULL")             # 업로드할 때 넣은 제목
-_ensure_column("analysis_tasks", "finished_at DATETIME NULL")   # 분석 이력: 끝난 시각
-_ensure_column("analysis_tasks", "event_count INT NULL")        # 분석 이력: 찾은 클립 수
-_ensure_column("crash_events", "clip_start_sec FLOAT NULL")     # CAM 클립이 원본의 몇 초부터인지
+_ensure_column("videos", "title VARCHAR(100) NULL")             # アップロード時に入力されたタイトル
+_ensure_column("analysis_tasks", "finished_at DATETIME NULL")   # 分析履歴: 完了日時
+_ensure_column("analysis_tasks", "event_count INT NULL")        # 分析履歴: 検出クリップ数
+_ensure_column("crash_events", "clip_start_sec FLOAT NULL")     # CAMクリップが元動画の何秒から開始するか
 
 
 def _drop_column(table, column):
-    """더 이상 쓰지 않는 컬럼을 기존 테이블에서 지운다.
-    이미 없으면 MySQL 이 오류를 내므로 그냥 넘어간다."""
+    """不要となったカラムを既存テーブルから削除。
+    既に存在しない場合はMySQLがエラーを返すためスキップ。"""
     from sqlalchemy import text
     with engine.connect() as conn:
         try:
@@ -99,7 +99,7 @@ def _drop_column(table, column):
             pass
 
 
-# 녹화 시작 시각 — 입력받지 않아 늘 기본값(20:30)이었다. 시간대별 통계와 함께 삭제(2026-10-18)
+# 録画開始時刻 — 未入力時は常にデフォルト値(20:30)だった。時間帯別統計と共に削除(2026-10-18)
 _drop_column("videos", "recording_start_time")
 
 app.include_router(auth.router)
@@ -110,4 +110,4 @@ app.include_router(analysis.router)
 
 @app.get("/")
 def read_root():
-    return {"message": "물피도주 자동감지 API 가동 중"}
+    return {"message": "当て逃げ・軽衝突自動検知API 稼働中"}
