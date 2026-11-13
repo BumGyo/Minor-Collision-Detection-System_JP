@@ -7,8 +7,8 @@ from torch.utils.checkpoint import checkpoint, checkpoint_sequential
 
 
 def _tag_names(path):
-    """조건 표시를 찾을 이름들 — 파일 이름, 그리고 학습 회차 폴더(<시각>_<모델>_<조건>) 안의 파일이면 그 폴더 이름.
-    work_best.pth·work_cand_ep*.pth·epochs/ 안 파일처럼 이름에 표시가 없어도 회차 폴더 이름으로 맞춘다."""
+    """条件タグを探索する名前のリスト — ファイル名、および学習実行回フォルダ (<日時>_<モデル>_<条件>) 配下のファイルであればそのフォルダ名。
+    work_best.pth・work_cand_ep*.pth・epochs/ 内のファイルのようにファイル名にタグがなくても実行回フォルダ名から取得可能。"""
     import re
     p = os.path.abspath(str(path))
     names = [os.path.basename(p)]
@@ -20,7 +20,7 @@ def _tag_names(path):
 
 
 def weights_input_size(path):
-    """가중치 파일(또는 회차 폴더) 이름의 입력 크기 표시(_s256 등 — 224 아닌 크기로 학습하면 train.py 가 붙인다). 없으면 None."""
+    """重みファイル (または実行回フォルダ) 名に含まれる入力サイズタグ (_s256 等 — 224 以外のサイズで学習時に train.py が付与)。なければ None。"""
     import re
     for n in _tag_names(path):
         m = re.search(r'_s(\d{3})(?=[_.]|$)', n)
@@ -30,20 +30,20 @@ def weights_input_size(path):
 
 
 def check_input_size(path):
-    """가중치를 학습한 입력 크기와 지금 config.INPUT_SIZE 가 다르면 멈춘다 — 크기가 다르면 판정이 틀어진다.
-    이름에 표시가 없으면 224 로 학습한 것으로 본다."""
+    """重みの学習時入力サイズと現在の config.INPUT_SIZE が異なる場合に停止する — サイズが異なると判定が崩れるため。
+    ファイル名にタグがない場合は 224 で学習されたものとみなす。"""
     import config
     n = weights_input_size(path) or 224
     if n != config.RESIZE[0]:
-        raise RuntimeError(f"가중치 {os.path.basename(str(path))} 은(는) 입력 {n}×{n} 으로 학습했는데 지금 입력 크기는 "
-                           f"{config.RESIZE[0]} 입니다 — 환경변수 INPUT_SIZE={n} 으로 실행하세요(config.INPUT_SIZE)")
+        raise RuntimeError(f"重み {os.path.basename(str(path))} は入力 {n}×{n} で学習されていますが、現在の入力サイズは "
+                           f"{config.RESIZE[0]} です — 環境変数 INPUT_SIZE={n} で実行してください (config.INPUT_SIZE)")
 
 
 HEAD_POOL_MODES = ('avg', 'top3', 'avgtop3')
 
 
 def weights_head_pool(path):
-    """가중치 파일(또는 회차 폴더) 이름의 헤드 시간 풀링 표시(_top3·_avgtop3 — avg 아닌 풀링으로 학습하면 train.py 가 붙인다). 없으면 'avg'."""
+    """重みファイル (または実行回フォルダ) 名に含まれるヘッド時間プーリングタグ (_top3・_avgtop3 — avg 以外で学習時に train.py が付与)。なければ 'avg'。"""
     import re
     for n in _tag_names(path):
         m = re.search(r'_(avgtop3|top3)(?=[_.]|$)', n)
@@ -53,36 +53,36 @@ def weights_head_pool(path):
 
 
 def check_head_pool(path):
-    """가중치를 학습한 헤드 시간 풀링과 지금 config.HEAD_TEMPORAL_POOL 이 다르면 멈춘다.
-    풀링엔 가중치가 없어 다른 풀링으로도 가중치가 그대로 읽히고 판정만 틀어지므로 이름으로 막는다."""
+    """重みの学習時ヘッド時間プーリングと現在の config.HEAD_TEMPORAL_POOL が異なる場合に停止する。
+    プーリング層には学習パラメータがないため異なる設定でも重み自体は読み込めてしまい、判定のみが狂うためファイル名で防止する。"""
     import config
     mode = weights_head_pool(path)
     if mode != config.HEAD_TEMPORAL_POOL:
-        raise RuntimeError(f"가중치 {os.path.basename(str(path))} 은(는) 헤드 시간 풀링 {mode} 로 학습했는데 지금은 "
-                           f"{config.HEAD_TEMPORAL_POOL} 입니다 — 환경변수 HEAD_TEMPORAL_POOL={mode} 로 실행하세요"
-                           f"(config.HEAD_TEMPORAL_POOL)")
+        raise RuntimeError(f"重み {os.path.basename(str(path))} はヘッド時間プーリング {mode} で学習されていますが、現在は "
+                           f"{config.HEAD_TEMPORAL_POOL} です — 環境変数 HEAD_TEMPORAL_POOL={mode} で実行してください"
+                           f" (config.HEAD_TEMPORAL_POOL)")
 
 
 def check_weights(path):
-    """가중치를 읽기 전 학습 조건 확인 — 입력 크기(_s256)·헤드 시간 풀링(_top3 등)이 지금 설정과 같아야 한다."""
+    """重み読み込み前の学習条件チェック — 入力サイズ (_s256)・ヘッド時間プーリング (_top3 等) が現在の設定と一致している必要がある。"""
     check_input_size(path)
     check_head_pool(path)
 
 
 class TemporalPool(nn.Module):
-    """헤드의 시간 축 모으기 (B, C, T, H, W) → (B, C, 1, H, W) — config.HEAD_TEMPORAL_POOL.
+    """ヘッドの時間軸プーリング (B, C, T, H, W) → (B, C, 1, H, W) — config.HEAD_TEMPORAL_POOL。
 
-    top3   : 채널·칸마다 시간 축에서 가장 큰 k(=3)개를 평균. 2~6프레임짜리 짧은 흔들림이 1/30 로 묽어지지 않는다.
-    avgtop3: 평균과 상위 k개 평균의 평균 — 긴 맥락(평균)과 짧은 순간(상위 k)을 함께, 크기는 둘 사이라 사전학습
-             post_conv 입력 범위에서 크게 벗어나지 않는다.
-    avg 는 이 모듈 대신 원래 AdaptiveAvgPool3d 를 그대로 둔다(지금까지 학습과 계산이 비트 단위로 같게).
-    mean·topk 만 써서 ONNX(TopK)·OpenVINO 로 그대로 바뀐다(infer_runtime 자가 검사로 결과 확인).
+    top3   : チャネル・グリッドごとに時間軸で最大の上位 k(=3) 個を平均。2〜6フレーム程度の短い揺れが 1/30 に希釈されない。
+    avgtop3: 全体平均と上位 k 個平均の平均 — 長期コンテキスト (平均) と一瞬のイベント (上位 k) を両立。値域が中間となるため
+             事前学習モデルの post_conv 入力範囲から大きく逸脱しない。
+    avg は本モジュールを使用せず元の AdaptiveAvgPool3d を維持 (従来の学習結果とビット完全一致を担保)。
+    mean・topk のみを使用しているため ONNX(TopK)・OpenVINO への変換も完全互換 (infer_runtime の自己診断で検証済み)。
     """
 
     def __init__(self, mode, k=3):
         super().__init__()
         if mode not in ('top3', 'avgtop3'):
-            raise ValueError(f'TemporalPool 은 top3·avgtop3 만: {mode!r}')
+            raise ValueError(f'TemporalPool は top3・avgtop3 のみサポート: {mode!r}')
         self.mode, self.k = mode, int(k)
 
     def forward(self, x):
@@ -92,90 +92,89 @@ class TemporalPool(nn.Module):
         return 0.5 * (x.mean(dim=2, keepdim=True) + top)
 
 
-# X3D-M의 마지막 res 스테이지 출력 채널 수(구조 확인으로 검증한 값).
+# X3D-M の最終 res ステージの出力チャネル数 (アーキテクチャ確認により検証済み)。
 X3D_M_FEATURE_CHANNELS = 192
-# 헤드 확장부(post_conv)를 거친 뒤의 채널 수 — 분류/CAM은 이 차원에서 이뤄진다.
+# ヘッド拡張部 (post_conv) 通過後のチャネル数 — 分類/CAM はこの次元で計算される。
 X3D_HEAD_CHANNELS = 2048
 
 
-# 분류 헤드 앞 dropout 비율 — 세 백본 공통값.
-# 백본 비교 실험에서 정규화 강도가 모델마다 다르면 결과 해석이 불가능해지므로
-# 반드시 같은 값을 쓴다. (기존: s3d 0.2 / x3d 0.5 / slowfast 0.2 로 제각각이었음)
+# 分類ヘッド前の Dropout 比率 — 全バックボーン共通値。
+# バックボーン比較実験において正規化の強度がモデルごとに異なると結果の解釈が困難になるため、
+# 必ず同一の値を使用する。(従来: s3d 0.2 / x3d 0.5 / slowfast 0.2 と不揃いであった)
 DROPOUT_P = 0.5
 
-# gradient checkpointing — 활성값을 들고 있지 않고 backward 때 forward를 다시
-# 계산한다. gradient가 수학적으로 동일해 **정확도에 영향이 없고**, 메모리만 줄고
-# 속도가 약 30% 느려진다.
+# Gradient Checkpointing — 中間活性化を保持せず、backward 時に forward を再計算する。
+# 勾配は数学的に完全に同一であるため **精度への悪影響はなく**、メモリ消費を大幅に削減し、
+# 速度は約 30% 低下する。
 #
-# X3D는 파라미터가 S3D의 1/2.7(2.98M vs 7.91M)인데 활성값은 1.7배다(25.4GB vs
-# 15.0GB, batch 15 기준). 시간축을 30프레임 그대로 유지하고 병목 안에서 채널을
-# 2.25배 확장하기 때문이다. RTX 3080 10GB에서 batch 15가 OOM 나는 원인이라,
-# batch를 줄이는 대신(→ 배치에 A가 없어져 학습이 깨진다) 이걸 쓴다.
-# 학습 때만 작동하며(self.training), 추론·CAM 경로는 건드리지 않는다.
+# X3D はパラメータ数が S3D の 1/2.7 (2.98M vs 7.91M) であるのに対し、活性化メモリは 1.7倍 (25.4GB vs
+# 15.0GB, batch 15 基準)。時間軸を 30 フレームそのまま維持しボトルネック内でチャネルを
+# 2.25倍に拡張するためである。RTX 3080 10GB で batch 15 が OOM となる原因であるため、
+# バッチサイズを減らす (→ バッチ内に A が含まれなくなり学習が破綻する) 代わりに本機能を使用する。
+# 学習時のみ動作し (self.training)、推論・CAM 経路には影響しない。
 GRAD_CHECKPOINT = os.getenv("GRAD_CHECKPOINT", "1").strip().lower() not in ("0", "false", "no")
-# 백본 블록이 5개뿐이라 segments=5 면 세그먼트당 1블록 = 블록 하나를 통째로
-# 재계산해야 한다. 그 피크가 features[1] 에서 8.67GB(batch 15)로 10GB에 빠듯하다.
-# 블록 수보다 크게 잡으면 checkpoint_sequential 이 블록 내부까지 쪼개 피크가 낮아진다.
+# バックボーンブロックが5個のみのため、segments=5 の場合 1セグメントあたり1ブロック = ブロック全体を
+# 再計算することになる。そのピークメモリは features[1] で 8.67GB (batch 15) となり 10GB に対して逼迫する。
+# ブロック数より大きく設定することで checkpoint_sequential がブロック内部まで分割しピークを抑制できる。
 GRAD_CHECKPOINT_SEGMENTS = int(os.getenv("GRAD_CHECKPOINT_SEGMENTS", "5"))
-# 체크포인팅할 앞쪽 블록 수(features 의 줄기·res2·res3·res4·res5 중 앞에서 몇 개). 비우면 지금까지와 같은
-# checkpoint_sequential(세그먼트 5 → 줄기~res4 를 backward 때 다시 계산, res5 는 그대로 = 4 와 같다).
-# 메모리가 남으면 줄여서 재계산을 덜 한다 — python -m model.speed_check ⑤로 RTX 3080 시간·메모리를 재고 고른다.
-# ⚠️ 체크포인팅한 블록은 다시 계산할 때 BN 이동평균(평가 때 쓰는 값)도 같은 묶음 통계로 한 번 더 갱신한다
-#    (2026-10-28 확인 — momentum 0.1 두 번 = 0.19 한 번. 기울기는 같다). 지금까지 학습이 그렇게 돼 왔으므로
-#    범위가 바뀌는 블록은 BN momentum 을 맞춰 예전과 같은 이동평균이 되게 한다(_match_bn_momentum).
+# チェックポインティング対象とする前方ブロック数 (features の stem・res2・res3・res4・res5 のうち前方何個か)。
+# 未指定時は従来通りの checkpoint_sequential (セグメント 5 → stem〜res4 を backward 時に再計算、res5 は通常保持 = 4 と等価)。
+# メモリに余裕がある場合は削減して再計算コストを抑制可能 — python -m model.speed_check ⑤ で RTX 3080 の時間・メモリを測定して選定。
+# ⚠️ チェックポインティング対象ブロックは再計算時に BN 移動平均 (評価時に使用する統計量) も同一バッチ統計で再度更新される
+#    (2026-10-28 検証 — momentum 0.1 を2回 = 0.19 を1回。勾配は同一)。従来の学習がその挙動であったため、
+#    範囲が変更されるブロックは BN momentum を調整して従来と同様の移動平均を再現する (_match_bn_momentum)。
 _ckpt_blocks_env = os.getenv("GRAD_CHECKPOINT_BLOCKS", "").strip()
 GRAD_CHECKPOINT_BLOCKS = int(_ckpt_blocks_env) if _ckpt_blocks_env else None
 
 class HitAndRun3DCNN(nn.Module):
-    """X3D-M 백본 기반 물피도주 감지 모델.
+    """X3D-M バックボーンベースの当て逃げ (物損事故) 検知モデル。
 
-    X3D(Feichtenhofer, CVPR 2020)는 2D 이미지 분류망을 폭·깊이·해상도·프레임
-    축으로 점진 확장해 얻은 효율적 3D-CNN이다. 같은 정확도를 S3D보다 훨씬 적은
-    연산으로 내는 것이 특징이라, 멀티-아워 영상을 슬라이딩 윈도로 훑는 이
-    서비스에서는 '윈도우당 비용'을 줄이는 쪽에 이점이 있다.
-    (파라미터: X3D-M 3.8M vs S3D 7.9M)
+    X3D (Feichtenhofer, CVPR 2020) は 2D 画像分類ネットワークを幅・深さ・解像度・フレーム軸で
+    段階的に拡張して得られた高効率 3D-CNN である。S3D と同等の精度を遥かに少ない演算量で達成するのが
+    特徴であり、数時間の長時間動画をスライディングウィンドウで走査する本サービスにおいて、
+    「ウィンドウあたりの処理コスト」を削減する大きな利点がある。
+    (パラメータ数: X3D-M 3.8M vs S3D 7.9M)
 
-    ⚠️ pytorchvideo의 기본 헤드(ResNetBasicHead)는 AvgPool3d 커널이 (16,7,7)로
-       고정되어 있어 T=30 입력에서 깨진다. 하지만 헤드를 통째로 버리면 그 안의
-       확장 conv(192→432→2048)까지 같이 날아가, 원본 구조로 학습된 가중치를
-       이식할 수 없다. 그래서 **고정 커널 pool만** 교체한다:
+    ⚠️ pytorchvideo のデフォルトヘッド (ResNetBasicHead) は AvgPool3d カーネルが (16,7,7) に
+       固定されており、T=30 の入力で形状不一致エラーとなる。しかしヘッド全体を破棄すると内部の
+       拡張 conv (192→432→2048) も同時に失われ、元の構造で学習された重みを移植できなくなる。
+       そのため、**固定カーネルの pool のみ** を差し替える:
 
            AvgPool3d((16,7,7))  →  AdaptiveAvgPool3d((1, None, None))
 
-       시간축만 뭉개고 공간 7×7을 남기므로 (a) T가 몇이든 동작하고
-       (b) 2048채널 공간 특징맵이 살아 있어 CAM을 뽑을 수 있다.
-       CAM은 어차피 시간축을 평균내므로(inference.py의 mean(cam, dim=0))
-       시간축 보존은 필요 없고, post_conv를 T=1에서만 돌려 연산도 아낀다.
+       時間軸のみを集約し空間 7×7 を保持するため、(a) 任意の T で動作し、
+       (b) 2048チャネルの空間特徴マップが残存するため CAM を抽出できる。
+       CAM は最終的に時間軸で平均化されるため (inference.py の mean(cam, dim=0))、
+       時間軸の保持は不要であり、post_conv を T=1 のみで実行することで演算量も削減できる。
 
-    서비스(inference.py)가 쓰는 인터페이스:
-      - 입력 (B, 3, T, 224, 224) → 출력 (B, num_classes) logits
-      - `head_conv`   : 1×1×1 Conv3d 분류 헤드 (CAM 가중치로 사용)
-      - `cam_layer`   : CAM forward hook 대상 (2048채널 공간 특징맵)
-      - `forward_with_cam` : logits + 칸별 클래스 지도(CAM) — 서비스 사고 클립 히트맵용
+    本番サービス (inference.py) が利用するインターフェース:
+      - 入力 (B, 3, T, 224, 224) → 出力 (B, num_classes) logits
+      - `head_conv`   : 1×1×1 Conv3d 分類ヘッド (CAM 重みとして使用)
+      - `cam_layer`   : CAM forward hook 対象 (2048チャネル空間特徴マップ)
+      - `forward_with_cam` : logits + グリッド別クラス活性化マップ (CAM) — サービス事故クリップヒートマップ用
 
     Args:
-        num_classes: 분류 클래스 수 (기본 2: S/A)
-        pretrained : True면 Kinetics-400 사전학습 가중치로 백본 초기화.
-                     추론에서는 학습된 state_dict를 로드하므로 False로 생성해
-                     불필요한 다운로드를 피한다.
+        num_classes: 分類クラス数 (デフォルト 2: S/A)
+        pretrained : True の場合、Kinetics-400 事前学習重みでバックボーンを初期化。
+                     推論時は学習済み state_dict をロードするため False で生成し不要なダウンロードを回避。
     """
 
     def __init__(self, num_classes=2, pretrained=False, dropout_p=DROPOUT_P, temporal_pool=None):
         super(HitAndRun3DCNN, self).__init__()
         base = x3d_m(pretrained=pretrained)
-        # 헤드 시간 풀링(config.HEAD_TEMPORAL_POOL) — avg 는 원래 연산, top3·avgtop3 는 TemporalPool. 가중치 키는 같다.
+        # ヘッド時間プーリング (config.HEAD_TEMPORAL_POOL) — avg は元の演算、top3・avgtop3 は TemporalPool。重みキーは同一。
         if temporal_pool is None:
             import config
             temporal_pool = getattr(config, 'HEAD_TEMPORAL_POOL', 'avg')
         if temporal_pool not in HEAD_POOL_MODES:
-            raise ValueError(f"HEAD_TEMPORAL_POOL 은 {'·'.join(HEAD_POOL_MODES)} 중 하나여야 합니다: {temporal_pool!r}")
+            raise ValueError(f"HEAD_TEMPORAL_POOL は {'・'.join(HEAD_POOL_MODES)} のいずれかである必要があります: {temporal_pool!r}")
         self.temporal_pool = temporal_pool
 
-        # blocks[-1]은 헤드. stem+res 스테이지와 분리한다.
+        # blocks[-1] はヘッド。stem+res ステージと分離する。
         self.features = nn.Sequential(*list(base.blocks)[:-1])
 
-        # 헤드의 확장부(pre_conv 192→432 → BN → ReLU → pool → post_conv 432→2048
-        # → ReLU)는 그대로 살리고, 고정 커널 pool만 교체한다.
+        # ヘッドの拡張部 (pre_conv 192→432 → BN → ReLU → pool → post_conv 432→2048
+        # → ReLU) は維持し、固定カーネル pool のみを差し替える。
         head_pool = base.blocks[-1].pool
         if temporal_pool == 'avg':
             head_pool.pool = nn.AdaptiveAvgPool3d((1, None, None))
@@ -186,23 +185,23 @@ class HitAndRun3DCNN(nn.Module):
 
         self.avg_pool = nn.AdaptiveAvgPool3d((1, 1, 1))
         self.dropout = nn.Dropout(p=dropout_p)
-        # 분류 헤드는 logit 출력이므로 BN/ReLU 없이 Conv3d 단독 (CAM 가중치 겸용).
-        # 원본 헤드의 Linear(2048→C)와 같은 연산이라 가중치를 reshape해 이식할 수 있다.
+        # 分類ヘッドは logit 出力のため BN/ReLU なしの Conv3d 単独 (CAM 重みを兼用)。
+        # 元ヘッドの Linear(2048→C) と等価な演算であるため、重みを reshape して移植可能。
         self.head_conv = nn.Conv3d(
             X3D_HEAD_CHANNELS, num_classes, kernel_size=1)
         self._match_bn_momentum()
 
     def default_checkpoint_blocks(self):
-        """GRAD_CHECKPOINT_BLOCKS 를 비웠을 때(checkpoint_sequential) 다시 계산하는 앞쪽 블록 수 — 기본 4."""
+        """GRAD_CHECKPOINT_BLOCKS 未指定時 (checkpoint_sequential) に再計算する前方ブロック数 — デフォルト 4。"""
         n = len(self.features)
         seg = max(1, min(GRAD_CHECKPOINT_SEGMENTS, n))
         return (n // seg) * (seg - 1)
 
     def _match_bn_momentum(self):
-        """체크포인팅 범위가 기본과 달라지는 블록의 BN momentum 을 맞춘다(위 GRAD_CHECKPOINT_BLOCKS 주석).
+        """チェックポインティング範囲がデフォルトと異なるブロックの BN momentum を調整する (上記の GRAD_CHECKPOINT_BLOCKS 注記参照)。
 
-        같은 묶음 통계로 momentum m 을 두 번 = 1-(1-m)² 를 한 번. 기본에선 다시 계산하던 블록이 빠지면
-        올리고, 기본에선 안 하던 블록이 들어가면 1-√(1-m) 로 내린다. momentum 은 가중치 파일에 없어 추론과 무관.
+        同一バッチ統計で momentum m を2回 = 1-(1-m)² を1回。デフォルトで再計算対象だったブロックが除外された場合は
+        引き上げ、デフォルトで対象外だったブロックが含まれた場合は 1-√(1-m) に引き下げる。momentum は重みファイルに保存されないため推論には影響しない。
         """
         if not GRAD_CHECKPOINT or GRAD_CHECKPOINT_BLOCKS is None:
             return
@@ -215,23 +214,22 @@ class HitAndRun3DCNN(nn.Module):
 
     @property
     def cam_layer(self):
-        """CAM 이 특징맵을 받아 가는 층 — 헤드 확장부 출력(2048채널, 공간 7×7 유지).
+        """CAM が特徴マップを取得する層 — ヘッド拡張部の出力 (2048チャネル、空間 7×7 を維持)。
 
-        property라 모듈이 중복 등록되지 않는다(가중치 키에 영향 없음). inference.py 가
-        `model.cam_layer.register_forward_hook(...)`으로 특징맵을 받는다.
-        head_conv.weight(2048채널)와 채널 수가 맞아야 CAM 가중합이 성립한다.
-        (예전 S3D 백본의 층 이름 inception5b 를 그대로 쓰던 것을 역할에 맞게 바꿨다)
+        property として定義しているためモジュールが重複登録されない (重みキーに影響なし)。inference.py が
+        `model.cam_layer.register_forward_hook(...)` で特徴マップを取得する。
+        head_conv.weight (2048チャネル) とチャネル数が一致することで CAM の重み付き和が成立する。
         """
         return self.head_pool
 
     def forward(self, x):
         if self.training and GRAD_CHECKPOINT and GRAD_CHECKPOINT_BLOCKS is not None:
-            # 앞쪽 GRAD_CHECKPOINT_BLOCKS 개만 블록마다 체크포인팅(checkpoint_sequential 과 같은 계산)
+            # 前方 GRAD_CHECKPOINT_BLOCKS 個のみブロック単位でチェックポインティング (checkpoint_sequential と等価な計算)
             for i, block in enumerate(self.features):
                 x = (checkpoint(block, x, use_reentrant=False)
                      if i < GRAD_CHECKPOINT_BLOCKS else block(x))
         elif self.training and GRAD_CHECKPOINT:
-            # 백본만 체크포인팅. head_pool 은 CAM hook 대상이라 밖에 둔다.
+            # バックボーンのみチェックポインティング。head_pool は CAM hook の対象であるため除外。
             x = checkpoint_sequential(
                 self.features, GRAD_CHECKPOINT_SEGMENTS, x, use_reentrant=False)
         else:
@@ -243,13 +241,13 @@ class HitAndRun3DCNN(nn.Module):
         return x.squeeze(-1).squeeze(-1).squeeze(-1)
 
     def forward_with_cam(self, x):
-        """forward 와 같은 logits (B, C) + 칸별 클래스 지도(CAM) (B, C, 7, 7) — 추론 전용.
+        """forward と同一の logits (B, C) + グリッド別クラス活性化マップ (CAM) (B, C, 7, 7) — 推論専用。
 
-        CAM 은 분류 헤드(1×1×1 Conv)를 공간 평균 '전에' 7×7 칸마다 적용한 것이다. 평균과 1×1 Conv 는
-        순서를 바꿔도 같아서 칸 평균이 곧 logits 이고, 칸마다 'A − S' 를 보면 그 칸이 사고 쪽으로 얼마나
-        기울였는지가 된다. 판정에 이미 계산하는 특징맵을 쓰므로 추가 비용은 칸 49개의 1×1 곱셈뿐이라,
-        빠른 실행기(ONNX·OpenVINO)도 이 두 출력을 함께 내보내 CAM 을 거의 공짜로 얻는다(infer_runtime.py).
-        logits 는 forward 와 같은 경로(평균 → Conv)로 계산해 판정 결과가 바뀌지 않게 한다.
+        CAM は分類ヘッド (1×1×1 Conv) を空間平均の「前」に 7×7 グリッドごとに適用したものである。平均と 1×1 Conv は
+        順序を入れ替えても同一であるため、グリッド平均がそのまま logits となり、グリッドごとの 'A − S' を確認することで
+        そのグリッドがどれだけ事故側に寄与したかを可視化できる。判定のために既に計算されている特徴マップを利用するため、
+        追加コストは 49 グリッドの 1×1 乗算のみであり、高速ランナー (ONNX・OpenVINO) でも両出力を同時に生成可能 (infer_runtime.py)。
+        logits は forward と同一経路 (平均 → Conv) で計算されるため判定結果に差異は生じない。
         """
         x = self.head_pool(self.features(x))            # (B, 2048, 1, 7, 7)
         cam = self.head_conv(x)[:, :, 0]                # (B, C, 7, 7)

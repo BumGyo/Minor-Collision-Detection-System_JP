@@ -1,11 +1,11 @@
-"""라이브 차량 탐지 모듈 (웹 서비스 /detect-vehicles 에서 사용).
+"""リアルタイム車両検出モジュール (Webサービス /detect-vehicles で使用)。
 
-YOLO(권장: segmentation 모델)로 프레임의 차량을 탐지하고, segmentation mask의
-실제 외곽으로 상/하/좌/우가 차량 엣지에 맞는 bbox를 계산한다. detection 모델을
-쓰면 마스크가 없어 YOLO detection bbox로 폴백한다.
+YOLO (推奨: segmentation モデル) でフレーム内の車両を検出し、segmentation mask の
+実際の輪郭から車両エッジにフィットしたバウンディングボックスを計算する。detection モデル使用時は
+マスクが存在しないため YOLO detection bbox にフォールバックする。
 
-- 라이브 진입점: get_detector(...) 로 탐지기를 프로세스당 1회 로드·재사용.
-- 반환: VehicleDetection(class_name, confidence, bbox=(x1,y1,x2,y2)) 목록.
+- エントリーポイント: get_detector(...) で検出器をプロセスごとに1回ロード・再利用。
+- 戻り値: VehicleDetection(class_name, confidence, bbox=(x1,y1,x2,y2)) のリスト。
 """
 
 from __future__ import annotations
@@ -19,10 +19,10 @@ import numpy as np
 
 try:
     from ultralytics import YOLO
-except ImportError as exc:  # pragma: no cover - runtime dependency 안내용
+except ImportError as exc:  # pragma: no cover - runtime dependency 案内用
     raise SystemExit(
-        "ultralytics가 설치되어 있지 않습니다. "
-        "다음 명령으로 설치하세요: pip install ultralytics opencv-python"
+        "ultralyticsがインストールされていません。 "
+        "次のコマンドでインストールしてください: pip install ultralytics opencv-python"
     ) from exc
 
 
@@ -37,7 +37,7 @@ class VehicleDetection:
 
 
 class VehicleBBoxDetector:
-    """YOLO-seg mask 외곽으로 차량 bbox를 타이트하게 재계산한다."""
+    """YOLO-seg mask 輪郭から車両 bbox をタイトに再計算する。"""
 
     def __init__(
         self,
@@ -55,17 +55,17 @@ class VehicleBBoxDetector:
     ):
         self.model = YOLO(model_path)
         self.conf = conf
-        # imgsz 의미:
-        #   dynamic_imgsz=False → 항상 이 값으로 추론(고정).
-        #   dynamic_imgsz=True  → 프레임 긴 변에 맞춘 동적 imgsz의 '상한(cap)'.
+        # imgsz の意味:
+        #   dynamic_imgsz=False → 常にこの値で推論 (固定)。
+        #   dynamic_imgsz=True  → フレーム長辺に合わせた動的 imgsz の「上限 (cap)」。
         #     eff = clamp(round32(long_side), imgsz_min, imgsz)
-        #     → 고해상도는 과다 다운스케일(정보손실) 방지, 저해상도는 업스케일 낭비 방지.
-        self.imgsz = imgsz              # 추론 입력 해상도(동적 모드에선 상한)
+        #     → 高解像度は過度なダウンスケール(情報損失)を防ぎ、低解像度は無駄なアップスケールを防ぐ。
+        self.imgsz = imgsz              # 推論入力解像度 (動的モードでは上限)
         self.dynamic_imgsz = dynamic_imgsz
         self.imgsz_min = imgsz_min
-        self.enhance_night = enhance_night  # 어두운 프레임 CLAHE/감마 전처리 여부
+        self.enhance_night = enhance_night  # 暗いフレームに対する CLAHE/ガンマ補正前処理の有無
         self.vehicle_classes = set(vehicle_classes)
-        self.mask_threshold = mask_threshold  # 마스크 이진화 임계값(↑ = bbox 타이트)
+        self.mask_threshold = mask_threshold  # マスク二値化閾値 (↑ = bboxがよりタイトに)
         self.min_area = min_area
         self.nms_iou = nms_iou
         self.contain_threshold = contain_threshold
@@ -129,7 +129,7 @@ class VehicleBBoxDetector:
         self,
         detections: list[VehicleDetection],
     ) -> list[VehicleDetection]:
-        """같은 차량에 여러 bbox가 생기면 confidence가 높은 bbox만 남긴다."""
+        """同一車両に複数の bbox が生成された場合、信頼度 (confidence) の高い bbox のみを残す。"""
         kept: list[VehicleDetection] = []
         for det in sorted(detections, key=lambda item: item.confidence, reverse=True):
             duplicate = False
@@ -149,7 +149,7 @@ class VehicleBBoxDetector:
         frame_width: int,
         frame_height: int,
     ) -> tuple[int, int, int, int] | None:
-        """Segmentation mask의 실제 양수 픽셀 외곽으로 bbox를 계산한다."""
+        """Segmentation mask の実際の正ピクセル外郭から bbox を計算する。"""
         binary = (mask > self.mask_threshold).astype(np.uint8)
         if binary.shape[:2] != (frame_height, frame_width):
             binary = cv2.resize(
@@ -158,7 +158,7 @@ class VehicleBBoxDetector:
                 interpolation=cv2.INTER_NEAREST,
             )
 
-        # 작은 구멍이나 끊긴 mask를 약하게 정리한다.
+        # 小さなノイズ穴や途切れをクローズ処理で補正
         kernel = np.ones((3, 3), dtype=np.uint8)
         binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel, iterations=1)
 
@@ -177,28 +177,27 @@ class VehicleBBoxDetector:
 
     @staticmethod
     def _enhance_low_light(frame_bgr: np.ndarray, brightness_thresh: int = 80) -> np.ndarray:
-        """어두운(야간) 프레임이면 CLAHE(대비 향상)+감마 보정으로 차량 가시성을 높인다.
+        """暗い (夜間) フレームの場合、CLAHE (コントラスト強調) + ガンマ補正で車両視認性を高める。
 
-        밝은 주간 프레임은 원본을 그대로 반환(과보정 방지). 밝기(그레이 평균)가
-        임계값 미만일 때만 보정을 적용한다.
+        明るい昼間フレームはそのまま返す (過補正防止)。輝度平均が閾値未満の場合のみ適用。
         """
         gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
         if float(gray.mean()) >= brightness_thresh:
             return frame_bgr
-        # CLAHE는 LAB의 L(밝기) 채널에만 적용 → 색 왜곡 없이 대비만 향상
+        # CLAHE は LAB の L (輝度) チャネルのみに適用 → 色の歪みなくコントラストのみ向上
         lab = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2LAB)
         l_ch, a_ch, b_ch = cv2.split(lab)
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         l_ch = clahe.apply(l_ch)
         enhanced = cv2.cvtColor(cv2.merge((l_ch, a_ch, b_ch)), cv2.COLOR_LAB2BGR)
-        # 감마 보정(<1) → 어두운 영역을 밝게
+        # ガンマ補正 (<1) → 暗部を明るく持ち上げる
         gamma = 0.7
         table = np.array([((i / 255.0) ** gamma) * 255
                           for i in range(256)], dtype=np.uint8)
         return cv2.LUT(enhanced, table)
 
     def _effective_imgsz(self, width: int, height: int) -> int:
-        """동적 모드면 프레임 긴 변을 32배수로 맞춰 [imgsz_min, imgsz]로 clamp."""
+        """動的モードの場合、フレーム長辺を32の倍数にスナップし [imgsz_min, imgsz] に収める。"""
         if not self.dynamic_imgsz:
             return self.imgsz
         long_side = max(width, height)
@@ -235,7 +234,6 @@ class VehicleBBoxDetector:
             if tight_bbox is None:
                 tight_bbox = self._clip_box(x1, y1, x2, y2, width, height)
 
-            # (엣지 정밀도는 마스크로 결정 — blind 좌우 shrink 휴리스틱은 사용하지 않음)
             bx1, by1, bx2, by2 = tight_bbox
             if bx2 <= bx1 or by2 <= by1:
                 continue
@@ -256,12 +254,12 @@ def read_source_frame(source: Path, frame_index: int = 0) -> np.ndarray:
     if source.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp", ".webp"}:
         frame = cv2.imread(str(source))
         if frame is None:
-            raise FileNotFoundError(f"이미지를 읽을 수 없습니다: {source}")
+            raise FileNotFoundError(f"画像を読み込めません: {source}")
         return frame
 
     cap = cv2.VideoCapture(str(source))
     if not cap.isOpened():
-        raise FileNotFoundError(f"영상을 읽을 수 없습니다: {source}")
+        raise FileNotFoundError(f"動画を読み込めません: {source}")
 
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     if frame_count > 0:
@@ -271,11 +269,11 @@ def read_source_frame(source: Path, frame_index: int = 0) -> np.ndarray:
     ok, frame = cap.read()
     cap.release()
     if not ok:
-        raise RuntimeError(f"{frame_index}번 프레임을 읽지 못했습니다: {source}")
+        raise RuntimeError(f"{frame_index}番目のフレームを読み込めませんでした: {source}")
     return frame
 
 
-# 프로세스당 탐지기(YOLO 모델)를 1회만 로드해 재사용 — 매 요청 재로드 오버헤드 제거.
+# プロセスごとに検出器 (YOLOモデル) を1回のみロードして再利用 — リクエストごとの再ロードオーバーヘッドを排除。
 _detector_cache: dict = {}
 
 
@@ -288,11 +286,11 @@ def get_detector(
     dynamic_imgsz: bool = True,
     imgsz_min: int = 640,
 ) -> "VehicleBBoxDetector":
-    """설정별로 VehicleBBoxDetector를 캐시해 반환한다(같은 설정이면 재사용).
+    """設定ごとに VehicleBBoxDetector をキャッシュして返す (同一設定なら再利用)。
 
-    YOLO 가중치 로드(≈수 초)를 요청마다 반복하지 않도록 프로세스 전역에 보관한다.
-    기본은 동적 imgsz(상한 1536): 프레임 해상도에 맞춰 imgsz를 정해 고해상도
-    정보손실과 저해상도 업스케일 낭비를 동시에 줄인다.
+    YOLO の重みロード (約数秒) をリクエストごとに繰り返さないようプロセス全体で保持。
+    デフォルトは動的 imgsz (上限 1536): フレーム解像度に合わせて imgsz を決定し、
+    高解像度の情報損失と低解像度の無駄なアップスケールを同時に削減する。
     """
     key = (model_path, conf, imgsz, enhance_night, mask_threshold,
            dynamic_imgsz, imgsz_min)

@@ -11,7 +11,7 @@ import { api, saveAuth, clearAuth, getToken, getStoredUser } from "./api";
 import "./App.css";
 import "./incident-ui.css";
 import "./premium-ui.css";
-import "./dashboard-dark.css"; // 다크 모드 통일 — 반드시 premium-ui.css 다음
+import "./dashboard-dark.css"; // ダークモード統一 — 必ず premium-ui.css の後に配置
 
 function InterfaceIcon({ name }) {
   const paths = {
@@ -24,8 +24,8 @@ function InterfaceIcon({ name }) {
   return <svg className="interface-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
 
-// 영상 카드의 ··· 메뉴 — '영상 정보 확인'은 화면 쪽 정보 팝업(onShowInfo, 업로드 일시 등 포함)을 열고,
-// '영상 삭제'는 여기서 확인 창을 띄워 지운다
+// 動画カードの ··· メニュー — 「動画情報確認」は画面側の情報ポップアップ(onShowInfo、アップロード日時等を含む)を開き、
+// 「動画削除」はここで確認ダイアログを表示して削除する
 function VideoCardActions({ video, title, onShowInfo, onDeleted, onError }) {
   const [open, setOpen] = useState(false);
   const [dialog, setDialog] = useState(null);
@@ -49,19 +49,19 @@ function VideoCardActions({ video, title, onShowInfo, onDeleted, onError }) {
   }, [open, dialog, busy]);
   const close = () => { if (!busy) { setDialog(null); triggerRef.current?.focus(); } };
   return <div className="video-card-actions" ref={containerRef} onClick={(e) => e.stopPropagation()}>
-    {/* 점 세 개는 글자(···) 대신 SVG — 글꼴·OS 마다 점 위치가 달라져 처져 보이지 않게 */}
-    <button className="video-more-trigger" ref={triggerRef} aria-label={`${title} 메뉴`} aria-expanded={open} onClick={() => setOpen(!open)}>
+    {/* 三点リーダーは文字(···)ではなくSVG — フォントやOSによってドットの位置がずれるのを防止 */}
+    <button className="video-more-trigger" ref={triggerRef} aria-label={`${title} メニュー`} aria-expanded={open} onClick={() => setOpen(!open)}>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
     </button>
     {open && <div className="video-card-menu">
-      <button onClick={() => { setOpen(false); onShowInfo(); }}><InterfaceIcon name="chart" /> 영상 정보 확인</button>
-      <button className="video-menu-delete" onClick={() => { setOpen(false); setError(""); setDialog("delete"); }}><TrashIcon size={17} /> 영상 삭제</button>
+      <button onClick={() => { setOpen(false); onShowInfo(); }}><InterfaceIcon name="chart" /> 動画情報を確認</button>
+      <button className="video-menu-delete" onClick={() => { setOpen(false); setError(""); setDialog("delete"); }}><TrashIcon size={17} /> 動画を削除</button>
     </div>}
     {dialog && <div className="settings-modal-overlay" onClick={close}>
-      <div className="confirm-modal video-card-dialog" role="alertdialog" aria-modal="true" aria-label="영상 삭제 확인" onClick={(e) => e.stopPropagation()}>
+      <div className="confirm-modal video-card-dialog" role="alertdialog" aria-modal="true" aria-label="動画削除の確認" onClick={(e) => e.stopPropagation()}>
         <span className="incident-eyebrow" translate="no">DELETE VIDEO</span>
-        <h2>해당 영상을 삭제하시겠습니까?</h2>
-        {/* 지울 영상을 카드처럼 — 썸네일 · 제목 · 녹화일자와 길이로 어떤 영상인지 바로 알아보게 */}
+        <h2>この動画を削除しますか？</h2>
+        {/* 削除対象の動画をカード表示 — サムネイル・タイトル・録画日と再生時間で対象動画を一目で識別可能に */}
         <div className="video-dialog-target">
           <img className="video-dialog-thumb" src={api.thumbnailUrl(video.id)} alt="" onError={(e) => { e.currentTarget.style.visibility = "hidden"; }} />
           <div className="video-dialog-target-text">
@@ -69,14 +69,14 @@ function VideoCardActions({ video, title, onShowInfo, onDeleted, onError }) {
             <span className="video-dialog-meta">{[video.date, formatTime(video.duration)].filter(Boolean).join(" · ")}</span>
           </div>
         </div>
-        <p className="confirm-modal-desc">원본 영상, 분석 이력과 사고 클립이 함께 삭제됩니다. 삭제 후에는 복구할 수 없습니다.</p>
+        <p className="confirm-modal-desc">原本動画、分析履歴、事故クリップがすべて削除されます。削除後は復元できません。</p>
         {error && <p className="video-delete-error" role="alert">{error}</p>}
-        <div className="video-dialog-actions"><button autoFocus disabled={busy} onClick={close}>취소</button>
+        <div className="video-dialog-actions"><button autoFocus disabled={busy} onClick={close}>キャンセル</button>
           {dialog === "delete" && <button className="video-delete-confirm" disabled={busy} onClick={async () => {
             setBusy(true); setError("");
             try { await api.deleteVideo(video.id); onDeleted(video.id); }
             catch (e) { setError(e.message); onError?.(e.message); setBusy(false); }
-          }}>{busy ? "삭제 중…" : "영상 삭제"}</button>}
+          }}>{busy ? "削除中…" : "動画を削除"}</button>}
         </div>
       </div>
     </div>}
@@ -85,14 +85,14 @@ function VideoCardActions({ video, title, onShowInfo, onDeleted, onError }) {
 
 function TeamFooter({ animated = false }) {
   return <footer className={`siot-team-footer ${animated ? "scroll-reveal" : ""}`}>
-    <div className="team-footer-brand"><strong translate="no">SIOT<span>.</span></strong><p>충북대학교 소프트웨어학부</p><small translate="no">Parking incident intelligence</small></div>
-    <div className="team-footer-people"><span className="team-footer-label" translate="no">THE TEAM</span><p><span>팀장</span> 이정주</p><p><span>팀원</span> 박마누엘정, 배기원, 서범교</p></div>
-    <a className="team-footer-github" href="https://github.com/CBNU-capstone-26/Minor-Collision-Detection-System" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span><small>프로젝트 저장소</small></a>
+    <div className="team-footer-brand"><strong translate="no">SIOT<span>.</span></strong><p>忠北大学校 ソフトウェア学部</p><small translate="no">Parking incident intelligence</small></div>
+    <div className="team-footer-people"><span className="team-footer-label" translate="no">THE TEAM</span><p><span>チームリーダー</span> イ・ジョンジュ</p><p><span>チームメンバー</span> パク・エマニュエル・ジョン, ペ・ギウォン, ソ・ボムギョ</p></div>
+    <a className="team-footer-github" href="https://github.com/CBNU-capstone-26/Minor-Collision-Detection-System" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span><small>プロジェクトリポジトリ</small></a>
   </footer>;
 }
 
-// 선으로 그린 휴지통 아이콘 — 글자색(currentColor)을 따라가서 평소 회색 → 마우스 올리면 빨강.
-// (🗑 이모지는 자체 색이라 hover 색이 안 먹고, 운영체제마다 모양이 달랐다)
+// 線画のゴミ箱アイコン — 文字色(currentColor)に追従し、通常グレー → ホバー時レッド。
+// (🗑 絵文字は固有色のためhover色が効かず、OSごとに形状が異なる)
 function TrashIcon({ size = 14 }) {
   return (
     <svg
@@ -115,7 +115,7 @@ function TrashIcon({ size = 14 }) {
   );
 }
 
-// 재생 컨트롤 아이콘 — 이모지(▶ ⏸ ⛶)는 OS·글꼴마다 모양과 크기가 달라 SVG 로 그린다
+// 再生コントロールアイコン — 絵文字(▶ ⏸ ⛶)はOSやフォントによって形状やサイズが異なるためSVGで描画
 const PLAYER_ICON_PATHS = {
   play: <path d="M8 5.5v13l10.5-6.5z" fill="currentColor" />,
   pause: (
@@ -166,7 +166,7 @@ function PlayerIcon({ name, size = 18 }) {
   );
 }
 
-// 그리드의 지금 열 수 — CSS(auto-fill)가 화면 폭·배율에 맞춰 정한 값을 읽는다. el 이 바뀌거나 크기가 바뀌면 다시 읽는다
+// グリッドの現在のカラム数 — CSS(auto-fill)が画面幅・倍率に応じて定めた値を読み取る。el変更時やリサイズ時に再取得
 function useGridColumns(el, fallback = 3) {
   const [cols, setCols] = useState(fallback);
   useEffect(() => {
@@ -183,10 +183,10 @@ function useGridColumns(el, fallback = 3) {
   return cols;
 }
 
-// 재생 위치 t 에 원본 위로 겹쳐 볼 사고 클립 — t 가 빨간 구간 안이면 그 구간, 아니면 lead 초 안에 시작할 구간(미리 불러 둔다).
-// 한 영상을 여러 번 분석해 같은 시각에 클립이 여럿이면 목록·재생바에서 고른 클립(selectedId) → 없으면 가장 최근 분석의 클립.
-// 클립이 원본의 몇 초부터인지(clipStartSec) 저장된 분석만 — 예전 분석은 클립 앞뒤 여유가 시기마다 달라(15·30프레임)
-// 역산하면 0.5초까지 어긋나 원본 시각과 다른 장면이 겹친다(2026-10-27 18번 영상 실측) → 원본을 그대로 보여 준다
+// 再生位置 t において原本に重ねて表示する事故クリップ — t が赤色区間内ならその区間、そうでなければ lead 秒以内に開始する区間(先読み)。
+// 1つの動画を複数回分析して同一時刻にクリップが複数ある場合、リスト・再生バーで選択したクリップ(selectedId) → なければ最新の分析クリップ。
+// クリップが原本の何秒からか(clipStartSec)が保存されている分析のみ — 以前の分析はクリップ前後のマージンが時期によって異なり(15・30フレーム)、
+// 逆算すると最大0.5秒ずれ、原本時刻と異なるシーンが重なる(2026-10-27 18番動画実測) → 原本をそのまま表示
 function clipEventAt(events, t, selectedId) {
   const inSeg = events.filter((e) => e.hasClip && e.clipStartSec != null
     && t >= e.startSec && t <= Math.max(e.startSec, e.endSec ?? e.startSec));
@@ -195,12 +195,12 @@ function clipEventAt(events, t, selectedId) {
       || ((e.analysisNo ?? 0) === (best.analysisNo ?? 0) && e.id > best.id) ? e : best), null);
 }
 
-// 빨간 구간·목록의 클립을 누르면 구간 이만큼 앞부터 재생한다 — 사고 장면부터 바로 틀면 갑작스러워서(사용자 요청 2026-10-27).
-// 그동안 CAM 클립을 미리 불러 맞춰 두어 구간에 들어서는 순간 바로 바뀐다
-const EVENT_PREROLL_SEC = 1;   // 처음 2초였다가 길다는 요청으로 1초(2026-10-27)
+// 赤色区間・リストのクリップをクリックすると区間の指定秒数手前から再生 — 事故シーンからいきなり再生されると唐突なため(ユーザー要望 2026-10-27)。
+// その間にCAMクリップを先読み同期させ、区間突入時に即座に切り替わる
+const EVENT_PREROLL_SEC = 1;   // 当初2秒から長いとの要望で1秒に変更(2026-10-27)
 
-// 재생 위치 t 부터 lead 초 안에 화면에 나올 클립들 — 지금 나올 클립과, 구간 경계에서 바뀌어 나올 클립.
-// 미리 불러 재생 위치를 맞춰 두면 경계에서 바로 바뀐다(그때 불러오면 0.1~0.6초 원본이 비쳤다, 2026-10-27 실측)
+// 再生位置 t から lead 秒以内に画面に表示されるクリップ群 — 現在表示対象のクリップと、区間境界で切り替わるクリップ。
+// 先読みして再生位置を同期しておくことで境界で即座に切り替わる(その場で読み込むと0.1〜0.6秒原本が映り込んだ、2026-10-27実測)
 function clipEventsAhead(events, t, selectedId, lead) {
   const times = [t];
   events.forEach((e) => {
@@ -217,10 +217,10 @@ function clipEventsAhead(events, t, selectedId, lead) {
   return out;
 }
 
-let toastSeq = 0; // 하단 알림 번호 (showToast)
-let bboxSeq = 0; // 고른 차량 박스 번호
+let toastSeq = 0; // トースト通知ID (showToast)
+let bboxSeq = 0; // 選択車両ボックスID
 
-// 화면 너비 조건(CSS 미디어쿼리)이 지금 맞는지 — 창 크기가 바뀌면 다시 그린다
+// 画面幅条件(CSSメディアクエリ)の現在の一致状態 — ウィンドウリサイズ時に再描画
 function useMediaQuery(query) {
   const subscribe = useCallback(
     (onChange) => {
@@ -233,7 +233,7 @@ function useMediaQuery(query) {
   return useSyncExternalStore(subscribe, () => window.matchMedia(query).matches);
 }
 
-// 검색 아이콘 — 색 없이 선만 있는 돋보기 (이모지 🔍 는 OS 마다 색·모양이 달라서)
+// 検索アイコン — 塗りのない線画の虫眼鏡 (絵文字🔍はOSによって色や形状が異なるため)
 function SearchIcon({ size = 16 }) {
   return (
     <svg
@@ -253,11 +253,11 @@ function SearchIcon({ size = 16 }) {
   );
 }
 
-// 로그인이 만료돼 돌아왔으면(/login?expired=1) 로그인 창을 열고 안내한다
-const AUTH_EXPIRED_MSG = "로그인이 만료되었습니다. 다시 로그인해 주세요.";
+// ログインの有効期限が切れて戻った場合(/login?expired=1)、ログイン画面を表示して案内する
+const AUTH_EXPIRED_MSG = "ログインの有効期限が切れました。再度ログインしてください。";
 const cameFromExpiredLogin = () => new URLSearchParams(window.location.search).has("expired");
 
-// 로그인·회원가입 팝업이 사라지는 효과 시간 — App.css 의 public-overlay-out·public-modal-out 과 같게
+// ログイン・会員登録ポップアップの非表示アニメーション時間 — App.css の public-overlay-out・public-modal-out と同期
 const MODAL_EXIT_MS = 200;
 const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
@@ -271,8 +271,8 @@ function LoginPage({ onLogin }) {
   const modalCloseTimerRef = useRef(null);
   const navigate = useNavigate();
 
-  // 팝업은 CSS 효과로 열리고, 닫을 땐 사라지는 효과가 끝난 뒤에 실제로 닫는다
-  // ('동작 줄이기' 설정이면 효과 없이 바로 닫는다 — 그땐 CSS 효과도 꺼져 있다)
+  // ポップアップはCSSアニメーションで開き、閉じる際は非表示アニメーション完了後に実際にアンマウントする
+  // (「動きを減らす」設定時はアニメーションなしで即時閉じる)
   const openLogin = () => {
     clearTimeout(modalCloseTimerRef.current);
     setIsModalClosing(false);
@@ -329,11 +329,11 @@ function LoginPage({ onLogin }) {
   return (
     <div className="public-login-page">
       <header className="public-navbar">
-        <button className="public-brand" onClick={() => navigate("/login")} aria-label="SIOT 홈으로 이동">
+        <button className="public-brand" onClick={() => navigate("/login")} aria-label="SIOTホームへ移動">
           <span className="workspace-wordmark" translate="no">SI<span className="workspace-lens">O</span>T<span className="workspace-brand-dot">.</span></span>
         </button>
         <div className="public-nav-meta">
-          <nav className="premium-nav-links" aria-label="서비스 소개"><a href="#overview" translate="no">SIOT</a><a href="#why-siot">주요 기능</a><a href="#review-preview">클립 검토</a></nav>
+          <nav className="premium-nav-links" aria-label="サービス紹介"><a href="#overview" translate="no">SIOT</a><a href="#why-siot">主な機能</a><a href="#review-preview">クリップ確認</a></nav>
           <button className="public-login-trigger" translate="no" onClick={openLogin}>
             LOGIN <span aria-hidden="true">↗</span>
           </button>
@@ -344,20 +344,20 @@ function LoginPage({ onLogin }) {
         <section className="public-hero" id="overview">
           <div className="public-hero-copy scroll-reveal">
             <p className="public-kicker" translate="no"><span className="premium-status-dot" /> SIOT · PARKING INTELLIGENCE</p>
-            <h1>스쳐 간 순간.<br /><em>선명해지는 단서.</em></h1>
+            <h1>見落とされがちな瞬間。<br /><em>鮮明になる手掛かり。</em></h1>
             <p className="public-hero-description">
-              수많은 CCTV 기록에서, 확인이 필요한 순간으로.
-              SIOT가 주차 중 접촉 의심 장면을 찾아 당신의 검토를 돕습니다.
+              膨大なCCTV映像から、確認が必要な瞬間へ。
+              SIOTが駐車中の接触疑いシーンを検出し、的確な確認作業を支援します。
             </p>
             <div className="public-hero-actions">
               <button className="public-primary-btn" onClick={openLogin}>
-                분석 시작하기 <span aria-hidden="true">→</span>
+                分析を開始する <span aria-hidden="true">→</span>
               </button>
-              <a className="public-text-link" href="#why-siot">SIOT 살펴보기 <span aria-hidden="true">↓</span></a>
+              <a className="public-text-link" href="#why-siot">SIOTの特長を見る <span aria-hidden="true">↓</span></a>
             </div>
           </div>
 
-          <div className="public-hero-panel scroll-reveal" aria-label="SIOT 분석 흐름">
+          <div className="public-hero-panel scroll-reveal" aria-label="SIOTの分析フロー">
             <div className="public-panel-topline" translate="no">
               <span>INCIDENT PREVIEW</span>
               <span className="public-live-dot">● DEMO</span>
@@ -372,60 +372,60 @@ function LoginPage({ onLogin }) {
                   <span className="public-detected-label" translate="no">DETECTED</span>
                 </div>
               </div>
-              <div className="public-scan-caption">SIMULATION / 실제 분석 결과가 아닌 예시입니다</div>
+              <div className="public-scan-caption">SIMULATION / 実際の分析結果ではなくサンプルです</div>
             </div>
 
 
             <div className="premium-preview-timeline" aria-hidden="true"><span /><span /><span /><i /></div>
             <div className="public-panel-footer">
-              <span>의심 구간 감지</span>
-              <strong>→ 날짜별 이벤트로 정리</strong>
+              <span>疑い区間の検知</span>
+              <strong>→ 日付別イベントとして整理</strong>
             </div>
           </div>
         </section>
 
-        <section className="public-proof-strip scroll-reveal" aria-label="SIOT 핵심 기능">
-          <div><strong>01</strong><span>영상 업로드</span></div>
-          <div><strong>02</strong><span>의심 장면 분석</span></div>
-          <div><strong>03</strong><span>사건별 확인</span></div>
-          <p>AI가 영상을 먼저 훑고, 관리자는 필요한 장면에 집중합니다.</p>
+        <section className="public-proof-strip scroll-reveal" aria-label="SIOTのコア機能">
+          <div><strong>01</strong><span>動画アップロード</span></div>
+          <div><strong>02</strong><span>疑いシーンの分析</span></div>
+          <div><strong>03</strong><span>事象別の確認</span></div>
+          <p>AIが映像をスクリーニングし、管理者は必要なシーンに集中できます。</p>
         </section>
 
         <section className="premium-showcase scroll-reveal" id="review-preview">
-          <div className="premium-showcase-copy"><p className="public-kicker" translate="no">SIOT. A CLOSER LOOK.</p><h2>놓치기 쉬운 접촉.<br /><span>다시 볼 수 있는 순간.</span></h2><p>긴 영상에서 의심 구간으로.<br />클립과 원본을 함께 확인하는 명확한 검토 경험.</p><a className="public-text-link" href="#why-siot">검토 흐름 살펴보기 <span aria-hidden="true">↗</span></a></div>
-          <div className="premium-review-window" aria-label="사고 의심 구간 검토 화면 예시">
-            <div className="premium-window-top"><span><i /><i /><i /></span><b translate="no">SIOT / CLIP REVIEW</b><small>예시 화면</small></div>
-            <div className="premium-window-scene"><div className="premium-parking-lines" /><div className="premium-scene-car parked" /><div className="premium-scene-car passing" /><div className="premium-scene-target"><span>차량 선택</span></div><span className="premium-scene-note">접촉 의심 구간 · 원본 확인 필요</span></div>
+          <div className="premium-showcase-copy"><p className="public-kicker" translate="no">SIOT. A CLOSER LOOK.</p><h2>見落としやすい接触。<br /><span>振り返ることができる瞬間。</span></h2><p>長時間の映像から疑い区間へ。<br />クリップと原本を同時に照合する明瞭な確認体験。</p><a className="public-text-link" href="#why-siot">確認フローを見る <span aria-hidden="true">↗</span></a></div>
+          <div className="premium-review-window" aria-label="事故疑い区間の確認画面サンプル">
+            <div className="premium-window-top"><span><i /><i /><i /></span><b translate="no">SIOT / CLIP REVIEW</b><small>サンプル画面</small></div>
+            <div className="premium-window-scene"><div className="premium-parking-lines" /><div className="premium-scene-car parked" /><div className="premium-scene-car passing" /><div className="premium-scene-target"><span>車両選択</span></div><span className="premium-scene-note">接触疑い区間 · 原本確認が必要</span></div>
             <div className="premium-window-bottom"><span aria-hidden="true">▶</span><div><i /></div><span>00:12 / 00:48</span></div>
           </div>
         </section>
         <section className="premium-story" id="why-siot">
-          <div className="premium-story-heading scroll-reveal"><p className="public-kicker" translate="no">LESS SEARCHING. MORE CLARITY.</p><h2>긴 기록은 짧게.<br /><span>중요한 순간은 깊게.</span></h2><p>차량을 고르고, 의심 구간을 찾고, 원본으로 확인하는 일.<br />복잡했던 영상 검토를 하나의 흐름으로 연결합니다.</p></div>
+          <div className="premium-story-heading scroll-reveal"><p className="public-kicker" translate="no">LESS SEARCHING. MORE CLARITY.</p><h2>長時間の記録は短縮。<br /><span>重要な瞬間は詳細に。</span></h2><p>車両を指定し、疑い区間を検出し、原本で確認する。<br />煩雑だった映像確認を一つのスムーズなフローに統合します。</p></div>
           <div className="premium-feature-grid">
-            <article className="premium-feature scroll-reveal"><span className="premium-feature-index" translate="no">01 / FOCUS</span><div className="premium-focus-art" aria-hidden="true"><span /><i /><b /></div><h3>한 대에 집중하는 시선.</h3><p>자동 차량 탐지와 직접 지정으로<br />확인할 차량을 명확하게 선택하세요.</p><span className="premium-feature-tag">차량 탐지 · 영역 지정</span></article>
-            <article className="premium-feature scroll-reveal"><span className="premium-feature-index" translate="no">02 / DISCOVER</span><div className="premium-wave-art" aria-hidden="true">{Array.from({length: 23}, (_, i) => <i key={i} style={{"--bar-height": `${20 + ((i * 37) % 65)}%`, "--bar-delay": `${i * 65}ms`}} />)}</div><h3>기록 속, 의심되는 순간.</h3><p>선택한 차량의 접촉 의심 장면을<br />분석하고 클립 단위로 살펴보세요.</p><span className="premium-feature-tag">의심 구간 분석 · 클립 확인</span></article>
-            <article className="premium-feature scroll-reveal"><span className="premium-feature-index" translate="no">03 / REVIEW</span><div className="premium-review-art" aria-hidden="true"><span>00:12 <b>의심 구간</b></span><span>00:28 <b>원본 확인</b></span><span>00:41 <b>클립 검토</b></span></div><h3>판단을 위한, 더 나은 맥락.</h3><p>분석 이력과 원본 클립을 함께 확인해<br />장면의 전후 맥락을 검토하세요.</p><span className="premium-feature-tag">분석 이력 · 원본 다운로드</span></article>
+            <article className="premium-feature scroll-reveal"><span className="premium-feature-index" translate="no">01 / FOCUS</span><div className="premium-focus-art" aria-hidden="true"><span /><i /><b /></div><h3>1台にフォーカスする視線。</h3><p>自動車両検出と手動指定により、<br />確認対象の車両を的確に選択できます。</p><span className="premium-feature-tag">車両検出 · エリア指定</span></article>
+            <article className="premium-feature scroll-reveal"><span className="premium-feature-index" translate="no">02 / DISCOVER</span><div className="premium-wave-art" aria-hidden="true">{Array.from({length: 23}, (_, i) => <i key={i} style={{"--bar-height": `${20 + ((i * 37) % 65)}%`, "--bar-delay": `${i * 65}ms`}} />)}</div><h3>記録の中に潜む、疑わしい瞬間。</h3><p>選択した車両の接触疑いシーンを<br />分析し、クリップ単位で確認できます。</p><span className="premium-feature-tag">疑い区間の分析 · クリップ確認</span></article>
+            <article className="premium-feature scroll-reveal"><span className="premium-feature-index" translate="no">03 / REVIEW</span><div className="premium-review-art" aria-hidden="true"><span>00:12 <b>疑い区間</b></span><span>00:28 <b>原本確認</b></span><span>00:41 <b>クリップ確認</b></span></div><h3>正確な判断のための、より確かな文脈。</h3><p>分析履歴と原本クリップを併せて確認し、<br />前後の状況・文脈を検証できます。</p><span className="premium-feature-tag">分析履歴 · 原本ダウンロード</span></article>
           </div>
         </section>
-        <section className="premium-closing scroll-reveal"><span className="public-kicker" translate="no">YOUR NEXT CLEAR MOMENT</span><h2>이제, 필요한 장면에만<br />집중하세요.</h2><button className="public-primary-btn" onClick={openLogin}>SIOT 시작하기 <span aria-hidden="true">↗</span></button><p>AI 감지는 검토를 돕는 보조 정보입니다. 최종 확인은 원본 영상으로 진행하세요.</p></section>
+        <section className="premium-closing scroll-reveal"><span className="public-kicker" translate="no">YOUR NEXT CLEAR MOMENT</span><h2>これからは、必要なシーンだけに<br />集中できます。</h2><button className="public-primary-btn" onClick={openLogin}>SIOTを始める <span aria-hidden="true">↗</span></button><p>AI検知は確認作業を支援する補助情報です。最終確認は原本動画にて行ってください。</p></section>
       </main>
 
       <TeamFooter animated />
 
-      {/* 로그인·회원가입이 어두운 배경 하나를 같이 쓴다 — 서로 넘어갈 때 배경이 깜빡이지 않게 */}
+      {/* ログイン・会員登録が共通のオーバーレイを使用 — 遷移時のチラつきを防止 */}
       {(isLoginOpen || isSignupOpen) && (
         <div className={`login-modal-overlay ${isModalClosing ? "closing" : ""}`} onClick={closeModal}>
           {isLoginOpen ? (
             <div className="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-modal-title" onClick={(e) => e.stopPropagation()}>
-              <button className="login-modal-close" onClick={closeModal} aria-label="로그인 창 닫기">×</button>
+              <button className="login-modal-close" onClick={closeModal} aria-label="ログイン画面を閉じる">×</button>
               <p className="public-kicker" translate="no">SECURE ACCESS</p>
-              <h2 id="login-modal-title">대시보드 로그인</h2>
-              <p className="login-modal-description">분석된 영상과 사고 의심 이벤트를 확인하세요.</p>
+              <h2 id="login-modal-title">ダッシュボード ログイン</h2>
+              <p className="login-modal-description">分析済み動画および事故疑いイベントをご確認ください。</p>
 
               <div className="input-group">
                 <input
                   type="text"
-                  placeholder="아이디"
+                  placeholder="ユーザー名"
                   value={id}
                   onChange={(e) => setId(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleLogin()}
@@ -436,7 +436,7 @@ function LoginPage({ onLogin }) {
               <div className="input-group">
                 <input
                   type="password"
-                  placeholder="비밀번호"
+                  placeholder="パスワード"
                   value={pw}
                   onChange={(e) => setPw(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleLogin()}
@@ -452,7 +452,7 @@ function LoginPage({ onLogin }) {
                 <a href="#none" className="support-link">Support</a>
               </div>
 
-              <button className="login-submit-btn" onClick={handleLogin}>로그인</button>
+              <button className="login-submit-btn" onClick={handleLogin}>ログイン</button>
               <button
                 className="login-signup-btn"
                 onClick={() => {
@@ -460,7 +460,7 @@ function LoginPage({ onLogin }) {
                   setIsSignupOpen(true);
                 }}
               >
-                회원가입
+                会員登録
               </button>
             </div>
           ) : (
@@ -492,11 +492,11 @@ function SignupModal({ onClose, onBackToLogin }) {
   const handleSignup = async () => {
     setError("");
     if (!form.username || !form.name || !form.password) {
-      setError("아이디, 이름, 비밀번호는 필수입니다.");
+      setError("ユーザー名、氏名、パスワードは必須です。");
       return;
     }
     if (form.password !== form.passwordConfirm) {
-      setError("비밀번호가 일치하지 않습니다.");
+      setError("パスワードが一致しません。");
       return;
     }
     try {
@@ -512,57 +512,57 @@ function SignupModal({ onClose, onBackToLogin }) {
     }
   };
 
-  // 어두운 배경(login-modal-overlay)은 LoginPage 가 로그인 창과 함께 쓴다
+  // 背景(login-modal-overlay)はLoginPageがログイン画面と共用
   return (
     <div className="login-modal signup-modal" role="dialog" aria-modal="true" aria-labelledby="signup-modal-title" onClick={(e) => e.stopPropagation()}>
-      <button className="login-modal-close" onClick={onClose} aria-label="회원가입 창 닫기">×</button>
+      <button className="login-modal-close" onClick={onClose} aria-label="会員登録画面を閉じる">×</button>
       <p className="public-kicker" translate="no">CREATE ACCOUNT</p>
-      <h2 id="signup-modal-title">회원가입</h2>
-      <p className="login-modal-description">SIOT 영상 분석 대시보드 계정을 생성합니다.</p>
+      <h2 id="signup-modal-title">会員登録</h2>
+      <p className="login-modal-description">SIOT動画分析ダッシュボードのアカウントを作成します。</p>
 
       {done ? (
         <div className="signup-complete-state">
-          <strong>가입이 완료되었습니다.</strong>
-          <span>이제 로그인하여 대시보드를 확인할 수 있습니다.</span>
-          <button className="login-submit-btn" onClick={onBackToLogin}>로그인하러 가기</button>
+          <strong>登録が完了しました。</strong>
+          <span>ログインしてダッシュボードをご利用いただけます。</span>
+          <button className="login-submit-btn" onClick={onBackToLogin}>ログイン画面へ</button>
         </div>
       ) : (
         <>
           <div className="signup-modal-grid">
             <div className="signup-field">
-              <label className="signup-field-label" htmlFor="signup-name">이름 <span>*</span></label>
+              <label className="signup-field-label" htmlFor="signup-name">氏名 <span>*</span></label>
               <div className="input-group">
-                <input id="signup-name" type="text" placeholder="이름을 입력하세요" value={form.name} onChange={update("name")} autoFocus />
+                <input id="signup-name" type="text" placeholder="氏名を入力してください" value={form.name} onChange={update("name")} autoFocus />
               </div>
             </div>
             <div className="signup-field">
-              <label className="signup-field-label" htmlFor="signup-email">이메일</label>
+              <label className="signup-field-label" htmlFor="signup-email">メールアドレス</label>
               <div className="input-group">
-                <input id="signup-email" type="email" placeholder="이메일을 입력하세요" value={form.email} onChange={update("email")} autoCapitalize="off" autoCorrect="off" />
+                <input id="signup-email" type="email" placeholder="メールアドレスを入力してください" value={form.email} onChange={update("email")} autoCapitalize="off" autoCorrect="off" />
               </div>
             </div>
             <div className="signup-field">
-              <label className="signup-field-label" htmlFor="signup-username">아이디 <span>*</span></label>
+              <label className="signup-field-label" htmlFor="signup-username">ユーザー名 <span>*</span></label>
               <div className="input-group">
-                <input id="signup-username" type="text" placeholder="로그인에 사용할 아이디" value={form.username} onChange={update("username")} autoCapitalize="off" autoCorrect="off" />
+                <input id="signup-username" type="text" placeholder="ログインに使用するユーザー名" value={form.username} onChange={update("username")} autoCapitalize="off" autoCorrect="off" />
               </div>
             </div>
             <div className="signup-field">
-              <label className="signup-field-label" htmlFor="signup-password">비밀번호 <span>*</span></label>
+              <label className="signup-field-label" htmlFor="signup-password">パスワード <span>*</span></label>
               <div className="input-group">
-                <input id="signup-password" type="password" placeholder="비밀번호를 입력하세요" value={form.password} onChange={update("password")} />
+                <input id="signup-password" type="password" placeholder="パスワードを入力してください" value={form.password} onChange={update("password")} />
               </div>
             </div>
             <div className="signup-field">
-              <label className="signup-field-label" htmlFor="signup-password-confirm">비밀번호 확인 <span>*</span></label>
+              <label className="signup-field-label" htmlFor="signup-password-confirm">パスワード確認 <span>*</span></label>
               <div className="input-group">
-                <input id="signup-password-confirm" type="password" placeholder="비밀번호를 한 번 더 입력하세요" value={form.passwordConfirm} onChange={update("passwordConfirm")} />
+                <input id="signup-password-confirm" type="password" placeholder="パスワードをもう一度入力してください" value={form.passwordConfirm} onChange={update("passwordConfirm")} />
               </div>
             </div>
           </div>
           {error && <p className="login-error-text">{error}</p>}
-          <button className="login-submit-btn" onClick={handleSignup}>가입하기</button>
-          <button className="login-signup-btn" onClick={onBackToLogin}>로그인으로 돌아가기</button>
+          <button className="login-submit-btn" onClick={handleSignup}>登録する</button>
+          <button className="login-signup-btn" onClick={onBackToLogin}>ログインに戻る</button>
         </>
       )}
     </div>
@@ -587,11 +587,11 @@ function SignupPage() {
   const handleSignup = async () => {
     setError("");
     if (!form.username || !form.name || !form.password) {
-      setError("아이디, 이름, 비밀번호는 필수입니다.");
+      setError("ユーザー名、氏名、パスワードは必須です。");
       return;
     }
     if (form.password !== form.passwordConfirm) {
-      setError("비밀번호가 일치하지 않습니다.");
+      setError("パスワードが一致しません。");
       return;
     }
     try {
@@ -613,43 +613,43 @@ function SignupPage() {
       <div className="login-left-panel">
         <div className="brand-content">
           <div className="brand-badge">Parking Scratch Detection</div>
-          <h1>회원가입</h1>
-          <p>관리자 계정을 생성하여 시스템에 접속하세요.</p>
+          <h1>会員登録</h1>
+          <p>管理者アカウントを作成してシステムに接続してください。</p>
         </div>
       </div>
 
       <div className="login-right-panel">
         <div className="login-form-wrapper">
-          <h2>회원가입</h2>
-          <p className="login-subtitle">새 계정을 만듭니다.</p>
+          <h2>会員登録</h2>
+          <p className="login-subtitle">新規アカウントを作成します。</p>
 
           <div className="input-group">
-            <input type="text" placeholder="이름 *" value={form.name} onChange={update("name")}
-              lang="ko" style={{ imeMode: "active" }} />
+            <input type="text" placeholder="氏名 *" value={form.name} onChange={update("name")}
+              lang="ja" style={{ imeMode: "active" }} />
           </div>
           <div className="input-group">
-            <input type="text" placeholder="아이디 *" value={form.username} onChange={update("username")}
+            <input type="text" placeholder="ユーザー名 *" value={form.username} onChange={update("username")}
               lang="en" style={{ imeMode: "inactive" }} autoCapitalize="off" autoCorrect="off" />
           </div>
           <div className="input-group">
-            <input type="email" placeholder="이메일" value={form.email} onChange={update("email")}
+            <input type="email" placeholder="メールアドレス" value={form.email} onChange={update("email")}
               lang="en" style={{ imeMode: "inactive" }} autoCapitalize="off" autoCorrect="off" />
           </div>
           <div className="input-group">
-            <input type="password" placeholder="비밀번호 *" value={form.password} onChange={update("password")}
+            <input type="password" placeholder="パスワード *" value={form.password} onChange={update("password")}
               lang="en" style={{ imeMode: "inactive" }} />
           </div>
           <div className="input-group">
-            <input type="password" placeholder="비밀번호 확인 *" value={form.passwordConfirm} onChange={update("passwordConfirm")}
+            <input type="password" placeholder="パスワード確認 *" value={form.passwordConfirm} onChange={update("passwordConfirm")}
               lang="en" style={{ imeMode: "inactive" }} />
           </div>
 
           {error && <p className="login-error-text">{error}</p>}
-          {done && <p className="login-success-text">가입 완료! 로그인 화면으로 이동합니다.</p>}
+          {done && <p className="login-success-text">登録完了！ログイン画面へ移動します。</p>}
 
-          <button className="login-submit-btn" onClick={handleSignup}>가입하기</button>
+          <button className="login-submit-btn" onClick={handleSignup}>登録する</button>
           <button className="login-signup-btn" onClick={() => navigate("/login")}>
-            로그인으로 돌아가기
+            ログインに戻る
           </button>
         </div>
       </div>
@@ -657,7 +657,7 @@ function SignupPage() {
   );
 }
 
-// 유틸 함수들
+// ユーティリティ関数群
 function formatDate(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -679,36 +679,36 @@ function formatTime(seconds) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-// 분석이 끝나 사고 의심 클립이 만들어진 일시 — ['YYYY-MM-DD', '04시 09분'] (보는 사람 컴퓨터의 시간대)
+// 分析が完了して事故疑いクリップが生成された日時 — ['YYYY-MM-DD', '04時09分'] (閲覧者のローカルタイムゾーン)
 function formatAnalyzedAt(iso) {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
   const p = (n) => String(n).padStart(2, "0");
-  return [`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`, `${p(d.getHours())}시 ${p(d.getMinutes())}분`];
+  return [`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`, `${p(d.getHours())}時${p(d.getMinutes())}分`];
 }
 
-// 걸린 시간 — '45초', '3분 12초', '1시간 5분'
+// 所要時間 — '45秒', '3分12秒', '1時間5分'
 function formatDuration(sec) {
   if (sec == null || !Number.isFinite(sec) || sec < 0) return "";
   const s = Math.round(sec);
-  if (s < 60) return `${s}초`;
+  if (s < 60) return `${s}秒`;
   const m = Math.floor(s / 60);
-  if (m < 60) return s % 60 ? `${m}분 ${s % 60}초` : `${m}분`;
-  return `${Math.floor(m / 60)}시간 ${m % 60}분`;
+  if (m < 60) return s % 60 ? `${m}分${s % 60}秒` : `${m}分`;
+  return `${Math.floor(m / 60)}時間${m % 60}分`;
 }
 
 const HISTORY_STATUS = {
-  SUCCESS: { label: "완료", cls: "success" },
-  FAILURE: { label: "실패", cls: "failure" },
-  CANCELLED: { label: "취소", cls: "cancelled" },
-  PENDING: { label: "대기", cls: "active" },
-  PROCESSING: { label: "분석 중", cls: "active" },
+  SUCCESS: { label: "完了", cls: "success" },
+  FAILURE: { label: "失敗", cls: "failure" },
+  CANCELLED: { label: "キャンセル", cls: "cancelled" },
+  PENDING: { label: "待機中", cls: "active" },
+  PROCESSING: { label: "分析中", cls: "active" },
 };
 
-// 영상 재생 화면 오른쪽: 이 영상의 분석 이력 (최근 분석이 위)
-// history: 서버가 준 분석 이력, events: 지금 남아 있는 클립(분석 번호별로 셈),
-// progressText(taskId): 진행 중인 분석의 진행 문구(없으면 null)
+// 動画再生画面右側: この動画の分析履歴 (最新の分析が上)
+// history: サーバーが返した分析履歴, events: 現在残っているクリップ(分析番号別に集計),
+// progressText(taskId): 進行中タスクの進捗テキスト(なければnull)
 function AnalysisHistoryPanel({ history, events, progressText, onSelect, activeNo }) {
   const remain = {};
   events.forEach((e) => {
@@ -719,26 +719,26 @@ function AnalysisHistoryPanel({ history, events, progressText, onSelect, activeN
     const left = remain[h.no] || 0;
     if (h.status === "SUCCESS") {
       if (h.eventCount == null) {
-        // 이력 기능 전 분석 — 찾은 수를 몰라 남은 수만 보여 준다
-        return left > 0 ? { text: `사고 의심 클립 ${left}개` } : { text: "남은 클립 없음", cls: "muted" };
+        // 履歴機能実装前の分析 — 検出数が不明なため残存数のみ表示
+        return left > 0 ? { text: `事故疑いクリップ ${left}件` } : { text: "残存クリップなし", cls: "muted" };
       }
-      if (h.eventCount === 0) return { text: "사고 의심 구간 없음", cls: "muted" };
+      if (h.eventCount === 0) return { text: "事故疑い区間なし", cls: "muted" };
       const deleted = h.eventCount - left;
-      return { text: `사고 의심 클립 ${h.eventCount}개${deleted > 0 ? ` · ${deleted}개 삭제됨` : ""}` };
+      return { text: `事故疑いクリップ ${h.eventCount}件${deleted > 0 ? ` · ${deleted}件削除済み` : ""}` };
     }
-    if (h.status === "FAILURE") return { text: h.errorMessage || "분석 중 오류가 났습니다", cls: "error" };
-    if (h.status === "CANCELLED") return { text: "사용자 요청으로 취소", cls: "muted" };
-    return { text: progressText(h.taskId) || "분석 진행 중", cls: "active" };
+    if (h.status === "FAILURE") return { text: h.errorMessage || "分析中にエラーが発生しました", cls: "error" };
+    if (h.status === "CANCELLED") return { text: "ユーザー要求によりキャンセル", cls: "muted" };
+    return { text: progressText(h.taskId) || "分析進行中", cls: "active" };
   };
 
   return (
     <aside className="analysis-history">
       <div className="analysis-history-header">
-        <h3>분석 이력</h3>
-        <span className="analysis-history-count">총 {history.length}회</span>
+        <h3>分析履歴</h3>
+        <span className="analysis-history-count">計 {history.length}回</span>
       </div>
       {history.length === 0 ? (
-        <div className="event-empty-hint">아직 분석한 적이 없습니다.</div>
+        <div className="event-empty-hint">まだ分析履歴がありません。</div>
       ) : (
         <ol className="analysis-history-list">
           {[...history].reverse().map((h) => {
@@ -749,18 +749,18 @@ function AnalysisHistoryPanel({ history, events, progressText, onSelect, activeN
                 ? formatDuration((new Date(h.finishedAt) - new Date(h.requestedAt)) / 1000)
                 : "";
             const result = resultOf(h);
-            // 남은 클립이 있는 분석만 눌러서 클립을 볼 수 있다 — 없으면 눌러도 아무 일도 없는 일반 칸
+            // 残存クリップがある分析のみクリックしてクリップ表示可能
             const hasClips = (remain[h.no] || 0) > 0;
             const body = (
               <>
                 <div className="ahi-top">
-                  <span className="ahi-no">분석 #{h.no}</span>
+                  <span className="ahi-no">分析 #{h.no}</span>
                   <span className={`ahi-status ${st.cls}`}>{st.label}</span>
                   {at && <span className="ahi-date">{at[0]}</span>}
                 </div>
                 {at && (
                   <div className="ahi-time">
-                    {at[1]} 요청{took && ` · ${took} 소요`}
+                    {at[1]} リクエスト{took && ` · 所要時間: ${took}`}
                   </div>
                 )}
                 <div className={`ahi-result ${result.cls || ""}`} title={result.text}>
@@ -774,7 +774,7 @@ function AnalysisHistoryPanel({ history, events, progressText, onSelect, activeN
                   <button className="history-video-link" onClick={() => onSelect(h)} aria-pressed={activeNo === h.no}>
                     {body}
                     <span className="history-video-action">
-                      {activeNo === h.no ? "강조 해제" : "클립 목록에서 강조"} <span aria-hidden="true">{activeNo === h.no ? "✕" : "←"}</span>
+                      {activeNo === h.no ? "強調解除" : "クリップ一覧で強調"} <span aria-hidden="true">{activeNo === h.no ? "✕" : "←"}</span>
                     </span>
                   </button>
                 ) : (
@@ -791,19 +791,19 @@ function AnalysisHistoryPanel({ history, events, progressText, onSelect, activeN
 
 function getVideoDisplayTitle(video, allVideos) {
   if (!video) return "";
-  if (video.title) return video.title; // 업로드할 때 넣은 제목이 있으면 그대로
+  if (video.title) return video.title; // アップロード時に入力されたタイトルがあればそのまま使用
   const sameDateVideos = (allVideos || []).filter((v) => v.date === video.date);
   if (sameDateVideos.length > 1) {
     const sorted = [...sameDateVideos].sort((a, b) => a.id - b.id);
     const index = sorted.findIndex((v) => v.id === video.id);
     const num = index >= 0 ? index + 1 : 1;
-    return `${video.date} 녹화본 #${num}`;
+    return `${video.date} 録画データ #${num}`;
   }
-  return `${video.date} 녹화본`;
+  return `${video.date} 録画データ`;
 }
 
 function formatMonthLabel(date) {
-  return `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
+  return `${date.getFullYear()}年 ${date.getMonth() + 1}月`;
 }
 
 function getCalendarDays(monthDate) {
@@ -831,40 +831,40 @@ function groupVideosByDate(videos) {
   }, {});
 }
 
-// 대시보드 컴포넌트
+// ダッシュボードコンポーネント
 function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
   const navigate = useNavigate();
   const { videoId } = useParams();
 
-  // 상태 관리
-  const [videos, setVideos] = useState([]); // API에서 로드한 영상 목록
-  const [filterDays, setFilterDays] = useState(9999); // 기본 전체
-  const [searchQuery, setSearchQuery] = useState(""); // 상단 검색어
+  // 状態管理
+  const [videos, setVideos] = useState([]); // APIから読み込んだ動画一覧
+  const [filterDays, setFilterDays] = useState(9999); // デフォルト全期間
+  const [searchQuery, setSearchQuery] = useState(""); // 検索ワード
 
-  const [selectedVideo, setSelectedVideo] = useState(null); // null이면 홈(그리드) 화면, 값이 있으면 영상 재생 화면
-  const [currentEventId, setCurrentEventId] = useState(null); // 현재 선택된 이벤트 마커
+  const [selectedVideo, setSelectedVideo] = useState(null); // nullなら一覧(グリッド)画面、値があれば動画再生画面
+  const [currentEventId, setCurrentEventId] = useState(null); // 選択中のイベントマーカー
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0); // 실제 영상 재생 위치(초)
-  const [selectedCalendarDate, setSelectedCalendarDate] = useState(null); // 달력에서 선택한 날짜
-  const [datePickerVideos, setDatePickerVideos] = useState(null); // 동일 날짜 영상 복수 존재 시 선택 모달 데이터
+  const [currentTime, setCurrentTime] = useState(0); // 実際の動画再生位置(秒)
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(null); // カレンダーで選択した日付
+  const [datePickerVideos, setDatePickerVideos] = useState(null); // 同一日付の複数動画選択モーダル用
   const [playbackSpeed, setPlaybackSpeed] = useState("1");
   const [volume, setVolume] = useState(70);
   const [isMuted, setIsMuted] = useState(false);
-  const [mediaDuration, setMediaDuration] = useState(0); // <video> 가 알려준 실제 길이(초, 소수) — 재생바 위치 계산용
-  const [isSeeking, setIsSeeking] = useState(false); // 재생바를 누른 채 끌어서 탐색 중
+  const [mediaDuration, setMediaDuration] = useState(0); // <video>の実際の長さ(秒、小数) — シークバー計算用
+  const [isSeeking, setIsSeeking] = useState(false); // シークバードラッグ中フラグ
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isTheaterMode, setIsTheaterMode] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(true); // 오른쪽 패널(진행 단계 + 분석 이력) — 기본은 열림(영상을 열 때마다)
-  const [highlightAnalysisNo, setHighlightAnalysisNo] = useState(null); // 분석 이력에서 고른 분석 — 그 클립을 왼쪽 목록에서 강조
+  const [isHistoryOpen, setIsHistoryOpen] = useState(true); // 右側パネル(進捗ステップ+分析履歴)
+  const [highlightAnalysisNo, setHighlightAnalysisNo] = useState(null); // 履歴で選択した分析番号(左側リストで強調)
   const eventListRef = useRef(null);
   const [calendarMonth, setCalendarMonth] = useState(new Date("2026-05-01T00:00:00"));
   const playerContainerRef = useRef(null);
-  const seekHoverRef = useRef(null); // 재생바 위 마우스 위치의 시각 말풍선 (마우스 움직임마다 다시 그리지 않게 직접 갱신)
-  const isSeekingRef = useRef(false); // 끄는 중인지 — 이벤트 처리 중엔 다시 그리기 전이라 상태 대신 이걸 본다
+  const seekHoverRef = useRef(null); // シークバー上のツールチップ要素
+  const isSeekingRef = useRef(false);
   const detectAbortControllerRef = useRef(null);
   const analyzeAbortControllerRef = useRef(null);
 
-  // 바운딩박스 / 차량 지정 모드 상태 ("none" | "manual" | "auto")
+  // バウンディングボックス / 車両指定モード状態 ("none" | "manual" | "auto")
   const [selectionMode, setSelectionMode] = useState("none");
   const [isBBoxMode, setIsBBoxMode] = useState(false);
 
@@ -872,39 +872,39 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
   const [currentDraw, setCurrentDraw] = useState(null); // { startX, startY, endX, endY }
   const [isDrawing, setIsDrawing] = useState(false);
   const bboxOverlayRef = useRef(null);
-  const videoElRef = useRef(null); // 실제 <video> 엘리먼트 (원본 해상도 환산용)
+  const videoElRef = useRef(null); // <video> 要素 (原本解像度換算用)
 
-  // YOLO 차량 자동 탐지 및 마우스 Hover 관련 상태
+  // YOLO 車両自動検出およびマウスHover関連状態
   const [isDetectingVehicles, setIsDetectingVehicles] = useState(false);
   const [detectedBoxes, setDetectedBoxes] = useState([]); // [{ id, class_name, confidence, bbox: [x1,y1,x2,y2] }]
   const [hoveredDetectedBox, setHoveredDetectedBox] = useState(null);
 
 
-  // 사고감지 실행 / 분석 관련 상태
-  const [showAnalyzeConfirm, setShowAnalyzeConfirm] = useState(false); // 확인 팝오버
+  // 事故検知実行 / 分析関連状態
+  const [showAnalyzeConfirm, setShowAnalyzeConfirm] = useState(false); // 確認ポップオーバー
   const [toast, setToast] = useState(null); // { type, message }
-  // 동시 분석 작업 목록: [{ taskId, videoId, dateLabel, estimatedSec, startedAt }]
+  // 同時分析タスク一覧: [{ taskId, videoId, dateLabel, estimatedSec, startedAt }]
   const [analyzingJobs, setAnalyzingJobs] = useState([]);
   const [showJobsDropdown, setShowJobsDropdown] = useState(false);
-  const [now, setNow] = useState(() => Date.now()); // 진행률 계산용 현재시각(0.5s마다 갱신)
-  const selectedVideoIdRef = useRef(null); // 폴링 중 최신 선택 영상 추적(stale closure 방지)
-  const progressSmoothRef = useRef({}); // 작업별 화면 진행률(부드럽게 움직이고 뒤로 가지 않게)
-  const aliveRef = useRef(true); // 화면이 떠 있는 동안만 상태 폴링을 이어 간다
-  const pollingRef = useRef(new Set()); // 이미 상태를 확인 중인 작업(중복 폴링 방지)
-  const [clipEvent, setClipEvent] = useState(null); // 사고 클립 팝업 대상 이벤트
-  // 재생 화면의 빨간 구간에서 보일 화면: "cam"(충돌 부위 히트맵이 합성된 사고 클립) | "orig"(원본 그대로)
+  const [now, setNow] = useState(() => Date.now()); // 進捗計算用の現在時刻(0.5sごとに更新)
+  const selectedVideoIdRef = useRef(null); // ポーリング中の最新選択動画ID
+  const progressSmoothRef = useRef({}); // タスク別進捗平滑化用
+  const aliveRef = useRef(true); // 画面マウント状態
+  const pollingRef = useRef(new Set()); // ポーリング中タスクIDセット
+  const [clipEvent, setClipEvent] = useState(null); // 事故クリップポップアップ対象
+  // 再生画面の赤色区間で表示する画面: "cam"(衝突箇所のヒートマップ合成クリップ) | "orig"(原本動画)
   const [clipView, setClipView] = useState("cam");
-  const camChipRef = useRef(null); // 컨트롤 줄의 '분석 #N 충돌 표시' — 겹친 클립이 보이는 동안만 보인다(동기화가 직접 바꾼다)
-  const [pendingDeleteEvent, setPendingDeleteEvent] = useState(null); // 삭제 확인 창 대상 이벤트
-  const [pendingClearAll, setPendingClearAll] = useState(false); // 전체 삭제 확인 창
-  const [infoVideo, setInfoVideo] = useState(null); // 영상 목록 카드의 ⋮ → 영상 정보 팝업 대상
+  const camChipRef = useRef(null);
+  const [pendingDeleteEvent, setPendingDeleteEvent] = useState(null); // 削除確認ダイアログ対象
+  const [pendingClearAll, setPendingClearAll] = useState(false); // 一括削除確認ダイアログ
+  const [infoVideo, setInfoVideo] = useState(null); // 動画情報ポップアップ対象
 
-  // 업로드 모달
+  // アップロードモーダル
   const [showUpload, setShowUpload] = useState(false);
 
-  // 영상 삭제 모드
+  // 動画削除モード
   const [deleteMode, setDeleteMode] = useState(false);
-  const [selectedForDelete, setSelectedForDelete] = useState([]); // 선택된 영상 id 목록
+  const [selectedForDelete, setSelectedForDelete] = useState([]); // 削除対象動画IDリスト
 
   const toggleDeleteSelect = (videoId) => {
     setSelectedForDelete((prev) =>
@@ -921,36 +921,35 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
 
   const handleDeleteSelected = async () => {
     if (selectedForDelete.length === 0) {
-      showToast("삭제할 영상을 선택해 주세요.", "warning");
+      showToast("削除する動画を選択してください。", "warning");
       return;
     }
-    if (!window.confirm(`선택한 ${selectedForDelete.length}개 영상을 삭제하시겠습니까? 되돌릴 수 없습니다.`)) {
+    if (!window.confirm(`選択した${selectedForDelete.length}件の動画を削除しますか？元に戻すことはできません。`)) {
       return;
     }
     try {
       await Promise.all(selectedForDelete.map((id) => api.deleteVideo(id)));
-      showToast(`${selectedForDelete.length}개 영상을 삭제했습니다.`, "success");
+      showToast(`${selectedForDelete.length}件の動画を削除しました。`, "success");
       exitDeleteMode();
       await loadVideos();
     } catch (e) {
-      showToast(`삭제 실패: ${e.message}`, "error");
+      showToast(`削除失敗: ${e.message}`, "error");
     }
   };
 
-  // 하단 알림. 알림마다 번호를 붙여, 타이머는 자기 알림이 아직 떠 있을 때만 닫는다
-  // (앞 알림의 타이머가 뒤에 뜬 알림 — 예: 7초짜리 분석 결과 — 을 일찍 닫지 않게)
+  // トースト通知。通知ごとにIDを付与
   const showToast = (message, type = "warning", durationMs = 2600) => {
     const id = ++toastSeq;
     setToast({ id, message, type });
     setTimeout(() => setToast((t) => (t && t.id === id ? null : t)), durationMs);
   };
 
-  // 프로필 & 설정 관련 상태
+  // プロフィール & 設定関連状態
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeSettingsTab, setActiveSettingsTab] = useState("account"); // "account", "security"
 
-  // 설정 정보 (현재 로그인 사용자 정보와 동기화)
+  // 設定情報 (現在のログインユーザー情報と同期)
   const currentUsername = currentUser?.username || "user";
   const [profileName, setProfileName] = useState(currentUser?.name || "");
   const [profilePhone, setProfilePhone] = useState(currentUser?.phone || "");
@@ -964,19 +963,19 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     }
   }, [currentUser]);
 
-  const displayName = currentUser?.name || currentUser?.username || "사용자";
+  const displayName = currentUser?.name || currentUser?.username || "ユーザー";
   const avatarInitial = (displayName[0] || currentUsername[0] || "U").toUpperCase();
-  const roleLabel = currentUser?.role === "ADMIN" ? "시스템 관리자" : "일반 사용자";
+  const roleLabel = currentUser?.role === "ADMIN" ? "システム管理者" : "一般ユーザー";
 
-  // 비밀번호 변경 필드
+  // パスワード変更フィールド
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // 테마 설정 (다크 모드)
+  // テーマ設定 (ダークモード)
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // 다크 모드 활성화 / 비활성화 제어
+  // ダークモード有効/無効制御
   useEffect(() => {
     if (isDarkMode) {
       document.body.classList.add("dark-mode");
@@ -985,28 +984,28 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     }
   }, [isDarkMode]);
 
-  // API에서 영상 목록 로드
+  // APIから動画一覧をロード
   const loadVideos = async () => {
     try {
       const list = await api.listVideos(9999);
       setVideos(list);
       return list;
     } catch (e) {
-      showToast(`영상 목록을 불러오지 못했습니다: ${e.message}`, "error");
+      showToast(`動画一覧の取得に失敗しました: ${e.message}`, "error");
       return [];
     }
   };
 
   useEffect(() => {
-    // 마운트 시 영상 목록 비동기 로드 (setState는 await 이후 발생)
+    // マウント時に動画リストを非同期ロード (setStateはawait以降に発生)
     // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
     loadVideos();
   }, []);
 
-  // 라우트(videoId)에 맞춰 selectedVideo 설정
+  // ルート(videoId)に合わせてselectedVideoを設定
   useEffect(() => {
     if (view !== "watch" || !videoId) {
-      // watch 화면이 아니면 선택 영상 해제 (라우트 동기화 가드)
+      // watch画面でなければ選択動画を解除 (ルート同期ガード)
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedVideo(null);
       return;
@@ -1045,7 +1044,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
           setSelectedCalendarDate(v.date);
         }
       } catch (e) {
-        showToast(`영상을 불러오지 못했습니다: ${e.message}`, "error");
+        showToast(`動画の取得に失敗しました: ${e.message}`, "error");
         navigate("/videos");
       }
     })();
@@ -1055,20 +1054,20 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, videoId]);
 
-  // 기간 필터만 적용한 목록
+  // 期間フィルターのみ適用した一覧
   const periodVideos = useMemo(() => {
     if (filterDays >= 9999) return videos;
     const startDate = formatDate(addDays(new Date(), -filterDays));
     return videos.filter((video) => video.date >= startDate);
   }, [filterDays, videos]);
 
-  // 기간 + 검색어 필터링 — 영상 목록 페이지용
+  // 期間 + 検索ワードフィルタリング — 動画一覧ページ用
   const filteredVideos = useMemo(() => {
     let list = periodVideos;
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
-      // 제목은 카드에 보이는 그대로('2026-10-12 녹화본 #5')로 찾는다
+      // タイトルはカード表示名('2026-10-12 録画データ #5')で検索
       list = list.filter(
         (v) =>
           (v.date || "").toLowerCase().includes(q) ||
@@ -1077,15 +1076,14 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
       );
     }
 
-    // 녹화 일자 최신순 정렬 (같은 날짜는 나중에 올린 영상 먼저)
+    // 録画日の新しい順にソート (同一日は後にアップロードされた動画を優先)
     return [...list].sort((a, b) => {
       if (a.date !== b.date) return (b.date || "").localeCompare(a.date || "");
       return b.id - a.id;
     });
   }, [periodVideos, searchQuery, videos]);
 
-  // 메인화면 영상 목록 페이지네이션 — 한 페이지 = 지금 열 수 × 줄 수(두 줄 이상, 최소 6개).
-  // 3열 이하(보통 화면)는 예전처럼 6개, 화면이 넓거나 축소해 열이 늘면 줄을 꽉 채운다(예: 6열 → 12개)
+  // メイン画面の動画一覧ページネーション
   const [videoGridEl, setVideoGridEl] = useState(null);
   const gridCols = useGridColumns(videoGridEl);
   const VIDEOS_PER_PAGE = gridCols * Math.max(2, Math.ceil(6 / gridCols));
@@ -1093,7 +1091,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
 
   const totalPages = Math.max(1, Math.ceil(filteredVideos.length / VIDEOS_PER_PAGE));
 
-  // 한 페이지 개수가 바뀌면(창 크기·배율 변경) 보던 첫 영상이 들어 있는 페이지로 옮긴다
+  // 1ページあたりの表示数が変更された場合
   const prevPerPage = useRef(VIDEOS_PER_PAGE);
   useEffect(() => {
     if (prevPerPage.current === VIDEOS_PER_PAGE) return;
@@ -1102,12 +1100,12 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     setCurrentPage(Math.floor(firstIndex / VIDEOS_PER_PAGE) + 1);
   }, [VIDEOS_PER_PAGE, currentPage]);
 
-  // 필터 조건(기간, 검색어) 변경 시 1페이지로 리셋
+  // フィルター条件変更時は1ページ目にリセット
   useEffect(() => {
     setCurrentPage(1);
   }, [filterDays, searchQuery]);
 
-  // 영상 삭제 등으로 인해 현재 페이지가 전체 페이지 수보다 커지면 조정
+  // 動画削除等で現在ページが全ページ数を超えた場合は調整
   useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(totalPages);
@@ -1150,7 +1148,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
 
   const handleCalendarDateClick = (date) => {
     const dateText = formatDate(date);
-    setSelectedCalendarDate(dateText); // 영상 유무와 무관하게 날짜 선택 표시
+    setSelectedCalendarDate(dateText);
     const dayVideos = videosByDate[dateText] ?? [];
     if (dayVideos.length === 1) {
       handleWatchVideo(dayVideos[0]);
@@ -1159,18 +1157,17 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     }
   };
 
-  // 영상을 클릭하여 시청 모드로 진입 → URL 이동
+  // 動画をクリックして再生モードへ遷移
   const handleWatchVideo = (video) => {
     navigate(`/videos/${video.id}`);
   };
 
-  // 홈(목록)으로 돌아가기
+  // 一覧へ戻る
   const handleBackToHome = () => {
     navigate("/videos");
   };
 
-  // 특정 사고 이벤트 1건 삭제
-  // 휴지통 → 바로 지우지 않고 화면 가운데 확인 창을 띄운다(서버가 클립 파일도 지움)
+  // 特定の事故イベント1件の削除要求
   const requestDeleteEvent = (event, e) => {
     if (e) e.stopPropagation();
     setPendingDeleteEvent(event);
@@ -1198,13 +1195,13 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
       if (currentEventId === eventId) {
         setCurrentEventId(null);
       }
-      showToast("감지 이벤트가 삭제되었습니다.", "info");
+      showToast("検知イベントが削除されました。", "info");
     } catch (err) {
-      showToast(`이벤트 삭제 실패: ${err.message}`, "error");
+      showToast(`イベント削除失敗: ${err.message}`, "error");
     }
   };
 
-  // 영상의 모든 사고 이벤트 전체 삭제 — 개별 삭제와 같은 확인 창을 거친다
+  // 動画のすべての事故イベントの一括削除要求
   const requestClearAllEvents = () => {
     if (!selectedVideo || selectedVideo.events.length === 0) return;
     setPendingClearAll(true);
@@ -1219,16 +1216,15 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
         prev.map((v) => (v.id === selectedVideo.id ? { ...v, events: [] } : v))
       );
       setCurrentEventId(null);
-      showToast("모든 감지 이벤트가 삭제되었습니다.", "info");
+      showToast("すべての検知イベントが削除されました。", "info");
     } catch (err) {
-      showToast(`이벤트 전체 삭제 실패: ${err.message}`, "error");
+      showToast(`イベント一括削除失敗: ${err.message}`, "error");
     }
   };
 
 
-  // 수동 차량 지정 모드 시작
+  // 手動による車両指定モード開始
   const handleStartManualDesignate = () => {
-    // 차량 탐지처럼 영상을 멈춰, 지금 보이는 화면에서 차량을 그리게 한다
     if (videoElRef.current) {
       videoElRef.current.pause();
       setIsPlaying(false);
@@ -1236,10 +1232,9 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     setSelectionMode("manual");
     setIsBBoxMode(true);
     setHoveredDetectedBox(null);
-    // 안내 문구는 잠깐 뜨는 알림 대신 버튼 위 말풍선으로 모드가 끝날 때까지 띄운다 (.designate-hint)
   };
 
-  // 탐지/지정 모드 해제
+  // 検出/指定モード解除
   const handleEndDesignateMode = () => {
     setSelectionMode("none");
     setIsBBoxMode(false);
@@ -1248,7 +1243,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     setHoveredDetectedBox(null);
   };
 
-  // YOLO 차량 탐지 취소
+  // YOLO 車両検出キャンセル
   const handleCancelDetectVehicles = () => {
     if (detectAbortControllerRef.current) {
       detectAbortControllerRef.current.abort();
@@ -1256,10 +1251,10 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     }
     setIsDetectingVehicles(false);
     setSelectionMode("none");
-    showToast("차량 탐지가 취소되었습니다.", "info");
+    showToast("車両検出がキャンセルされました。", "info");
   };
 
-  // YOLO 차량 탐지 실행 (영상 pause → 백엔드 탐지 → Hover 선택 활성화)
+  // YOLO 車両自動検出実行
   const handleAutoDetectVehicles = async () => {
     if (!selectedVideo) return;
     if (videoElRef.current) {
@@ -1267,7 +1262,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
       setIsPlaying(false);
     }
     setSelectionMode("auto");
-    setIsDetectingVehicles(true);   // 진행 표시는 영상 위 로딩으로 한다(알림 없음)
+    setIsDetectingVehicles(true);
 
     const controller = new AbortController();
     detectAbortControllerRef.current = controller;
@@ -1277,15 +1272,14 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
       const list = res.detected_vehicles || [];
       setDetectedBoxes(list);
       setIsBBoxMode(true);
-      // 탐지 성공은 알리지 않는다(영상 위에 차량이 바로 표시됨). 한 대도 없을 때만 다음 행동을 안내한다.
       if (list.length === 0) {
-        showToast("탐지된 차량이 없습니다. 직접 차량 지정을 이용해 주세요.", "warning");
+        showToast("検出された車両がありません。手動による車両指定をご利用ください。", "warning");
       }
     } catch (err) {
       if (err.name === "AbortError") {
         return;
       }
-      showToast(`차량 탐지 실패: ${err.message}`, "error");
+      showToast(`車両検出失敗: ${err.message}`, "error");
     } finally {
       setIsDetectingVehicles(false);
       detectAbortControllerRef.current = null;
@@ -1294,24 +1288,23 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
 
 
 
-  // '사고 구간 찾기' 클릭 → 차량 박스가 없으면 경고, 있으면 확인 팝오버
+  // 「事故区間を検出」クリック → 車両ボックスがなければ警告、あれば確認ポップオーバー
   const handleAnalyzeClick = () => {
     if (bboxList.length === 0) {
-      showToast("사고를 감지할 차량을 드래그하여 주십시오.", "warning");
+      showToast("事故検知対象の車両を指定してください。", "warning");
       return;
     }
     setShowAnalyzeConfirm(true);
   };
 
-  // 사고감지 분석 작업 취소
-  // 보고 있는 영상의 상세(분석 이력 포함)를 다시 받아 온다 — 그사이 다른 영상으로 옮겼으면 덮어쓰지 않는다
+  // 事故検知分析タスクのキャンセル
   const refreshSelectedVideo = async (videoId) => {
     if (videoId == null || selectedVideoIdRef.current !== videoId) return;
     try {
       const v = await api.getVideo(videoId);
       if (selectedVideoIdRef.current === videoId) setSelectedVideo(v);
     } catch {
-      /* 이력 갱신에 실패해도 다음 갱신 때 맞춰진다 */
+      /* ignore */
     }
   };
 
@@ -1325,49 +1318,48 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
         const cancelledVideoId = analyzingJobs.find((j) => j.taskId === taskId)?.videoId;
         await api.cancelTask(taskId);
         removeJob(taskId);
-        showToast("사고 감지 분석 작업을 취소했습니다.", "info");
-        refreshSelectedVideo(cancelledVideoId); // 분석 이력에 '취소' 반영
+        showToast("事故検知の分析タスクをキャンセルしました。", "info");
+        refreshSelectedVideo(cancelledVideoId);
         loadVideos();
       } catch (e) {
-        showToast(`분석 취소 실패: ${e.message}`, "error");
+        showToast(`分析キャンセル失敗: ${e.message}`, "error");
       }
     } else {
-      showToast("분석 요청이 취소되었습니다.", "info");
+      showToast("分析リクエストがキャンセルされました。", "info");
     }
   };
 
-  // 분석 태스크 상태 폴링 (videoId = 분석을 시작한 영상 id)
+  // 分析タスク状態ポーリング
   const removeJob = (taskId) =>
     setAnalyzingJobs((prev) => prev.filter((j) => j.taskId !== taskId));
 
-  // 분석이 끝났을 때: 화면 안 토스트 + 다른 탭·창을 보고 있으면 브라우저 알림
+  // 分析完了通知
   const notifyDone = (title, body, type) => {
-    showToast(`${title}: ${body}`, type, 7000); // 분석 결과는 놓치지 않게 7초
+    showToast(`${title}: ${body}`, type, 7000);
     try {
       if (document.hidden && "Notification" in window && Notification.permission === "granted") {
         new Notification(title, { body, icon: "/siot-logo.svg" });
       }
     } catch {
-      /* 브라우저 알림을 못 띄워도 토스트는 이미 표시됨 */
+      /* ignore */
     }
   };
 
   const pollTask = (taskId, videoId) => {
-    if (pollingRef.current.has(taskId)) return; // 같은 작업을 두 번 폴링하지 않는다
+    if (pollingRef.current.has(taskId)) return;
     pollingRef.current.add(taskId);
     const finish = () => {
       pollingRef.current.delete(taskId);
       removeJob(taskId);
     };
     const poll = async () => {
-      if (!aliveRef.current) return; // 화면이 닫히면 멈춤 — 다시 열리면 복원하면서 새로 시작
+      if (!aliveRef.current) return;
       try {
         const status = await api.getTaskStatus(taskId);
         if (!aliveRef.current) return;
         if (status.status === "SUCCESS") {
           finish();
-          notifyDone("분석 완료", `사고 의심 구간 ${status.events.length}건`, "success");
-          // 분석한 영상을 아직 보고 있을 때만 화면 갱신 (다른 영상으로 이동했으면 덮어쓰지 않음)
+          notifyDone("分析完了", `事故疑い区間 ${status.events.length}件`, "success");
           if (selectedVideoIdRef.current === videoId) {
             const v = await api.getVideo(videoId);
             setSelectedVideo(v);
@@ -1377,21 +1369,19 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
         }
         if (status.status === "FAILURE") {
           finish();
-          notifyDone("분석 실패", status.error_message || "오류", "error");
+          notifyDone("分析失敗", status.error_message || "エラー", "error");
           if (selectedVideoIdRef.current === videoId) {
-            const v = await api.getVideo(videoId); // '다시 실행' 안내를 띄우기 위해 갱신
+            const v = await api.getVideo(videoId);
             setSelectedVideo(v);
           }
           return;
         }
         if (status.status === "CANCELLED") {
           finish();
-          showToast("사고 감지 분석이 취소되었습니다.", "info");
+          showToast("事故検知の分析がキャンセルされました。", "info");
           refreshSelectedVideo(videoId);
           return;
         }
-        // 진행도(%)와 서버가 실제로 잰 속도 기준의 남은 시간(초)을 반영한다.
-        // 받은 시각(etaAt)을 같이 저장해 다음 확인 전까지 화면에서 1초씩 줄여 보여 준다.
         const receivedAt = Date.now();
         setAnalyzingJobs((prev) =>
           prev.map((j) => {
@@ -1399,26 +1389,26 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
             const next = { ...j, status: status.status };
             if (typeof status.progress === "number") {
               next.progress = status.progress;
-              next.progressAt = receivedAt;             // 받은 시각 — 진행 속도 계산용
+              next.progressAt = receivedAt;
             }
             next.etaSec = status.eta_sec ?? null;
             next.etaMin = !!status.eta_is_min;
             next.etaAt = receivedAt;
-            next.phase = status.stage ?? null;          // 지금 단계(훑어보기 등)
+            next.phase = status.stage ?? null;
             next.phaseCount = status.stage_count ?? null;
             next.phaseIndex = status.stage_index ?? null;
             return next;
           }));
-        setTimeout(poll, 2000); // PENDING/PROCESSING → 재시도
+        setTimeout(poll, 2000);
       } catch (e) {
         finish();
-        showToast(`상태 조회 실패: ${e.message}`, "error");
+        showToast(`ステータス取得失敗: ${e.message}`, "error");
       }
     };
     poll();
   };
 
-  // 실패·중단된 마지막 분석을 같은 차량 박스로 다시 실행
+  // 失敗・中断された直近の分析を同一車両ボックスで再実行
   const handleRetryAnalysis = async () => {
     const last = selectedVideo?.lastTask;
     if (!last) return;
@@ -1431,20 +1421,18 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
         dateLabel: selectedVideo.date,
         status: res.status,
       };
-      showToast(res.already_running ? "이 영상은 이미 분석 중입니다." : "분석을 다시 시작했습니다.", "info");
+      showToast(res.already_running ? "この動画は既に分析中です。" : "分析を再開しました。", "info");
       setAnalyzingJobs((prev) => (prev.some((j) => j.taskId === res.task_id) ? prev : [...prev, job]));
       pollTask(res.task_id, videoIdForJob);
       setSelectedVideo((v) =>
         v ? { ...v, lastTask: { id: res.task_id, status: res.status, errorMessage: null } } : v);
-      refreshSelectedVideo(videoIdForJob); // 분석 이력에 새 분석 추가
+      refreshSelectedVideo(videoIdForJob);
     } catch (e) {
-      showToast(`다시 실행 실패: ${e.message}`, "error");
+      showToast(`再実行失敗: ${e.message}`, "error");
     }
   };
 
-  // 화면이 열릴 때(새로고침·재접속 포함) 서버에 남아 있는 내 분석을 복원해 이어서 추적한다.
-  // 분석 목록은 브라우저 메모리에만 있어서, 이게 없으면 창을 닫았다 열었을 때 진행 중인
-  // 분석이 사라진 것처럼 보이고 같은 영상을 다시 요청하게 된다.
+  // 画面復帰時のアクティブタスク復元
   useEffect(() => {
     aliveRef.current = true;
     (async () => {
@@ -1471,7 +1459,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
           pollTask(t.task_id, t.video_id);
         });
       } catch {
-        /* 복원 실패는 치명적이지 않다 — 새 분석 요청은 그대로 동작 */
+        /* ignore */
       }
     })();
     return () => {
@@ -1480,13 +1468,12 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 확인 팝오버에서 '실행' → bbox 원본해상도 환산 후 분석 요청
+  // 確認ポップオーバーから「実行」 → 分析リクエスト
   const runAnalysis = async () => {
     setShowAnalyzeConfirm(false);
     const box = bboxList[0];
     if (!box) return;
 
-    // bboxList 는 원본 영상 해상도 좌표 — 지금 화면 크기와 상관없이 그대로 보낸다
     const bbox = {
       bbox_xmin: box.xmin,
       bbox_ymin: box.ymin,
@@ -1494,13 +1481,9 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
       bbox_ymax: box.ymax,
     };
 
-    // 분석 시작: 지정 모드를 끄고 해당 영상을 '분석 중'으로 표시
-    // (박스 그리기 판만 끄면 모드 값이 남아 분석 중에도 탐지 버튼이 켜진 상태로 보였다)
     const videoId = selectedVideo.id;
     handleEndDesignateMode();
 
-    // 예상 소요시간(초) 추정: 슬라이딩 윈도우 수(총프레임/stride) 기반 (CPU ~1s/윈도우)
-    // ※ 분모는 백엔드 config.PREDICT_WINDOW_STRIDE(현재 5)와 반드시 일치시킬 것
     const totalFrames = Math.round(
       (selectedVideo.duration || 0) * (selectedVideo.fps || 30));
     const estimatedSec = Math.max(10, Math.round((totalFrames / 5) * 1.1));
@@ -1512,14 +1495,13 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
       startedAt: Date.now(),
     };
 
-    // 분석이 끝나면 다른 탭에 있어도 알려 주도록 처음 한 번 알림 권한을 묻는다
     try {
       if ("Notification" in window && Notification.permission === "default") {
         const r = Notification.requestPermission();
         if (r && r.catch) r.catch(() => {});
       }
     } catch {
-      /* 알림을 지원하지 않는 브라우저 — 토스트만 쓴다 */
+      /* ignore */
     }
 
     const controller = new AbortController();
@@ -1530,17 +1512,16 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
       job.taskId = res.task_id;
       job.status = res.status;
       if (res.already_running) {
-        // 같은 영상에 이미 대기·진행 중인 분석이 있으면 서버가 새로 만들지 않고 그 작업을 준다
-        showToast("이 영상은 이미 분석 중입니다. 진행 상황을 이어서 보여드릴게요.", "info");
+        showToast("この動画は既に分析中です。進捗を続けて表示します。", "info");
       }
       setAnalyzingJobs((prev) => (prev.some((j) => j.taskId === res.task_id) ? prev : [...prev, job]));
       pollTask(res.task_id, videoId);
-      refreshSelectedVideo(videoId); // 분석 이력에 새 분석 추가
+      refreshSelectedVideo(videoId);
     } catch (e) {
       if (e.name === "AbortError") {
         return;
       }
-      showToast(`분석 요청 실패: ${e.message}`, "error");
+      showToast(`分析リクエスト失敗: ${e.message}`, "error");
     } finally {
       analyzeAbortControllerRef.current = null;
     }
@@ -1558,15 +1539,15 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     if (player.requestFullscreen) {
       player.requestFullscreen();
     } else if (player.webkitRequestFullscreen) {
-      player.webkitRequestFullscreen(); // 옛 Safari
+      player.webkitRequestFullscreen(); // 旧Safari
     } else {
-      // iPhone Safari 는 영상 영역(div) 전체화면을 허용하지 않는다 → 영상만이라도 기기 전체화면으로
+      // iPhone Safariは動画領域(div)の全画面表示を許可しない → 動画のみでも端末全画面に
       videoElRef.current?.webkitEnterFullscreen?.();
     }
   };
 
-  // ── 실제 <video> 재생 제어 ──────────────────────────────
-  // 차량 탐지 중엔 재생·이동을 막는다 — 탐지는 요청한 순간의 화면으로 하므로 화면이 바뀌면 박스가 어긋난다
+  // ── 実際の <video> 再生制御 ──────────────────────────────
+  // 車両検出中は再生・シークを制限
   const togglePlay = () => {
     const v = videoElRef.current;
     if (!v || isDetectingVehicles) return;
@@ -1574,10 +1555,10 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     else v.pause();
   };
 
-  // 재생바 길이 기준 — 실제 영상 길이(소수)를 쓰고, 영상 정보를 받기 전엔 서버가 준 길이(정수 초)
+  // 再生バーの長さ基準
   const playerDuration = mediaDuration || selectedVideo?.duration || 0;
 
-  // 재생바: 누르거나 누른 채 끌어서 탐색하고, 마우스를 올리면 그 위치의 시각을 말풍선으로 보여준다
+  // 再生バー: クリックまたはドラッグでシーク、ホバー時に時刻をツールチップ表示
   const seekRatioAt = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
     return Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
@@ -1594,7 +1575,6 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     const bubble = seekHoverRef.current;
     if (!bubble) return;
     bubble.textContent = formatTime(Math.floor(ratio * playerDuration));
-    // 양 끝에서 말풍선이 재생바 밖으로 잘리지 않게 안쪽으로 붙인다
     const width = e.currentTarget.getBoundingClientRect().width;
     const half = bubble.offsetWidth / 2;
     bubble.style.left = `${Math.min(width - half, Math.max(half, ratio * width))}px`;
@@ -1625,8 +1605,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     setIsSeeking(false);
   };
 
-  // 재생바의 빨간 구간·왼쪽 클립 목록 클릭 → 그 구간 1초 앞(EVENT_PREROLL_SEC)부터 재생. 그 클립을 고른 것으로 두어,
-  // 같은 시각에 여러 분석의 클립이 겹치면 이 클립이 메인 화면에 나온다(clipEventAt)
+  // 再生バーの赤色区間・左側クリップ一覧クリック → その区間の1秒手前(EVENT_PREROLL_SEC)から再生
   const seekToEvent = (event) => {
     if (isDetectingVehicles) return;
     setCurrentEventId(event.id);
@@ -1646,7 +1625,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     }
   };
 
-  // 배속/볼륨을 실제 video에 반영
+  // 再生速度/音量を実際のvideoに反映
   useEffect(() => {
     const v = videoElRef.current;
     if (v) v.playbackRate = parseFloat(playbackSpeed);
@@ -1662,9 +1641,8 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     if (v) v.muted = isMuted;
   }, [isMuted, selectedVideo]);
 
-  // 영상 칸 크기가 바뀌면(창 크기 · 안내 바 · 실패 안내 · 전체화면) 차량 박스 위치를 다시 계산하도록 다시 그린다.
-  // 영상 칸은 화면 높이에 맞춰 줄어들 수 있어, 렌더 시점의 크기로 그린 박스가 어긋나지 않게 한다.
-  const [overlaySize, setOverlaySize] = useState(null); // { w, h } — 박스 그리기용(렌더 중 ref 를 읽지 않게 상태로 둔다)
+  // 動画エリアのリサイズ監視
+  const [overlaySize, setOverlaySize] = useState(null);
   useEffect(() => {
     const el = bboxOverlayRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
@@ -1676,14 +1654,14 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     return () => ro.disconnect();
   }, [selectedVideo?.id, view]);
 
-  // 분석 이력에서 분석을 고르면, 그 분석의 첫 클립이 보이도록 왼쪽 목록을 스크롤한다
+  // 分析履歴選択時の自動スクロール
   useEffect(() => {
     if (highlightAnalysisNo == null) return;
     const el = eventListRef.current?.querySelector(".event-item.analysis-highlight");
     el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [highlightAnalysisNo]);
 
-  // 전체화면 버튼 아이콘을 실제 상태에 맞춘다 (Esc 로 나가도 따라가게)
+  // 全画面状態の同期
   useEffect(() => {
     const onChange = () =>
       setIsFullscreen(!!document.fullscreenElement && document.fullscreenElement === playerContainerRef.current);
@@ -1691,42 +1669,33 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
-  // 폴링 콜백에서 현재 보고 있는 영상 id를 최신으로 참조 (stale closure 방지)
   useEffect(() => {
     selectedVideoIdRef.current = selectedVideo?.id ?? null;
   }, [selectedVideo]);
 
-  // 현재 보고 있는 영상이 분석 중인지 (영상별로 판정 — 다른 영상엔 영향 없음)
+  // 現在の動画が分析中かどうか
   const isAnalyzing =
     !!selectedVideo && analyzingJobs.some((j) => j.videoId === selectedVideo.id);
 
-  // 분석 작업이 있는 동안 진행률 바를 0.5초마다 갱신
+  // 分析中の進捗更新タイマー
   useEffect(() => {
     if (analyzingJobs.length === 0) return;
     const id = setInterval(() => setNow(Date.now()), 500);
     return () => clearInterval(id);
   }, [analyzingJobs.length]);
 
-  // 작업별 진행률(%)과 단계 문구.
-  // 백엔드가 디코딩·선별·추론·렌더링 전 단계에서 '실제' 진행도와 지금 단계를 보고하므로
-  // 가짜 시간기반 추정을 만들지 않는다. 남은 시간은 단계가 바뀔 때 숫자가 뛰어 혼란스러워서
-  // 보여 주지 않고, 대신 지금 무엇을 하는지(단계)와 부드럽게 움직이는 진행률을 보여 준다.
-
-  // 분석 단계 문구 — 서버(model/inference.py _report, backend prediction_job)의 stage 값.
-  // main 은 '~하는 중'(뒤에 움직이는 점이 붙음), extra 는 그 뒤에 붙는 보조 정보.
+  // 分析フェーズテキスト定義
   const PHASE_TEXT = {
-    loading: () => ({ main: "분석 엔진 준비 중" }),
-    decode: () => ({ main: "분석 엔진 준비 중" }),   // 영상 읽기도 준비 과정으로 묶어 따로 알리지 않는다
-    motion: () => ({ main: "차량 움직임 계산 중" }),
-    coarse: () => ({ main: "영상 전체 훑어보는 중" }),
-    refine: (n, i) => ({ main: n > 1 && i ? `의심 구간 ${i}/${n} 자세히 보는 중` : "의심 구간 자세히 보는 중" }),
-    scan: () => ({ main: "영상 분석 중" }),
-    events: () => ({ main: "사고 구간 정리 중" }),
-    render: (n, i) => ({ main: n > 1 && i ? `사고 클립 ${i}/${n} 만드는 중` : "사고 클립 만드는 중" }),
+    loading: () => ({ main: "分析エンジン準備中" }),
+    decode: () => ({ main: "分析エンジン準備中" }),
+    motion: () => ({ main: "車両の動きを計算中" }),
+    coarse: () => ({ main: "映像全体をスクリーニング中" }),
+    refine: (n, i) => ({ main: n > 1 && i ? `疑い区間 ${i}/${n} を詳細分析中` : "疑い区間を詳細分析中" }),
+    scan: () => ({ main: "映像分析中" }),
+    events: () => ({ main: "事故区間を整理中" }),
+    render: (n, i) => ({ main: n > 1 && i ? `事故クリップ ${i}/${n} を生成中` : "事故クリップを生成中" }),
   };
 
-  // '~하는 중' 뒤의 점: . → .. → ... → .... 를 0.5초마다 반복한다.
-  // 점 자리는 고정 폭(.phase-dots)이라 점 개수가 바뀌어도 뒤 글자가 흔들리지 않는다.
   const phaseText = (pct, main, extra) => (
     <>
       {pct != null && `${Math.round(pct)}% · `}
@@ -1739,22 +1708,17 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
   const jobProgress = (job) => {
     const key = job.taskId ?? job.videoId;
     const hasReal = typeof job.progress === "number" && (job.progress > 0 || !!job.phase);
-    // 단계: 요청(서버 대기열에서 차례를 기다림) → 준비 → 진행(서버가 단계·진행도를 보냄)
-    // 다른 사용자의 작업 정보는 드러내지 않으므로 대기 순번은 보여 주지 않는다.
     const stage = hasReal ? "running" : job.status === "PENDING" ? "queued" : "starting";
 
-    // 진행률(막대·%): 서버 값(2초마다, 소수 첫째 자리) 사이를 최근 진행 속도로 채워 계속 조금씩
-    // 움직이게 한다. 서버 값보다 최대 3%p(약 4초어치)까지만 앞서가고, 뒤로는 가지 않으며,
-    // 서버 값이 크게 뛰어도 0.5초마다 남은 차이의 40%씩 따라가 부드럽게 움직인다.
     const serverP = hasReal ? Math.min(99, job.progress) : 0;
     const sm = progressSmoothRef.current[key]
       || (progressSmoothRef.current[key] = { disp: 0, p: null, at: null, rate: 0, tick: null });
-    if (sm.tick !== now) {                        // 같은 순간 여러 곳에서 불러도 한 번만 계산
+    if (sm.tick !== now) {
       const at = job.progressAt ?? now;
-      if (sm.p === null || at !== sm.at) {        // 새 서버 값
+      if (sm.p === null || at !== sm.at) {
         if (sm.p !== null && at > sm.at && serverP >= sm.p) {
           const r = (serverP - sm.p) / ((at - sm.at) / 1000);
-          sm.rate = sm.rate ? sm.rate * 0.6 + r * 0.4 : r;   // 진행 속도(%/초)도 부드럽게
+          sm.rate = sm.rate ? sm.rate * 0.6 + r * 0.4 : r;
         }
         sm.p = serverP;
         sm.at = at;
@@ -1767,26 +1731,20 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     }
     const pct = hasReal ? sm.disp : 0;
 
-    const ph = PHASE_TEXT[job.phase]?.(job.phaseCount, job.phaseIndex) ?? { main: "분석 중" };
-    // 상단 대표 칸: 단계 문구(가운데)와 진행률(맨 오른쪽, pctText)을 따로 보여 준다
+    const ph = PHASE_TEXT[job.phase]?.(job.phaseCount, job.phaseIndex) ?? { main: "分析中" };
     const statusText =
-      stage === "queued" ? phaseText(null, "서버에 분석을 요청하는 중")
-        : stage === "starting" ? phaseText(null, "분석 준비 중")
+      stage === "queued" ? phaseText(null, "サーバーに分析を要求中")
+        : stage === "starting" ? phaseText(null, "分析準備中")
           : phaseText(null, ph.main, ph.extra);
     const pctText = stage === "running" ? `${Math.round(pct)}%` : null;
-    // 서버 병목으로 기다린다는 걸 알리는 게 목적이라, 요청 단계 문구는 줄이지 않는다
     const shortText =
-      stage === "queued" ? "서버에 분석을 요청하는 중" : stage === "starting" ? "준비 중" : `${Math.round(pct)}%`;
-    // 펼친 목록의 아랫줄 — 윗줄(짧은 칸: %)과 겹치지 않게 단계만
+      stage === "queued" ? "サーバーに分析を要求中" : stage === "starting" ? "準備中" : `${Math.round(pct)}%`;
     const detailText =
-      stage === "queued" ? "서버의 앞선 분석이 끝나면 자동으로 시작됩니다"
-        : stage === "starting" ? phaseText(null, "분석 준비 중") : phaseText(null, ph.main, ph.extra);
+      stage === "queued" ? "サーバーの先行分析完了後に自動開始されます"
+        : stage === "starting" ? phaseText(null, "分析準備中") : phaseText(null, ph.main, ph.extra);
     return { pct, preparing: stage !== "running", stage, statusText, pctText, shortText, detailText };
   };
 
-  // 오버레이 div 안에서 실제 영상 콘텐츠가 차지하는 영역(object-fit:contain 레터박스)과
-  // 원본해상도→화면 스케일을 반환. bbox 그리기/클릭 좌표 환산을 이걸로 통일한다.
-  // 화면 좌표(포인터 위치)에 있는 차량 탐지 박스 — 없으면 null
   const detectedBoxAt = (e) => {
     const geom = getVideoGeom();
     const el = bboxOverlayRef.current;
@@ -1797,33 +1755,28 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     return detectedBoxes.find(({ bbox: [x1, y1, x2, y2] }) => realX >= x1 && realX <= x2 && realY >= y1 && realY <= y2) || null;
   };
 
-  // 영상 칸 크기(w, h) → 원본 해상도와의 배율·레터박스 여백. 해상도는 서버가 분석에 쓰는 크기(DB width/height)
   const geomFor = (w, h) => {
     const vw = selectedVideo?.width || w;
     const vh = selectedVideo?.height || h;
-    const scale = Math.min(w / vw, h / vh); // contain
+    const scale = Math.min(w / vw, h / vh);
     return {
       scale,
       vw,
       vh,
-      offsetX: (w - vw * scale) / 2, // 좌우 레터박스 여백
-      offsetY: (h - vh * scale) / 2, // 상하 레터박스 여백
+      offsetX: (w - vw * scale) / 2,
+      offsetY: (h - vh * scale) / 2,
     };
   };
-  // 마우스·터치 처리용 — 지금 영상 칸 크기를 직접 잰다
+
   const getVideoGeom = () => {
     const el = bboxOverlayRef.current;
     if (!el) return null;
     const rect = el.getBoundingClientRect();
     return geomFor(rect.width, rect.height);
   };
-  // 그리기용 — ResizeObserver 가 기록한 영상 칸 크기로 계산(크기가 바뀌면 다시 그려진다)
+
   const renderGeom = overlaySize ? geomFor(overlaySize.w, overlaySize.h) : null;
 
-  // 고른 차량 박스(bboxList)는 원본 영상 해상도 좌표로 저장한다.
-  // 영상 칸 크기가 바뀌어도(창 크기 · 오른쪽 패널 · 영화관 모드 · 전체화면) 그릴 때마다 지금 크기로 바꾸므로
-  // 박스가 영상의 같은 자리에 있고, 분석에 보내는 좌표도 그대로다.
-  // 화면(오버레이) 좌표 → 원본 좌표 (영상 밖 레터박스로 나간 부분은 영상 안으로 자른다)
   const toOrigBox = (x1, y1, x2, y2) => {
     const g = getVideoGeom();
     if (!g) return null;
@@ -1831,7 +1784,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     const oy = (y) => Math.round(Math.min(g.vh, Math.max(0, (y - g.offsetY) / g.scale)));
     return { xmin: ox(x1), ymin: oy(y1), xmax: ox(x2), ymax: oy(y2) };
   };
-  // 원본 좌표 → 지금 영상 칸의 화면 위치
+
   const toDispBox = (box) => {
     const g = renderGeom;
     if (!g) return null;
@@ -1843,16 +1796,10 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     };
   };
 
-  // 넓은 화면의 영상 재생 화면에선 버튼 묶음을 왼쪽 칸 맨 위(사고 클립 사이드바 위)에 둔다.
-  // 좁은 화면(1024px 이하)은 한 줄로 쌓여 사이드바가 영상 아래로 가므로 영상 위 헤더에 둔다.
   const isWideScreen = useMediaQuery("(min-width: 1025px)");
   const actionsInSide = isWideScreen && !!selectedVideo;
 
-  // 진행 단계(01 차량 선택 → 02 사고 구간 찾기 → 03 클립 검토).
-  // 넓은 화면(1280px 이상)은 영상 오른쪽 칸 위에 세로로, 그보다 좁으면 작업 헤더 안에 가로로 둔다.
   const isXLScreen = useMediaQuery("(min-width: 1280px)");
-  // 지금 할 단계 하나를 화면 상태로 정한다: 분석 중 → 02, 차량 고르는 중 → 01, 결과 있음 → 03,
-  // 박스만 지정됨 → 02(찾기 차례), 그 외 → 01. 앞 단계는 끝남(✓), 뒤 단계는 아직(흐리게).
   const currentStep = !selectedVideo ? 1
     : isAnalyzing ? 2
       : selectionMode !== "none" ? 1
@@ -1860,20 +1807,13 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
           : bboxList.length > 0 ? 2
             : 1;
   const selectedVideoJob = selectedVideo ? analyzingJobs.find((j) => j.videoId === selectedVideo.id) : null;
-  // 차량 탐지·직접 지정 중 — 영상 크기·비율이 바뀌면 그리던 박스·탐지 박스 위치가 흔들리므로
-  // 이 동안엔 영상 크기를 바꾸는 기능(영화관 모드·전체화면·오른쪽 패널 열기/닫기)을 쓰지 못하게 한다
   const isChoosingVehicle = selectionMode !== "none" || isDetectingVehicles;
-  // ── 빨간 구간에서 CAM 클립 겹쳐 보기 ─────────────────────────────
-  // 원본 영상·재생바는 그대로 두고, 재생 위치가 빨간 구간 안이면 그 구간의 CAM 클립을 원본과 같은 시각에 맞춰
-  // 영상 그림 위에 겹친다. 지금 나올 클립과 3초 안에 바뀌어 나올 클립을 미리 불러 같은 시각에 맞춰 둔다.
-  // 차량을 고르는 동안엔 원본 화면에서 골라야 하므로 겹치지 않는다
+
   const camEnabled = clipView === "cam" && !isChoosingVehicle;
   const camShown = camEnabled && selectedVideo
     ? clipEventsAhead(selectedVideo.events, currentTime, currentEventId, 3) : [];
   const camKey = camShown.map((e) => e.id).join(",");
 
-  // 원본 재생에 맞춰 CAM 클립들의 위치·재생/멈춤·속도를 맞추고, 지금 나올 클립 하나만 보이게 한다.
-  // 재생 중엔 화면을 그릴 때마다 확인해 구간 경계에서 바로 바뀐다(timeupdate 는 약 0.25초 간격이라 늦다)
   useEffect(() => {
     const main = videoElRef.current;
     const overlay = bboxOverlayRef.current;
@@ -1891,10 +1831,9 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
       const now = clipEventAt(events, main.currentTime, currentEventId);
       let shown = null;
       layers.forEach(({ layer, cam, ev }) => {
-        const local = main.currentTime - ev.clipStartSec;   // 클립 안 재생 위치
+        const local = main.currentTime - ev.clipStartSec;
         const inClip = local >= 0 && local < (cam.duration || 0);
         if (inClip) {
-          // 재생 중엔 조금(0.12초) 어긋날 때만 맞춘다 — 자꾸 맞추면 오히려 끊긴다. 멈춰 있으면 정확히
           if (Math.abs(cam.currentTime - local) > (main.paused ? 0.01 : 0.12)) cam.currentTime = local;
           if (cam.playbackRate !== main.playbackRate) cam.playbackRate = main.playbackRate;
           if (!main.paused && cam.paused) cam.play().catch(() => {});
@@ -1903,13 +1842,12 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
           cam.pause();
         }
         const show = now?.id === ev.id && inClip && cam.readyState >= 2;
-        layer.classList.toggle("shown", show);   // 0.25초 동안 서서히 나타나고 사라진다(App.css)
+        layer.classList.toggle("shown", show);
         if (show) shown = ev;
       });
-      // 어느 분석의 클립이 보이는지는 영상 밖(컨트롤 줄)에 — 영상 위에 쓰면 CCTV 날짜·시각 글자를 가린다
       if (chip) {
         chip.hidden = !shown;
-        if (shown) chip.textContent = shown.analysisNo != null ? `분석 #${shown.analysisNo} 충돌 표시` : "충돌 표시";
+        if (shown) chip.textContent = shown.analysisNo != null ? `分析 #${shown.analysisNo} 衝突表示` : "衝突表示";
       }
     };
     let raf = 0;
@@ -1939,26 +1877,24 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
     };
   }, [camKey, selectedVideo, currentEventId]);
 
-  // 분석 이력에서 고른 분석의 클립이 아직 남아 있으면 '강조 중' (클립을 다 지우면 저절로 풀림)
   const isHighlighting = !!selectedVideo && highlightAnalysisNo != null
     && selectedVideo.events.some((e) => e.analysisNo === highlightAnalysisNo);
-  // 왼쪽 클립 목록 순서: 최근 분석이 위, 같은 분석 안에서는 영상 시각 순(사용자 요청 2026-10-27).
-  // 재생바의 빨간 구간은 서버 순서 그대로 둔다 — 겹친 구간은 나중에 그린 최근 분석이 위에 와서 눌린다
+
   const listedEvents = selectedVideo
     ? [...selectedVideo.events].sort((a, b) => (b.analysisNo ?? 0) - (a.analysisNo ?? 0) || a.startSec - b.startSec)
     : [];
   const workflowSteps = selectedVideo ? (
-    <ol className="incident-workflow" aria-label="사고 의심 구간 검토 순서">
+    <ol className="incident-workflow" aria-label="事故疑い区間の確認フロー">
       {[
-        { n: 1, title: "분석할 차량 선택", desc: "자동 탐지 또는 직접 지정" },
+        { n: 1, title: "分析対象の車両選択", desc: "自動検出または手動指定" },
         {
           n: 2,
-          title: "사고 구간 찾기",
+          title: "事故区間の検出",
           desc: isAnalyzing
-            ? `분석 중 · ${typeof selectedVideoJob?.progress === "number" ? `${Math.round(selectedVideoJob.progress)}%` : "준비 중"}`
-            : "선택한 차량의 접촉 장면 탐색",
+            ? `分析中 · ${typeof selectedVideoJob?.progress === "number" ? `${Math.round(selectedVideoJob.progress)}%` : "準備中"}`
+            : "選択車両の接触シーンを探索",
         },
-        { n: 3, title: "클립 검토", desc: "원본과 의심 장면을 함께 확인", count: selectedVideo.events.length },
+        { n: 3, title: "クリップ確認", desc: "原本と疑いシーンを併せて確認", count: selectedVideo.events.length },
       ].map((st) => {
         const state = st.n < currentStep ? "is-complete" : st.n === currentStep ? "is-current" : "is-pending";
         return (
@@ -1969,16 +1905,13 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
               ) : String(st.n).padStart(2, "0")}
             </span>
             <div><strong>{st.title}</strong><small>{st.desc}</small></div>
-            {st.count > 0 && <b>{st.count}건</b>}
+            {st.count > 0 && <b>{st.count}件</b>}
           </li>
         );
       })}
     </ol>
   ) : null;
 
-  // 영상 재생 화면의 차량 탐지 · 직접 차량 지정 · 사고감지 실행 버튼 묶음.
-  // 차량 탐지 버튼은 상태에 따라 세 가지로 바뀐다:
-  // 탐지 전 '차량 탐지' → 탐지 중 '탐지 취소' → 탐지 후 차량을 고르는 동안 '차량 선택 종료'
   const watchActionButtons = selectedVideo ? (
     <div className="watch-header-actions">
       <button
@@ -1986,42 +1919,37 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
         disabled={isAnalyzing}
         onClick={isDetectingVehicles ? handleCancelDetectVehicles
           : selectionMode === "auto" ? handleEndDesignateMode : handleAutoDetectVehicles}
-        title={isDetectingVehicles ? "진행 중인 차량 탐지를 취소합니다"
-          : selectionMode === "auto" ? "차량 고르기를 끝냅니다"
-            : "현재 화면의 차량을 자동으로 찾아 표시합니다"}
+        title={isDetectingVehicles ? "進行中の車両検出をキャンセルします"
+          : selectionMode === "auto" ? "車両選択を終了します"
+            : "現在画面の車両を自動検出して表示します"}
       >
-        {isDetectingVehicles ? "🛑 탐지 취소" : selectionMode === "auto" ? "차량 선택 종료" : "차량 탐지"}
+        {isDetectingVehicles ? "🛑 検出キャンセル" : selectionMode === "auto" ? "車両選択終了" : "車両検出"}
       </button>
 
-      {/* 직접 차량 지정 + 지정 모드 안내 말풍선(버튼 위로 떠서 상단 바의 빈 곳에 겹쳐 뜬다 — 아무것도 밀어내지 않음) */}
       <div className="designate-btn-wrapper">
         <button
           className={`bbox-designate-btn ${selectionMode === "manual" ? "active" : ""}`}
-          disabled={isAnalyzing || isDetectingVehicles} /* 분석 중 · 차량 자동 탐지 중엔 누를 수 없다 */
+          disabled={isAnalyzing || isDetectingVehicles}
           onClick={() => {
             if (selectionMode === "manual") {
-              // '직접 지정 종료'는 모드만 끝낸다 — 그린 박스는 남는다(차량 탐지로 고른 박스와 같게).
-              // 지우려면 박스에 마우스를 올려 ✕
               handleEndDesignateMode();
             } else {
               handleStartManualDesignate();
             }
           }}
-          title={isAnalyzing ? "분석 중에는 지정할 수 없습니다"
-            : isDetectingVehicles ? "차량 탐지 중에는 지정할 수 없습니다"
-              : (selectionMode === "manual" ? "직접 지정 모드를 끝냅니다" : "마우스로 드래그해 차량을 직접 지정합니다")}
+          title={isAnalyzing ? "分析中は指定できません"
+            : isDetectingVehicles ? "車両検出中は指定できません"
+              : (selectionMode === "manual" ? "手動指定モードを終了します" : "マウスのドラッグで車両を手動指定します")}
         >
-          {selectionMode === "manual" ? "직접 지정 종료" : "직접 차량 지정"}
+          {selectionMode === "manual" ? "手動指定終了" : "車両を手動指定"}
         </button>
         {selectionMode === "manual" && (
           <div className="designate-hint" role="status">
-            🖱️ 마우스로 드래그하여 사고 차량을 지정해 주세요.
+            🖱️ マウスでドラッグして事故対象車両を指定してください。
           </div>
         )}
       </div>
 
-
-      {/* 사고감지 실행 버튼 + 확인 팝오버 / 취소 버튼 */}
       <div className="detect-btn-wrapper">
         {isAnalyzing ? (
           <button
@@ -2030,17 +1958,17 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
               const currentJob = analyzingJobs.find((j) => j.videoId === selectedVideo?.id);
               handleCancelAnalysis(currentJob?.taskId);
             }}
-            title="진행 중인 사고 감지 분석을 취소합니다"
+            title="進行中の事故検知分析をキャンセルします"
           >
-            🛑 사고감지 취소
+            🛑 事故検知キャンセル
           </button>
         ) : (
           <button
             className="detect-run-btn"
             onClick={handleAnalyzeClick}
-            title="선택한 차량의 사고 의심 구간을 찾습니다"
+            title="選択した車両の事故疑い区間を検出します"
           >
-            사고 구간 찾기
+            事故区間を検出
           </button>
         )}
 
@@ -2053,18 +1981,18 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
             <div className="analyze-popover">
               <p className="analyze-popover-text">
                 {selectedVideo?.analyzedBefore
-                  ? "이미 분석을 완료한 영상입니다. 다시 분석을 실행하시겠습니까?"
-                  : "현재 선택하신 차량의 사고예상 구간을 탐지하시겠습니까?"}
+                  ? "すでに分析済みの動画です。再分析を実行しますか？"
+                  : "選択した車両の接触疑い区間を検出しますか？"}
               </p>
               <div className="analyze-popover-actions">
                 <button className="analyze-popover-run" onClick={runAnalysis}>
-                  실행
+                  実行
                 </button>
                 <button
                   className="analyze-popover-cancel"
                   onClick={() => setShowAnalyzeConfirm(false)}
                 >
-                  뒤로가기
+                  戻る
                 </button>
               </div>
             </div>
@@ -2076,10 +2004,10 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
 
   return (
     <div className="dashboard-layout">
-      {/* 상단 네비게이션 바 */}
+      {/* 上部ナビゲーションバー */}
       <header className="top-navbar">
         <div className="nav-section nav-left">
-          <button className="nav-logo nav-home-btn" onClick={handleBackToHome} aria-label="SIOT 홈으로 이동">
+          <button className="nav-logo nav-home-btn" onClick={handleBackToHome} aria-label="SIOTホームへ移動">
             <span className="workspace-wordmark" translate="no">SI<span className="workspace-lens">O</span>T<span className="workspace-brand-dot">.</span></span><span className="workspace-brand-caption" translate="no">{selectedVideo ? "INCIDENT REVIEW" : "LIBRARY"}</span>
           </button>
         </div>
@@ -2087,7 +2015,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
         <div className="nav-section nav-center">
           {analyzingJobs.length === 0 ? (
             <div className="analysis-status-box analysis-status-idle">
-              <span className="analysis-idle-text">현재 분석 중인 영상이 없습니다</span>
+              <span className="analysis-idle-text">現在、分析中の動画はありません</span>
             </div>
           ) : (() => {
             const lead = analyzingJobs[0];
@@ -2097,11 +2025,10 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                 <div className="analysis-status-main">
                   <div className="analysis-status-info">
                     <span className="analysis-status-label">
-                      {/* 영상 목록의 제목과 같게 (제목을 넣었으면 그 제목, 아니면 '녹화일 녹화본 #N') */}
                       🔍 {(() => {
                         const v = videos.find((x) => x.id === lead.videoId);
                         return v ? getVideoDisplayTitle(v, videos) : lead.dateLabel;
-                      })()} 분석 중
+                      })()} 分析中
                     </span>
                     <span className="analysis-status-eta">
                       {statusText}
@@ -2119,9 +2046,9 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                 <button
                   className="analysis-jobs-toggle"
                   onClick={() => setShowJobsDropdown((v) => !v)}
-                  title="분석 중인 영상 목록을 펼칩니다"
+                  title="分析中の動画一覧を表示します"
                 >
-                  {analyzingJobs.length}개 ▾
+                  {analyzingJobs.length}件 ▾
                 </button>
 
                 {showJobsDropdown && (
@@ -2132,7 +2059,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                     />
                     <div className="analysis-jobs-dropdown">
                       <div className="analysis-jobs-dropdown-title">
-                        분석 중인 영상 ({analyzingJobs.length})
+                        分析中の動画 ({analyzingJobs.length})
                       </div>
                       {analyzingJobs.map((job) => {
                         const p = jobProgress(job);
@@ -2141,7 +2068,6 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                             <div className="analysis-job-top">
                               <span className="analysis-job-name">
                                 {(() => {
-                                  // 같은 날짜 영상이 여럿이면 '녹화본 #N' 으로 구분해 보여준다
                                   const v = videos.find((x) => x.id === job.videoId);
                                   return v ? getVideoDisplayTitle(v, videos) : job.dateLabel;
                                 })()}
@@ -2153,9 +2079,9 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                                 <button
                                   className="analysis-job-cancel-btn"
                                   onClick={() => handleCancelAnalysis(job.taskId)}
-                                  title="이 분석을 취소합니다"
+                                  title="この分析をキャンセルします"
                                 >
-                                  🛑 취소
+                                  🛑 キャンセル
                                 </button>
                               </div>
                             </div>
@@ -2183,21 +2109,21 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
             <button
               className="profile-trigger-btn simple-avatar-trigger"
               onClick={() => setIsProfileOpen(!isProfileOpen)}
-              aria-label="프로필 메뉴 열기"
+              aria-label="プロフィールメニューを開く"
               aria-expanded={isProfileOpen}
               aria-controls="profile-menu"
             >
               <div className="profile-avatar">
                 <span>{avatarInitial}</span>
               </div>
-              <span className="profile-trigger-copy"><strong>{displayName}</strong><small>내 계정</small></span><span className="profile-trigger-chevron" aria-hidden="true">⌄</span>
+              <span className="profile-trigger-copy"><strong>{displayName}</strong><small>マイアカウント</small></span><span className="profile-trigger-chevron" aria-hidden="true">⌄</span>
             </button>
 
             {isProfileOpen && (
               <>
                 <div className="dropdown-overlay" onClick={() => setIsProfileOpen(false)} />
                 <div className="profile-dropdown-menu" id="profile-menu">
-                  {/* 관리자/사용자 정보 요약 Header */}
+                  {/* 管理者/ユーザー情報要約 Header */}
                   <div className="dropdown-header">
                     <div className="header-avatar">{avatarInitial}</div>
                     <div className="header-info">
@@ -2208,8 +2134,8 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
 
                   <div className="dropdown-divider" />
 
-                  {/* 내 정보 설정 (Account Settings) */}
-                  <div className="dropdown-section-title">내 정보 설정</div>
+                  {/* アカウント設定 (Account Settings) */}
+                  <div className="dropdown-section-title">アカウント設定</div>
                   <button
                     className="dropdown-item"
                     onClick={() => {
@@ -2218,7 +2144,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                       setActiveSettingsTab("account");
                     }}
                   >
-                    <InterfaceIcon name="user" /> {currentUser?.role === "ADMIN" ? "관리자 정보 수정" : "내 정보 수정"}
+                    <InterfaceIcon name="user" /> {currentUser?.role === "ADMIN" ? "管理者情報の変更" : "ユーザー情報の変更"}
                   </button>
                   <button
                     className="dropdown-item"
@@ -2228,15 +2154,15 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                       setActiveSettingsTab("security");
                     }}
                   >
-                    <InterfaceIcon name="lock" /> 비밀번호 변경
+                    <InterfaceIcon name="lock" /> パスワード変更
                   </button>
 
                   <div className="dropdown-divider" />
 
-                  {/* 테마 설정 (Appearance) */}
-                  <div className="dropdown-section-title">테마 설정</div>
+                  {/* テーマ設定 (Appearance) */}
+                  <div className="dropdown-section-title">テーマ設定</div>
                   <div className="dropdown-item-toggle">
-                    <span className="theme-label"><InterfaceIcon name="moon" /> 다크 모드</span>
+                    <span className="theme-label"><InterfaceIcon name="moon" /> ダークモード</span>
                     <label className="switch-mini">
                       <input
                         type="checkbox"
@@ -2249,7 +2175,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
 
                   <div className="dropdown-divider" />
 
-                  {/* 로그아웃 (Logout) */}
+                  {/* ログアウト (Logout) */}
                   <button
                     className="dropdown-item logout-item"
                     onClick={() => {
@@ -2257,7 +2183,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                       onLogout();
                     }}
                   >
-                    <InterfaceIcon name="exit" /> 로그아웃
+                    <InterfaceIcon name="exit" /> ログアウト
                   </button>
                 </div>
               </>
@@ -2266,40 +2192,40 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
         </div>
       </header>
 
-      {/* 컨텐츠 영역: 영상 목록 또는 재생 화면 */}
+      {/* コンテンツ領域: 動画一覧または再生画面 */}
       {!selectedVideo ? (
         <main className="home-view">
           <section className="incident-overview">
-            <div className="incident-overview-copy"><span className="incident-eyebrow" translate="no">SIOT / INCIDENT REVIEW</span><h1>주차된 순간부터,<br />놓치지 않는 사고 단서.</h1><p>CCTV 속 접촉 의심 장면을 찾고, 필요한 구간을 빠르게 검토하세요.</p><button className="incident-upload" onClick={() => setShowUpload(true)}>영상 추가하고 분석 시작 <span aria-hidden="true">↗</span></button></div>
-            <div className="incident-metrics" aria-label="내 영상 현황">
-              <div><span>보관 영상</span><strong>{videos.length}<small>개</small></strong></div>
-              <div><span>사고 의심 구간</span><strong>{videos.reduce((sum, video) => sum + video.events.length, 0)}<small>건</small></strong></div>
-              <div><span>분석 진행</span><strong>{analyzingJobs.length}<small>개</small></strong></div>
+            <div className="incident-overview-copy"><span className="incident-eyebrow" translate="no">SIOT / INCIDENT REVIEW</span><h1>駐車の瞬間から、<br />見逃さない事故の手がかり。</h1><p>防犯カメラ映像から接触の疑いがある場面を検出し、必要な区間を素早く確認できます。</p><button className="incident-upload" onClick={() => setShowUpload(true)}>動画を追加して分析開始 <span aria-hidden="true">↗</span></button></div>
+            <div className="incident-metrics" aria-label="動画ステータス">
+              <div><span>保存動画</span><strong>{videos.length}<small>件</small></strong></div>
+              <div><span>事故疑い区間</span><strong>{videos.reduce((sum, video) => sum + video.events.length, 0)}<small>件</small></strong></div>
+              <div><span>分析進行中</span><strong>{analyzingJobs.length}<small>件</small></strong></div>
             </div>
           </section>
-          <div className="incident-section-title"><div><span className="incident-eyebrow" translate="no">VIDEO LIBRARY</span><h2>영상 보관함</h2></div></div>
-          {/* 기간 필터 및 영상 관리 툴바 */}
+          <div className="incident-section-title"><div><span className="incident-eyebrow" translate="no">VIDEO LIBRARY</span><h2>動画保管庫</h2></div></div>
+          {/* 期間フィルターおよび動画管理ツールバー */}
           <div className="home-toolbar">
             <div className="home-toolbar-filters">
               <div className="filter-pills">
-                <button className={filterDays === 9999 ? "active" : ""} onClick={() => setFilterDays(9999)}>전체</button>
-                <button className={filterDays === 7 ? "active" : ""} onClick={() => setFilterDays(7)}>1주일</button>
-                <button className={filterDays === 14 ? "active" : ""} onClick={() => setFilterDays(14)}>2주일</button>
-                <button className={filterDays === 30 ? "active" : ""} onClick={() => setFilterDays(30)}>1개월</button>
-                <button className={filterDays === 90 ? "active" : ""} onClick={() => setFilterDays(90)}>3개월</button>
+                <button className={filterDays === 9999 ? "active" : ""} onClick={() => setFilterDays(9999)}>すべて</button>
+                <button className={filterDays === 7 ? "active" : ""} onClick={() => setFilterDays(7)}>1週間</button>
+                <button className={filterDays === 14 ? "active" : ""} onClick={() => setFilterDays(14)}>2週間</button>
+                <button className={filterDays === 30 ? "active" : ""} onClick={() => setFilterDays(30)}>1ヶ月</button>
+                <button className={filterDays === 90 ? "active" : ""} onClick={() => setFilterDays(90)}>3ヶ月</button>
               </div>
 
               <div className="list-search-bar">
                 <span className="search-icon"><SearchIcon /></span>
                 <input
                   type="text"
-                  placeholder="영상 날짜, 제목 검색"
+                  placeholder="動画の日付、タイトルを検索"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  aria-label="영상 검색"
+                  aria-label="動画検索"
                 />
                 {searchQuery && (
-                  <button className="search-clear-btn" onClick={() => setSearchQuery("")} aria-label="검색어 지우기">
+                  <button className="search-clear-btn" onClick={() => setSearchQuery("")} aria-label="検索ワードをクリア">
                     ✕
                   </button>
                 )}
@@ -2320,23 +2246,23 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                     }}
                   >
                     {selectedForDelete.length === filteredVideos.length && filteredVideos.length > 0
-                      ? "☑ 전체 해제"
-                      : "☐ 전체 선택"}
+                      ? "☑ すべて解除"
+                      : "☐ すべて選択"}
                   </button>
                   <button className="delete-cancel-btn" onClick={exitDeleteMode}>
-                    취소
+                    キャンセル
                   </button>
                   <button className="delete-confirm-btn" onClick={handleDeleteSelected}>
-                    🗑 선택 삭제 ({selectedForDelete.length})
+                    🗑 選択削除 ({selectedForDelete.length})
                   </button>
                 </>
               ) : (
                 <>
                   <button className="toolbar-upload-btn" onClick={() => setShowUpload(true)}>
-                    ⬆ 영상 업로드
+                    ⬆ 動画アップロード
                   </button>
                   <button className="toolbar-delete-btn" onClick={() => setDeleteMode(true)}>
-                    🗑 영상 삭제
+                    🗑 動画削除
                   </button>
                 </>
               )}
@@ -2344,10 +2270,10 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
           </div>
 
 
-          {/* 영상 썸네일 그리드 — 열 수는 CSS 가 화면 폭에 맞춰 정하고, 한 페이지 개수가 그 열 수를 따른다 */}
+          {/* 動画サムネイルグリッド — カラム数はCSSが表示幅に合わせて決定し、1ページあたりの件数がそれに従う */}
           <div className="video-grid" ref={setVideoGridEl}>
             {filteredVideos.length === 0 ? (
-              <div className="empty-state">선택한 기간에 해당하는 영상이 없습니다.</div>
+              <div className="empty-state">選択した期間に該当する動画がありません。</div>
             ) : (
               paginatedVideos.map((video) => {
                 const isSelected = selectedForDelete.includes(video.id);
@@ -2360,17 +2286,17 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                     }
                   >
                     <div className="video-thumbnail">
-                      {/* 영상 첫 프레임 썸네일 */}
+                      {/* 動画の先頭フレームサムネイル */}
                       <img
                         className="video-thumbnail-img"
                         src={api.thumbnailUrl(video.id)}
-                        alt={`${video.date} 썸네일`}
+                        alt={`${video.date} サムネイル`}
                         loading="lazy"
                         onError={(e) => { e.currentTarget.style.display = "none"; }}
                       />
-                      {/* 왼쪽 아래 녹화일자(제목을 따로 넣으면 언제 찍었는지 모르니) · 오른쪽 아래 의심 구간 수 */}
+                      {/* 左下: 録画日 · 右下: 疑い区間数 */}
                       {video.date && <span className="recording-date-badge">{video.date}</span>}
-                      <span className="event-count-badge">의심 구간 {video.events.length}건</span>
+                      <span className="event-count-badge">疑い区間 {video.events.length}件</span>
                       {deleteMode && (
                         <span className={`delete-check ${isSelected ? "checked" : ""}`}>
                           {isSelected ? "✓" : ""}
@@ -2380,22 +2306,22 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                     <div className="video-info">
                       <div className="video-info-text">
                         <h3>{getVideoDisplayTitle(video, videos)}</h3>
-                        <p>영상 길이: {formatTime(video.duration)}</p>
-                        {/* 보관 기간 — 지나면 영상과 분석 클립이 함께 지워진다. 7일 이하는 강조 */}
+                        <p>動画の長さ: {formatTime(video.duration)}</p>
+                        {/* 保存期間 — 経過すると動画と分析クリップが削除される。7日以下は強調 */}
                         {video.expiresInDays != null && (
                           <p
                             className={`video-expiry ${video.expiresInDays <= 7 ? "soon" : ""}`}
-                            title="보관 기간이 지나면 영상과 분석된 클립이 함께 삭제됩니다"
+                            title="保存期間を過ぎると動画と分析されたクリップが削除されます"
                           >
-                            {video.expiresInDays > 0 ? `${video.expiresInDays}일 뒤 만료` : "곧 만료"}
+                            {video.expiresInDays > 0 ? `${video.expiresInDays}日後に期限切れ` : "まもなく期限切れ"}
                           </p>
                         )}
                       </div>
-                      {/* ··· 메뉴: 영상 정보 확인(giwon 정보 팝업 — 업로드 일시 등 포함) / 영상 삭제 */}
+                      {/* ··· メニュー: 動画情報確認(情報ポップアップ — アップロード日時等を含む) / 動画削除 */}
                       {!deleteMode && <VideoCardActions video={video} title={getVideoDisplayTitle(video, videos)} onShowInfo={() => setInfoVideo(video)} onDeleted={(id) => {
                         setVideos((previous) => previous.filter((video) => video.id !== id));
                         setSelectedForDelete((previous) => previous.filter((videoId) => videoId !== id));
-                        showToast("영상을 삭제했습니다.", "success");
+                        showToast("動画を削除しました。", "success");
                       }} />}
                     </div>
                   </div>
@@ -2404,16 +2330,16 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
             )}
           </div>
 
-          {/* 페이지네이션 (영상 개수가 6개를 초과할 때 노출) */}
+          {/* ページネーション (動画数が6件を超える場合に表示) */}
           {filteredVideos.length > VIDEOS_PER_PAGE && (
             <div className="pagination-bar">
-              {/* 버튼 묶음은 화면 가운데, 페이지 정보는 그 오른쪽 — 정보 글자 때문에 버튼이 왼쪽으로 밀리지 않게 */}
+              {/* ボタン群は中央、ページ情報は右側 — 情報テキストによるボタン位置ズレを防ぐ */}
               <div className="pagination-controls">
                 <button
                   className="pagination-btn pagination-nav"
                   onClick={() => handlePageChange(1)}
                   disabled={currentPage === 1}
-                  title="첫 페이지로 이동"
+                  title="最初のページへ移動"
                 >
                   «
                 </button>
@@ -2421,7 +2347,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                   className="pagination-btn pagination-nav"
                   onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  title="이전 페이지로 이동"
+                  title="前のページへ移動"
                 >
                   ‹
                 </button>
@@ -2442,7 +2368,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                   className="pagination-btn pagination-nav"
                   onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
-                  title="다음 페이지로 이동"
+                  title="次のページへ移動"
                 >
                   ›
                 </button>
@@ -2450,14 +2376,14 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                   className="pagination-btn pagination-nav"
                   onClick={() => handlePageChange(totalPages)}
                   disabled={currentPage === totalPages}
-                  title="마지막 페이지로 이동"
+                  title="最後のページへ移動"
                 >
                   »
                 </button>
               </div>
 
               <span className="pagination-info">
-                {currentPage} / {totalPages} 페이지 (총 {filteredVideos.length}개)
+                {currentPage} / {totalPages} ページ (合計 {filteredVideos.length}件)
               </span>
             </div>
           )}
@@ -2465,33 +2391,33 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
       ) : (
         <main className={`watch-view ${isTheaterMode ? "theater-view" : ""}`}>
           {!isTheaterMode && <section className="incident-workspace-header">
-            <div className="incident-workspace-top"><div><button className="incident-back" onClick={handleBackToHome}>← 영상 보관함</button><h1>{getVideoDisplayTitle(selectedVideo, videos)}</h1></div>
-              {/* 오른쪽 패널(진행 단계·분석 이력) 열기·닫기 — 닫으면 그 칸이 빠지고 영상이 넓어진다(넓은 화면만).
-                  영상 크기가 바뀌므로 차량을 고르는 중엔 막는다 */}
+            <div className="incident-workspace-top"><div><button className="incident-back" onClick={handleBackToHome}>← 動画保管庫</button><h1>{getVideoDisplayTitle(selectedVideo, videos)}</h1></div>
+              {/* 右側パネル(進捗ステップ・分析履歴)の開閉 — 閉じるとその領域が消えて動画が広がる(幅広画面のみ)。
+                  動画サイズが変わるため車両選択中は無効化 */}
               {isXLScreen && (
                 <button
                   className="panel-toggle-btn"
                   onClick={() => setIsHistoryOpen((open) => !open)}
                   disabled={isChoosingVehicle}
                   aria-expanded={isHistoryOpen}
-                  title={isChoosingVehicle ? "차량을 고르는 중에는 쓸 수 없습니다"
-                    : isHistoryOpen ? "진행 단계·분석 이력 패널을 닫고 영상을 넓게 봅니다" : "진행 단계·분석 이력 패널을 엽니다"}
+                  title={isChoosingVehicle ? "車両の選択中は利用できません"
+                    : isHistoryOpen ? "進捗ステップ・分析履歴パネルを閉じて動画を広く表示します" : "進捗ステップ・分析履歴パネルを開きます"}
                 >
-                  {/* 오른쪽 패널 모양 아이콘 — 열려 있으면 오른쪽 칸이 칠해지고, 닫혀 있으면 빈 칸 */}
+                  {/* 右側パネル形状アイコン — 開いていれば右側が塗られ、閉じていれば空枠 */}
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
                     <rect x="3" y="4.5" width="18" height="15" rx="1.5" />
                     <path d="M15 4.5v15" />
                     {isHistoryOpen && <rect x="15" y="4.5" width="6" height="15" fill="currentColor" stroke="none" opacity="0.45" />}
                   </svg>
-                  {isHistoryOpen ? "오른쪽 패널 닫기" : "오른쪽 패널 열기"}
+                  {isHistoryOpen ? "右側パネルを閉じる" : "右側パネルを開く"}
                 </button>
               )}
             </div>
             {!isXLScreen && workflowSteps}
           </section>}
 
-          {/* 좁은 화면(1024px 이하): 영상 위 헤더에 버튼 묶음.
-              넓은 화면은 헤더 줄 없이 영상을 맨 위로 — 버튼은 왼쪽 칸 맨 위에 둔다 */}
+          {/* 狭い画面(1024px以下): 動画上のヘッダーにボタン群。
+              広い画面はヘッダー行なしで動画を最上部に — ボタンは左側エリアの最上部に配置 */}
           {!actionsInSide && (
             <div className="watch-header">
               <div className="watch-header-right">
@@ -2501,31 +2427,31 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
           )}
 
           <div className={`watch-layout ${isTheaterMode ? "theater-mode" : ""} ${!isHistoryOpen && isXLScreen ? "history-collapsed" : ""}`}>
-            {/* 왼쪽 칸: (넓은 화면) 버튼 묶음 + 사고 클립 사이드바 */}
+            {/* 左側エリア: (幅広画面) ボタン群 + 事故クリップサイドバー */}
             <div className="watch-side">
               {actionsInSide && watchActionButtons}
               <aside className={`event-sidebar ${isHighlighting ? "highlighting" : ""}`}>
-                {/* 머리말: 윗줄 제목 + 버튼(가운데 맞춤), 아랫줄 건수 안내(가로 전체 — 버튼 때문에 줄바꿈되지 않게) */}
+                {/* ヘッダー: 上段タイトル + ボタン、下段件数案内 */}
                 <div className="event-sidebar-header">
-                  <h3>사고 의심 구간</h3>
-                  {/* 전체 삭제 (목록 닫기(×)는 사용자 요청으로 뺐다, 2026-10-27) */}
+                  <h3>事故疑い区間</h3>
+                  {/* 一括削除 */}
                   <div className="event-header-actions">
                     {selectedVideo.events.length > 0 && (
                       <button
                         className="event-clear-all-btn"
                         onClick={requestClearAllEvents}
-                        title="이 영상의 사고 의심 클립을 모두 삭제합니다"
+                        title="この動画の事故疑いクリップをすべて削除します"
                       >
-                        🗑 전체 삭제
+                        🗑 すべて削除
                       </button>
                     )}
                   </div>
-                  <p className="event-summary">클립 {selectedVideo.events.length}건 · 직접 검토가 필요합니다.</p>
+                  <p className="event-summary">クリップ {selectedVideo.events.length}件 · 直接の確認が必要です。</p>
                 </div>
 
                 <div className="event-list" ref={eventListRef}>
                   {selectedVideo.events.length === 0 ? (
-                    <div className="event-empty-hint">감지된 이벤트가 없습니다.</div>
+                    <div className="event-empty-hint">検出されたイベントはありません。</div>
                   ) : (
                     listedEvents.map((event) => (
                       <div
@@ -2535,13 +2461,13 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                             ? ""
                             : event.analysisNo === highlightAnalysisNo ? "analysis-highlight" : "analysis-dim"
                         }`}
-                        /* 누르면 그 구간으로 이동해 재생 — 같은 시각에 여러 분석의 클립이 겹치면 이 클립이 메인 화면에 나온다 */
+                        /* クリックすると該当区間に移動して再生 — 同一時刻に複数分析のクリップが重複する場合、このクリップがメイン画面に表示される */
                         onClick={() => seekToEvent(event)}
                       >
                         <div className="event-item-top">
                           <span className="event-time-pill">{formatTime(event.timestamp)}</span>
-                          <span className="event-actual-time-text" title="이 영상의 몇 번째 분석에서 나온 클립인지 나타냅니다">
-                            {event.analysisNo != null && `분석 #${event.analysisNo}`}
+                          <span className="event-actual-time-text" title="この動画の何回目の分析で生成されたクリップかを示します">
+                            {event.analysisNo != null && `分析 #${event.analysisNo}`}
                           </span>
                           <div className="event-item-actions">
                             <button
@@ -2552,27 +2478,27 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                                 if (event.hasClip) {
                                   setClipEvent(event);
                                 } else {
-                                  showToast("이 이벤트의 사고 클립이 아직 없습니다.", "warning");
+                                  showToast("このイベントの事故クリップはまだありません。", "warning");
                                 }
                               }}
-                              aria-label={`${formatTime(event.timestamp)} 사고구간 클립 재생`}
-                              title="사고 구간 클립을 봅니다"
+                              aria-label={`${formatTime(event.timestamp)} 事故区間クリップ再生`}
+                              title="事故区間のクリップを表示します"
                             >
-                              {/* 글자 ▶ 는 글꼴마다 모양이 다르고 macOS·iOS 에선 이모지(▶️)로 바뀌어 SVG 로 그린다 */}
+                              {/* 文字 ▶ はフォント依存や絵文字化を防ぐためSVGで描画 */}
                               <PlayerIcon name="play" size={14} />
                             </button>
                             <button
                               className="event-delete-item-btn"
                               onClick={(e) => requestDeleteEvent(event, e)}
-                              title="이 클립을 삭제합니다"
-                              aria-label={`${formatTime(event.timestamp)} 사고구간 클립 삭제`}
+                              title="このクリップを削除します"
+                              aria-label={`${formatTime(event.timestamp)} 事故区間クリップ削除`}
                             >
                               <TrashIcon size={15} />
                             </button>
                           </div>
                         </div>
                         <div className="event-item-bottom">
-                          <h4 className="event-title-text" title="분석 일시">
+                          <h4 className="event-title-text" title="分析日時">
                             {(() => {
                               const at = formatAnalyzedAt(event.analyzedAt);
                               return at && (
@@ -2590,21 +2516,21 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                 </div>
 
 
-                {/* 달력을 사이드바 이벤트 목록 하단으로 삽입 */}
+                {/* カレンダーをサイドバーイベントリスト下部に挿入 */}
                 <div className="sidebar-calendar-container">
                   <section className="event-calendar-panel" style={{ background: "transparent", padding: 0 }}>
                     <div className="calendar-header">
-                      <button className="calendar-nav-btn" onClick={() => moveCalendarMonth(-1)} aria-label="이전 달">
+                      <button className="calendar-nav-btn" onClick={() => moveCalendarMonth(-1)} aria-label="前月">
                         ‹
                       </button>
                       <h2>{formatMonthLabel(calendarMonth)}</h2>
-                      <button className="calendar-nav-btn" onClick={() => moveCalendarMonth(1)} aria-label="다음 달">
+                      <button className="calendar-nav-btn" onClick={() => moveCalendarMonth(1)} aria-label="次月">
                         ›
                       </button>
                     </div>
 
                     <div className="calendar-weekdays">
-                      {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
+                      {["日", "月", "火", "水", "木", "金", "土"].map((day) => (
                         <span key={day}>{day}</span>
                       ))}
                     </div>
@@ -2620,7 +2546,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                         const hasVideo = videos.length > 0;
                         const isSelectedDate = (selectedCalendarDate ?? selectedVideo.date) === dateText;
 
-                        // 영상의 총 이벤트 건수를 합산하여 강도를 계산
+                        // 動画の総イベント件数を合算して強度を計算
                         const totalEvents = videos.reduce((acc, v) => acc + v.events.length, 0);
 
                         let intensityClass = "";
@@ -2633,12 +2559,12 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                             key={dateText}
                             className={`calendar-day ${hasVideo ? `has-video ${intensityClass}` : ""} ${isSelectedDate ? "selected" : ""}`}
                             onClick={() => handleCalendarDateClick(date)}
-                            title={hasVideo ? `총 ${videos.length}개 영상 / ${totalEvents}건의 이벤트` : "영상 없음"}
+                            title={hasVideo ? `合計 ${videos.length}件の動画 / ${totalEvents}件のイベント` : "動画なし"}
                           >
                             <span className="calendar-date-number">{date.getDate()}</span>
                             {videos.length > 1 && (
-                              <span className="calendar-multi-count-badge" title={`영상 ${videos.length}개`}>
-                                {videos.length}개
+                              <span className="calendar-multi-count-badge" title={`動画 ${videos.length}件`}>
+                                {videos.length}件
                               </span>
                             )}
                           </button>
@@ -2646,14 +2572,14 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                       })}
                     </div>
                   </section>
-                  <div className="calendar-legend"><span><i /> 영상 있음</span><span><i /> 의심 구간 있음</span><span><i /> 선택한 날짜</span></div>
+                  <div className="calendar-legend"><span><i /> 動画あり</span><span><i /> 疑い区間あり</span><span><i /> 選択した日付</span></div>
                 </div>
               </aside>
             </div>
 
-            {/* 우측/중앙: 메인 비디오 플레이어 */}
+            {/* 右側/中央: メイン動画プレイヤー */}
             <section className="player-section">
-              {/* 마지막 분석이 실패·중단됐으면 같은 차량 박스로 다시 실행하도록 안내 */}
+              {/* 前回の分析が失敗・中断した場合は同一車両ボックスで再実行を案内 */}
               {!isAnalyzing && selectedVideo?.lastTask?.status === "FAILURE" && (
                 <div
                   className="analysis-failed-banner"
@@ -2661,12 +2587,12 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                   title={selectedVideo.lastTask.errorMessage || ""}
                 >
                   <span>
-                    {(selectedVideo.lastTask.errorMessage || "").startsWith("분석 서버가 재시작")
-                      ? "⚠️ 서버 재시작으로 분석이 중단됐습니다"
-                      : "⚠️ 마지막 분석이 실패했습니다"}
+                    {(selectedVideo.lastTask.errorMessage || "").startsWith("分析サーバーが再起動")
+                      ? "⚠️ サーバー再起動により分析が中断されました"
+                      : "⚠️ 前回の分析に失敗しました"}
                   </span>
                   <button className="analysis-retry-btn" onClick={handleRetryAnalysis}>
-                    다시 실행
+                    再試行
                   </button>
                 </div>
               )}
@@ -2682,21 +2608,21 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                       ? `${selectedVideo.width} / ${selectedVideo.height}`
                       : "16 / 9",
                   }}
-                  /* 박스 그리기·차량 고르기는 pointer 이벤트 — 마우스·터치(폰·태블릿)·펜 모두 같은 코드로 동작 */
+                  /* ボックス描画・車両選択は pointer イベント — マウス・タッチ・ペン共通で動作 */
                   onPointerDown={(e) => {
                     if (!isBBoxMode) return;
-                    if (e.target.closest("button")) return; // 박스 ✕ 등 버튼을 누를 땐 그리기를 시작하지 않는다
-                    // 터치에는 hover 가 없으니 누른 위치의 박스를 바로 찾는다
+                    if (e.target.closest("button")) return; // ボックスの✕等のボタン操作時は描画を開始しない
+                    // タッチ操作時はタップ位置のボックスを直接検出
                     const picked = selectionMode === "auto" ? hoveredDetectedBox || detectedBoxAt(e) : null;
                     if (selectionMode === "auto" && picked) {
-                      const [x1, y1, x2, y2] = picked.bbox; // 탐지 결과는 이미 원본 해상도 좌표
+                      const [x1, y1, x2, y2] = picked.bbox; // 検出結果はすでに元解像度の座標
                       setBboxList([{ id: ++bboxSeq, xmin: x1, ymin: y1, xmax: x2, ymax: y2 }]);
-                      showToast("차량이 선택되었습니다.", "success");
+                      showToast("車両が選択されました。", "success");
                       return;
                     }
                     if (selectionMode === "manual") {
                       e.preventDefault();
-                      // 손가락·마우스가 영상 밖으로 나가도 끝까지 따라가게 포인터를 붙잡는다
+                      // ポインターが画面外に出ても追尾するようキャプチャ
                       e.currentTarget.setPointerCapture?.(e.pointerId);
                       const rect = bboxOverlayRef.current.getBoundingClientRect();
                       const x = Math.round(e.clientX - rect.left);
@@ -2718,7 +2644,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
 
                     if (selectionMode === "auto" && detectedBoxes.length > 0 && getVideoGeom()) {
                       const { scale, offsetX, offsetY } = getVideoGeom();
-                      // 화면(오버레이) 좌표 → 레터박스 여백 제거 → 원본 해상도 좌표
+                      // 画面(オーバーレイ)座標 → レターボックス余白除去 → 元解像度座標
                       const realX = (e.clientX - rect.left - offsetX) / scale;
                       const realY = (e.clientY - rect.top - offsetY) / scale;
 
@@ -2751,7 +2677,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                     }
                   }}
                   onPointerCancel={() => {
-                    // 시스템 제스처 등으로 끊기면 그리던 박스는 버린다
+                    // システムジェスチャー等で途切れた場合は描画中のボックスを破棄
                     setCurrentDraw(null);
                     setIsDrawing(false);
                   }}
@@ -2770,7 +2696,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                   }}
                 >
 
-                  {/* 실제 업로드 영상 재생 (bbox 모드에서는 포인터 이벤트를 컨테이너로 전달) */}
+                  {/* アップロード動画再生 (bboxモードではポインターイベントをコンテナへ伝達) */}
                   <video
                     ref={videoElRef}
                     className="real-video"
@@ -2781,17 +2707,17 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                     controls={false}
 
                     onPlay={(e) => {
-                      // 키보드 미디어 키·브라우저/OS 미디어 조작으로 재생돼도 탐지 중이면 바로 멈춘다
+                      // 検出中の場合は外部メディアキー操作でも再生を即時停止
                       if (isDetectingVehicles) {
                         e.currentTarget.pause();
                         return;
                       }
-                      // 탐지 박스는 탐지한 순간의 화면 기준이라 재생하면 어긋난다 → 자동 탐지 모드를 끝낸다(고른 박스는 남는다)
+                      // 検出ボックスは静止画基準のため再生時は自動検出モードを終了(選択ボックスは維持)
                       if (selectionMode === "auto") handleEndDesignateMode();
                       setIsPlaying(true);
                     }}
                     onSeeking={() => {
-                      // 다른 장면으로 옮겨도(재생바·사고 의심 구간) 마찬가지
+                      // シーク時も同様に自動検出モードを終了
                       if (selectionMode === "auto" && !isDetectingVehicles) handleEndDesignateMode();
                     }}
                     onPause={() => setIsPlaying(false)}
@@ -2814,8 +2740,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                     }}
                   />
 
-                  {/* 빨간 구간의 CAM 클립 — 영상 그림 영역에 딱 맞춰 겹친다(보이기는 위 동기화가 재생 시각마다 정한다).
-                      클립 아래의 S/A 상태 띠는 칸 밖으로 넘쳐 가려지고, 상태는 박스 색(사고 빨강·정상 초록)으로 보인다 */}
+                  {/* 赤色区間のCAMクリップ — 動画描画エリアに正確に重ね合わせる(表示同期は再生時刻ごとに制御) */}
                   {camShown.map((ev) => (
                     <div
                       key={ev.id}
@@ -2833,25 +2758,24 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                     </div>
                   ))}
 
-                  {/* 차량 자동 탐지 중: 영상 화면 위에 로딩 표시 */}
+                  {/* 車両自動検出中: 動画画面上にローディング表示 */}
                   {isDetectingVehicles && (
                     <div className="vehicle-detect-loading" role="status" aria-live="polite">
                       <div className="vehicle-detect-spinner" />
-                      <span>차량을 찾는 중…</span>
+                      <span>車両を検出中…</span>
                     </div>
                   )}
 
-                  {/* 저장된 바운딩 박스 렌더링 (단일 박스) */}
+                  {/* 保存されたバウンディングボックスの描画 (単一ボックス) */}
                   {bboxList.map((box) => {
-                    const d = toDispBox(box); // 원본 좌표 → 지금 영상 칸 위치(크기가 바뀌면 다시 그려 따라간다)
+                    const d = toDispBox(box); // 元座標 → 現在の動画領域の位置(サイズ変更時も追従して再描画)
                     return d && (
                     <div
                       key={box.id}
                       className={`bbox-drawn ${isBBoxMode ? "editing" : ""}`}
                       style={{ left: d.left, top: d.top, width: d.width, height: d.height }}
                     >
-                      {/* 삭제(✕): 직접 지정 중엔 늘 보이고, 그 밖엔(차량 탐지로 고른 뒤 모드를 끝내도) 박스에 마우스를 올리면 보인다.
-                          분석 중엔 숨긴다 — 분석은 시작할 때의 박스로 돌기 때문 */}
+                      {/* 削除(✕): 手動指定時は常時表示、それ以外はホバー時表示。分析中は非表示 */}
                       {!isAnalyzing && (
                         <button
                           className="bbox-delete-btn"
@@ -2859,7 +2783,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                             e.stopPropagation();
                             setBboxList((prev) => prev.filter((b) => b.id !== box.id));
                           }}
-                          title="지정한 박스를 삭제합니다"
+                          title="指定したボックスを削除します"
                         >
                           ✕
                         </button>
@@ -2868,7 +2792,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                     );
                   })}
 
-                  {/* 현재 수동 드래그 중인 박스 미리보기 */}
+                  {/* 現在の手動ドラッグ中ボックスのプレビュー */}
                   {selectionMode === "manual" && isDrawing && currentDraw && (() => {
                     const xmin = Math.min(currentDraw.startX, currentDraw.endX);
                     const ymin = Math.min(currentDraw.startY, currentDraw.endY);
@@ -2886,7 +2810,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                     );
                   })()}
 
-                  {/* YOLO 자동 탐지 모드: 탐지된 모든 bbox를 항상 표시 (진단용 #번호·클래스·신뢰도) */}
+                  {/* YOLO自動検出モード: 検出された全bboxを常時表示 */}
                   {selectionMode === "auto" && detectedBoxes.length > 0 && renderGeom && (() => {
                     const { scale, offsetX, offsetY } = renderGeom;
                     return detectedBoxes.map((box) => {
@@ -2916,7 +2840,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                     });
                   })()}
 
-                  {/* YOLO 자동 탐지 모드: 마우스 Hover 미리보기 (Hover 시에만 가상 노출) */}
+                  {/* YOLO自動検出モード: マウスホバープレビュー */}
                   {selectionMode === "auto" && hoveredDetectedBox && renderGeom && (() => {
                     const { scale, offsetX, offsetY } = renderGeom;
                     const [x1, y1, x2, y2] = hoveredDetectedBox.bbox;
@@ -2936,31 +2860,31 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                         }}
                       >
                         <span className="bbox-hover-label">
-                          🚗 클릭하여 이 차량 선택
+                          🚗 クリックしてこの車両を選択
                         </span>
                       </div>
                     );
                   })()}
                 </div>
 
-                {/* 재생바 + 재생 컨트롤 (영상 화면을 가리지 않게 화면 바깥 하단) */}
+                {/* 再生バー + コントロール */}
                 <div className="custom-progress-bar">
                   <div
                     className={`progress-track ${isSeeking ? "seeking" : ""} ${isDetectingVehicles ? "locked" : ""}`}
-                    title={isDetectingVehicles ? "차량 탐지 중에는 이동할 수 없습니다" : undefined}
+                    title={isDetectingVehicles ? "車両検出中はシークできません" : undefined}
                     onPointerDown={handleSeekStart}
                     onPointerMove={handleSeekMove}
                     onPointerUp={handleSeekEnd}
                     onPointerCancel={handleSeekEnd}
                   >
                     <div className="progress-rail">
-                      {/* 실제 재생 진행률 */}
+                      {/* 再生進捗 */}
                       <div
                         className="progress-fill"
                         style={{ width: `${playerDuration ? Math.min(100, (currentTime / playerDuration) * 100) : 0}%` }}
                       />
 
-                      {/* 사고 의심 구간 (빨간 구간) — 누르면 그 시점부터 재생 */}
+                      {/* 事故疑い区間 (赤色区間) — クリックで該当時点から再生 */}
                       {playerDuration > 0 &&
                         selectedVideo.events.map((event) => {
                           const start = event.startSec ?? event.timestamp;
@@ -2994,9 +2918,9 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                       className="control-btn"
                       onClick={togglePlay}
                       disabled={isDetectingVehicles}
-                      aria-label={isPlaying ? "일시정지" : "재생"}
-                      title={isDetectingVehicles ? "차량 탐지 중에는 재생할 수 없습니다"
-                        : isPlaying ? "일시정지합니다" : "재생합니다"}
+                      aria-label={isPlaying ? "一時停止" : "再生"}
+                      title={isDetectingVehicles ? "車両検出中は再生できません"
+                        : isPlaying ? "一時停止します" : "再生します"}
                     >
                       <PlayerIcon name={isPlaying ? "pause" : "play"} size={20} />
                     </button>
@@ -3005,8 +2929,8 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                       <button
                         className="control-btn"
                         onClick={toggleMute}
-                        aria-label={isMuted || volume === 0 ? "음소거 해제" : "음소거"}
-                        title={isMuted || volume === 0 ? "음소거를 해제합니다" : "소리를 끕니다"}
+                        aria-label={isMuted || volume === 0 ? "ミュート解除" : "ミュート"}
+                        title={isMuted || volume === 0 ? "ミュートを解除します" : "消音します"}
                       >
                         <PlayerIcon
                           name={isMuted || volume === 0 ? "volumeMute" : volume < 50 ? "volumeLow" : "volumeHigh"}
@@ -3024,7 +2948,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                           setVolume(next);
                           setIsMuted(next === 0);
                         }}
-                        aria-label="음량"
+                        aria-label="音量"
                       />
                     </div>
 
@@ -3033,31 +2957,30 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                       <span className="time-sep">/</span>
                       {formatTime(Math.floor(playerDuration))}
                     </span>
-                    {/* 지금 화면에 겹쳐 보이는 클립이 어느 분석의 것인지 */}
+                    {/* オーバーレイ表示中のクリップの分析番号 */}
                     <span className="cam-now-chip" ref={camChipRef} hidden />
 
                     <div className="right-controls">
-                      {/* 빨간 구간에서 보일 화면 — 원본 / 충돌 표시(CAM 클립: AI 가 충돌로 본 부위를 색으로 칠함).
-                          일반 사용자에게 '히트맵'·'CAM' 은 와닿지 않아 화면에는 '충돌 표시'라고 쓴다 */}
+                      {/* 赤色区間で表示する画面 — オリジナル / 衝突表示(CAMクリップ: AIが衝突判定した箇所を着色) */}
                       {selectedVideo.events.some((e) => e.hasClip && e.clipStartSec != null) && (
-                        <div className="clip-view-toggle" role="group" aria-label="사고 구간 화면">
+                        <div className="clip-view-toggle" role="group" aria-label="事故区間画面">
                           <button
                             type="button"
                             className={clipView === "orig" ? "active" : ""}
                             aria-pressed={clipView === "orig"}
                             onClick={() => setClipView("orig")}
-                            title="빨간 구간에서도 원본 영상을 봅니다"
+                            title="赤色区間でもオリジナル動画を表示します"
                           >
-                            원본
+                            オリジナル
                           </button>
                           <button
                             type="button"
                             className={clipView === "cam" ? "active" : ""}
                             aria-pressed={clipView === "cam"}
                             onClick={() => setClipView("cam")}
-                            title="빨간 구간에서 AI가 충돌로 본 부위를 색으로 칠한 화면을 봅니다(목록에서 고른 클립, 없으면 가장 최근 분석)"
+                            title="赤色区間でAIが衝突と判定した箇所を着色した画面を表示します(選択中クリップ、なければ最新の分析)"
                           >
-                            충돌 표시
+                            衝突表示
                           </button>
                         </div>
                       )}
@@ -3065,8 +2988,8 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                         className="speed-select"
                         value={playbackSpeed}
                         onChange={(e) => setPlaybackSpeed(e.target.value)}
-                        aria-label="재생 속도"
-                        title="재생 속도를 바꿉니다"
+                        aria-label="再生速度"
+                        title="再生速度を変更します"
                       >
                         <option value="0.25">0.25x</option>
                         <option value="0.5">0.5x</option>
@@ -3074,15 +2997,15 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                         <option value="1.5">1.5x</option>
                         <option value="2">2x</option>
                       </select>
-                      {/* 전체화면에선 영화관 모드가 의미 없어 숨긴다 */}
+                      {/* 全画面時はシアターモードを非表示 */}
                       {!isFullscreen && (
                         <button
                           className={`control-btn ${isTheaterMode ? "active" : ""}`}
                           onClick={() => setIsTheaterMode((enabled) => !enabled)}
                           disabled={isChoosingVehicle}
-                          aria-label="영화관 모드"
-                          title={isChoosingVehicle ? "차량을 고르는 중에는 쓸 수 없습니다"
-                            : isTheaterMode ? "영화관 모드를 끕니다" : "영화관 모드로 크게 봅니다"}
+                          aria-label="シアターモード"
+                          title={isChoosingVehicle ? "車両の選択中は利用できません"
+                            : isTheaterMode ? "シアターモードを終了します" : "シアターモードで大きく表示します"}
                         >
                           <PlayerIcon name="theater" />
                         </button>
@@ -3091,9 +3014,9 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                         className="control-btn"
                         onClick={handleToggleFullscreen}
                         disabled={isChoosingVehicle && !isFullscreen}
-                        aria-label={isFullscreen ? "전체화면 종료" : "전체화면"}
-                        title={isChoosingVehicle && !isFullscreen ? "차량을 고르는 중에는 쓸 수 없습니다"
-                          : isFullscreen ? "전체화면을 종료합니다" : "전체화면으로 봅니다"}
+                        aria-label={isFullscreen ? "全画面終了" : "全画面"}
+                        title={isChoosingVehicle && !isFullscreen ? "車両の選択中は利用できません"
+                          : isFullscreen ? "全画面表示を終了します" : "全画面で表示します"}
                       >
                         <PlayerIcon name={isFullscreen ? "exitFullscreen" : "fullscreen"} />
                       </button>
@@ -3103,9 +3026,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
               </div>
             </section>
 
-            {/* 오른쪽 패널: (1280px 이상) 진행 단계 + 이 영상의 분석 이력. 넓은 화면에서 닫으면(헤더의 '패널 닫기') 칸 폭이
-                0.3초 동안 0 으로 줄며 사라진다(App.css) — 그동안 보이도록 닫혀도 화면에서 빼지 않고, 대신 inert 로
-                보이지 않는 버튼에 Tab·클릭이 가지 않게 한다. 좁은 화면에선 영상 아래에 늘 보인다(영상 크기와 상관없음) */}
+            {/* 右側パネル: (1280px以上) 進捗ステップ + 分析履歴 */}
             <div className="watch-right" inert={isXLScreen && !isHistoryOpen} aria-hidden={isXLScreen && !isHistoryOpen ? true : undefined}>
               {isXLScreen && workflowSteps}
               <AnalysisHistoryPanel
@@ -3113,11 +3034,11 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                 events={selectedVideo.events}
                 progressText={(taskId) => {
                   const job = analyzingJobs.find((j) => j.taskId === taskId);
-                  return job ? `분석 중 · ${jobProgress(job).shortText}` : null;
+                  return job ? `分析中 · ${jobProgress(job).shortText}` : null;
                 }}
                 activeNo={highlightAnalysisNo}
                 onSelect={(history) => {
-                  // 그 분석의 클립을 왼쪽 목록에서 강조(나머지는 흐리게). 같은 이력을 다시 누르면 해제
+                  // 該当分析のクリップを左側リストで強調表示(他はフェードアウト)。同一履歴を再クリックで解除
                   setHighlightAnalysisNo((cur) => (cur === history.no ? null : history.no));
                 }}
               />
@@ -3127,29 +3048,29 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
       )}
 
       {!selectedVideo && <TeamFooter />}
-      {/* 설정 모달 */}
+      {/* 設定モーダル */}
       {isSettingsOpen && (
         <div className="settings-modal-overlay" onClick={() => setIsSettingsOpen(false)}>
-          <div className="settings-modal-container" role="dialog" aria-modal="true" aria-label="계정 설정" onClick={(e) => e.stopPropagation()}>
+          <div className="settings-modal-container" role="dialog" aria-modal="true" aria-label="アカウント設定" onClick={(e) => e.stopPropagation()}>
             <div className="settings-modal-sidebar">
-              <span className="account-settings-kicker" translate="no">PERSONAL SPACE</span><h3>계정 설정</h3><div className="settings-identity"><span>{avatarInitial}</span><strong>{displayName}</strong><small>{roleLabel}</small></div>
+              <span className="account-settings-kicker" translate="no">PERSONAL SPACE</span><h3>アカウント設定</h3><div className="settings-identity"><span>{avatarInitial}</span><strong>{displayName}</strong><small>{roleLabel}</small></div>
               <button
                 className={`settings-tab-btn ${activeSettingsTab === "account" ? "active" : ""}`}
                 onClick={() => setActiveSettingsTab("account")}
               >
-                <InterfaceIcon name="user" /> 내 정보 설정
+                <InterfaceIcon name="user" /> プロフィール設定
               </button>
               <button
                 className={`settings-tab-btn ${activeSettingsTab === "security" ? "active" : ""}`}
                 onClick={() => setActiveSettingsTab("security")}
               >
-                <InterfaceIcon name="lock" /> 비밀번호 변경
+                <InterfaceIcon name="lock" /> パスワード変更
               </button>
               <button
                 className="settings-modal-close-btn"
                 onClick={() => setIsSettingsOpen(false)}
               >
-                닫기
+                閉じる
               </button>
             </div>
 
@@ -3157,45 +3078,45 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
               {activeSettingsTab === "account" && (
                 <div className="settings-tab-content">
                   <span className="account-settings-kicker" translate="no">MY ACCOUNT</span>
-                  <h2>{currentUser?.role === "ADMIN" ? "관리자 정보 설정" : "내 정보 설정"}</h2>
+                  <h2>{currentUser?.role === "ADMIN" ? "管理者情報設定" : "プロフィール設定"}</h2>
                   <p className="tab-description">
                     {currentUser?.role === "ADMIN"
-                      ? "관리자 기본 정보를 확인 및 수정할 수 있습니다."
-                      : "회원 기본 정보를 확인 및 수정할 수 있습니다."}
+                      ? "管理者基本情報の確認および修正ができます。"
+                      : "ユーザー基本情報の確認および修正ができます。"}
                   </p>
 
                   <div className="settings-form-group">
-                    <label htmlFor="account-username">계정 아이디</label>
+                    <label htmlFor="account-username">アカウントID</label>
                     <input id="account-username" type="text" value={currentUsername} disabled className="disabled-input" />
                   </div>
 
                   <div className="settings-form-group">
-                    <label htmlFor="account-name">이름</label>
+                    <label htmlFor="account-name">お名前</label>
                     <input id="account-name"
                       type="text"
                       value={profileName}
                       onChange={(e) => setProfileName(e.target.value)}
-                      placeholder="이름 입력"
+                      placeholder="お名前を入力"
                     />
                   </div>
 
                   <div className="settings-form-group">
-                    <label htmlFor="account-phone">연락처</label>
+                    <label htmlFor="account-phone">連絡先</label>
                     <input id="account-phone"
                       type="text"
                       value={profilePhone}
                       onChange={(e) => setProfilePhone(e.target.value)}
-                      placeholder="연락처 입력 (예: 010-1234-5678)"
+                      placeholder="連絡先を入力 (例: 010-1234-5678)"
                     />
                   </div>
 
                   <div className="settings-form-group">
-                    <label htmlFor="account-email">이메일 주소</label>
+                    <label htmlFor="account-email">メールアドレス</label>
                     <input id="account-email"
                       type="email"
                       value={profileEmail}
                       onChange={(e) => setProfileEmail(e.target.value)}
-                      placeholder="이메일 입력"
+                      placeholder="メールアドレスを入力"
                     />
                   </div>
 
@@ -3203,7 +3124,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                     className="settings-save-btn"
                     onClick={async () => {
                       if (!profileName.trim()) {
-                        alert("이름을 입력해 주세요.");
+                        alert("お名前を入力してください。");
                         return;
                       }
                       try {
@@ -3213,14 +3134,14 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                           email: profileEmail.trim(),
                         });
                         if (onUpdateUser) onUpdateUser(updated);
-                        showToast("사용자 정보가 성공적으로 저장되었습니다.", "success");
-                        alert("사용자 정보가 성공적으로 저장되었습니다.");
+                        showToast("ユーザー情報を正常に保存しました。", "success");
+                        alert("ユーザー情報を正常に保存しました。");
                       } catch (err) {
-                        alert(`정보 수정 실패: ${err.message}`);
+                        alert(`情報修正に失敗しました: ${err.message}`);
                       }
                     }}
                   >
-                    수정 내용 저장
+                    変更内容を保存
                   </button>
                 </div>
               )}
@@ -3228,34 +3149,34 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
               {activeSettingsTab === "security" && (
                 <div className="settings-tab-content">
                   <span className="account-settings-kicker" translate="no">MY ACCOUNT</span>
-                  <h2>비밀번호 변경</h2>
-                  <p className="tab-description">시스템 보안을 위해 주기적으로 비밀번호를 변경해 주십시오.</p>
+                  <h2>パスワード変更</h2>
+                  <p className="tab-description">システムのセキュリティ保護のため、定期的にパスワードを変更してください。</p>
 
                   <div className="settings-form-group">
-                    <label htmlFor="account-current-password">현재 비밀번호</label>
+                    <label htmlFor="account-current-password">現在のパスワード</label>
                     <input id="account-current-password"
                       type="password"
-                      placeholder="현재 비밀번호 입력"
+                      placeholder="現在のパスワードを入力"
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                     />
                   </div>
 
                   <div className="settings-form-group">
-                    <label htmlFor="account-new-password">새 비밀번호</label>
+                    <label htmlFor="account-new-password">新しいパスワード</label>
                     <input id="account-new-password"
                       type="password"
-                      placeholder="새 비밀번호 입력"
+                      placeholder="新しいパスワードを入力"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                     />
                   </div>
 
                   <div className="settings-form-group">
-                    <label htmlFor="account-confirm-password">새 비밀번호 확인</label>
+                    <label htmlFor="account-confirm-password">新しいパスワード（確認）</label>
                     <input id="account-confirm-password"
                       type="password"
-                      placeholder="새 비밀번호 다시 입력"
+                      placeholder="新しいパスワードを再入力"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                     />
@@ -3265,15 +3186,15 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                     className="settings-save-btn"
                     onClick={async () => {
                       if (!currentPassword || !newPassword || !confirmPassword) {
-                        alert("모든 필드를 입력해 주세요.");
+                        alert("すべての項目を入力してください。");
                         return;
                       }
                       if (newPassword !== confirmPassword) {
-                        alert("새 비밀번호가 서로 일치하지 않습니다.");
+                        alert("新しいパスワードが一致しません。");
                         return;
                       }
                       if (newPassword.length < 4) {
-                        alert("새 비밀번호는 최소 4자 이상이어야 합니다.");
+                        alert("新しいパスワードは4文字以上で入力してください。");
                         return;
                       }
                       try {
@@ -3281,18 +3202,18 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                           current_password: currentPassword,
                           new_password: newPassword,
                         });
-                        showToast("비밀번호가 성공적으로 변경되었습니다.", "success");
-                        alert("비밀번호가 성공적으로 변경되었습니다.");
+                        showToast("パスワードが正常に変更されました。", "success");
+                        alert("パスワードが正常に変更されました。");
                         setCurrentPassword("");
                         setNewPassword("");
                         setConfirmPassword("");
                         setIsSettingsOpen(false);
                       } catch (err) {
-                        alert(`비밀번호 변경 실패: ${err.message}`);
+                        alert(`パスワード変更に失敗しました: ${err.message}`);
                       }
                     }}
                   >
-                    비밀번호 변경 완료
+                    パスワード変更を完了
                   </button>
                 </div>
               )}
@@ -3301,24 +3222,24 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
         </div>
       )}
 
-      {/* 토스트 알림 */}
+      {/* トースト通知 */}
       {toast && (
         <div className={`app-toast app-toast-${toast.type}`}>{toast.message}</div>
       )}
 
-      {/* 영상 정보 팝업 (영상 목록 카드의 ⋮) — 화면 가운데, Esc·바깥 클릭·닫기로 닫힘 */}
+      {/* 動画情報ポップアップ */}
       {infoVideo && (() => {
         const v = infoVideo;
         const up = formatAnalyzedAt(v.uploadedAt);
         const lastStatus = v.lastTask ? (HISTORY_STATUS[v.lastTask.status]?.label || v.lastTask.status) : null;
         const rows = [
-          ["녹화일자", v.date || "-"],
-          ["업로드 일시", up ? `${up[0]} ${up[1]}` : "-"],
-          ["원본 파일", v.fileName || "-"],
-          ["영상 길이", formatTime(v.duration)],
-          ["해상도", v.width && v.height ? `${v.width}×${v.height}${v.fps ? ` · ${Math.round(v.fps)}fps` : ""}` : "-"],
-          ["사고 의심 클립", `${v.events.length}건`],
-          ["마지막 분석", lastStatus || "아직 없음"],
+          ["録画日", v.date || "-"],
+          ["アップロード日時", up ? `${up[0]} ${up[1]}` : "-"],
+          ["元ファイル名", v.fileName || "-"],
+          ["動画の長さ", formatTime(v.duration)],
+          ["解像度", v.width && v.height ? `${v.width}×${v.height}${v.fps ? ` · ${Math.round(v.fps)}fps` : ""}` : "-"],
+          ["事故疑いクリップ", `${v.events.length}件`],
+          ["最終分析", lastStatus || "未実施"],
         ];
         return (
           <div className="settings-modal-overlay" onClick={() => setInfoVideo(null)}>
@@ -3336,7 +3257,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                 <h2 id="video-info-title" title={getVideoDisplayTitle(v, videos)}>
                   {getVideoDisplayTitle(v, videos)}
                 </h2>
-                <button className="clip-modal-close" onClick={() => setInfoVideo(null)} autoFocus aria-label="닫기">
+                <button className="clip-modal-close" onClick={() => setInfoVideo(null)} autoFocus aria-label="閉じる">
                   ✕
                 </button>
               </div>
@@ -3353,7 +3274,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
         );
       })()}
 
-      {/* 사고 클립 삭제 확인 (1건 · 전체) — 화면 가운데. 기본 초점은 '취소'(Enter 실수로 지우지 않게), Esc·바깥 클릭으로 닫힘 */}
+      {/* 事故クリップ削除確認 (1件 · 一括) */}
       {(pendingDeleteEvent || pendingClearAll) && (() => {
         const isAll = pendingClearAll;
         const closeConfirm = () => {
@@ -3378,15 +3299,15 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
               </div>
               <h2 id="confirm-modal-title" className="confirm-modal-title">
                 {isAll
-                  ? `사고 의심 클립 ${selectedVideo?.events.length ?? 0}개를 모두 삭제하시겠습니까?`
-                  : "클립 영상을 삭제하시겠습니까?"}
+                  ? `事故疑いクリップ ${selectedVideo?.events.length ?? 0}件をすべて削除しますか？`
+                  : "クリップ動画を削除しますか？"}
               </h2>
               <p id="confirm-modal-desc" className="confirm-modal-desc">
                 {isAll
-                  ? "이 영상에서 감지된 모든 클립 영상과 감지 기록이 삭제됩니다."
-                  : "해당 사고 구간의 클립 영상과 감지 기록이 삭제됩니다."}
+                  ? "この動画で検出されたすべてのクリップ動画および検出ログが削除されます。"
+                  : "該当する事故区間のクリップ動画および検出ログが削除されます。"}
                 <br />
-                삭제한 뒤에는 되돌릴 수 없습니다.
+                削除後は元に戻すことができません。
               </p>
               <div className="upload-modal-actions">
                 <button
@@ -3398,14 +3319,14 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                     else handleDeleteEvent(id);
                   }}
                 >
-                  {isAll ? "전체 삭제" : "삭제"}
+                  {isAll ? "すべて削除" : "削除"}
                 </button>
                 <button
                   className="upload-cancel-btn"
                   autoFocus
                   onClick={closeConfirm}
                 >
-                  취소
+                  キャンセル
                 </button>
               </div>
             </div>
@@ -3413,7 +3334,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
         );
       })()}
 
-      {/* 사고구간 클립 팝업 (+ 원본 클립 다운로드) */}
+      {/* 事故区間クリップポップアップ (+ オリジナルクリップダウンロード) */}
       {clipEvent && (
         <div className="settings-modal-overlay clip-viewer-overlay" onClick={() => setClipEvent(null)}>
           <div
@@ -3428,7 +3349,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
           >
             <div className="clip-modal-header">
               <div className="clip-modal-heading">
-                <h2 id="clip-modal-title" className="clip-modal-title">사고구간 클립</h2>
+                <h2 id="clip-modal-title" className="clip-modal-title">事故区間クリップ</h2>
                 <div className="clip-modal-chips">
                   <span className="clip-chip">
                     ⏱ {formatTime(clipEvent.timestamp)}
@@ -3439,7 +3360,7 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
               <button
                 className="clip-close-btn"
                 onClick={() => setClipEvent(null)}
-                aria-label="클립 창 닫기"
+                aria-label="クリップを閉じる"
                 autoFocus
               >
                 ✕
@@ -3453,10 +3374,10 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
             <div className="clip-modal-footer">
               <div className="clip-legend">
                 <span className="clip-legend-item">
-                  <i className="clip-legend-swatch clip-legend-a" /> 빨간 테두리 — 사고가 의심되는 순간이에요
+                  <i className="clip-legend-swatch clip-legend-a" /> 赤枠 — 事故が疑われる瞬間です
                 </span>
                 <span className="clip-legend-item">
-                  <i className="clip-legend-swatch clip-legend-s" /> 초록 테두리 — 특별한 이상이 없는 장면이에요
+                  <i className="clip-legend-swatch clip-legend-s" /> 緑枠 — 特段の異常が見られない場面です
                 </span>
               </div>
               {clipEvent.hasRawClip ? (
@@ -3464,13 +3385,13 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
                   className="clip-download-btn"
                   href={api.rawClipUrl(clipEvent.id)}
                   download
-                  title="박스·상태 표시가 없는 원본 사고 구간 영상을 내려받습니다"
+                  title="バウンディングボックスやステータス表示のない元の事故区間動画をダウンロードします"
                 >
-                  ⬇ 원본 클립 다운로드
+                  ⬇ オリジナルクリップをダウンロード
                 </a>
               ) : (
-                <span className="clip-download-unavailable" title="이 영상을 다시 분석하면 원본 클립이 만들어집니다">
-                  원본 클립 없음 · 다시 분석하면 생성
+                <span className="clip-download-unavailable" title="この動画を再分析するとオリジナルクリップが生成されます">
+                  オリジナルクリップなし · 再分析時に生成
                 </span>
               )}
             </div>
@@ -3478,19 +3399,19 @@ function Dashboard({ onLogout, view, currentUser, onUpdateUser }) {
         </div>
       )}
 
-      {/* 영상 업로드 모달 */}
+      {/* 動画アップロードモーダル */}
       {showUpload && (
         <UploadModal
           onClose={() => setShowUpload(false)}
           onUploaded={async () => {
             setShowUpload(false);
-            showToast("업로드 완료", "success");
+            showToast("アップロード完了", "success");
             await loadVideos();
           }}
           onError={(msg) => showToast(msg, "error")}
         />
       )}
-      {/* 동일 날짜 여러 영상 선택 모달 */}
+      {/* 同一日付の複数動画選択モーダル */}
       {datePickerVideos && (
         <DateVideosModal
           dateText={datePickerVideos.dateText}
@@ -3521,7 +3442,7 @@ function UploadModal({ onClose, onUploaded, onError }) {
       id: `${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`,
       file,
       recordingDate: todayStr,
-      title: "", // 선택 — 비우면 '녹화일 녹화본 #N'
+      title: "", // 任意 — 空欄の場合は「録画日 録画データ #N」
     }));
     setFilesList((prev) => [...prev, ...items]);
   };
@@ -3570,7 +3491,7 @@ function UploadModal({ onClose, onUploaded, onError }) {
 
   const handleUpload = async () => {
     if (filesList.length === 0) {
-      onError("업로드할 영상 파일을 선택해 주세요.");
+      onError("アップロードする動画ファイルを選択してください。");
       return;
     }
     setUploading(true);
@@ -3596,11 +3517,11 @@ function UploadModal({ onClose, onUploaded, onError }) {
     setUploading(false);
     if (successCount > 0) {
       if (failCount > 0) {
-        onError(`${successCount}개 업로드 완료 (${failCount}개 실패)`);
+        onError(`${successCount}件のアップロード完了 (${failCount}件失敗)`);
       }
       onUploaded();
     } else {
-      onError("모든 영상 파일 업로드에 실패했습니다.");
+      onError("すべての動画ファイルのアップロードに失敗しました。");
     }
   };
 
@@ -3609,8 +3530,8 @@ function UploadModal({ onClose, onUploaded, onError }) {
       <div className="upload-modal multi-upload-modal" onClick={(e) => e.stopPropagation()}>
         <div className="upload-modal-header">
           <div>
-            <h2>영상 다중 업로드</h2>
-            <p className="tab-description">분석할 CCTV 녹화 영상을 업로드합니다. 여러 파일을 한번에 선택하고 파일마다 날짜와 제목을 지정할 수 있습니다.</p>
+            <h2>動画の一括アップロード</h2>
+            <p className="tab-description">分析対象の防犯カメラ録画映像をアップロードします。複数ファイルを一度に選択し、ファイルごとに録画日やタイトルを設定できます。</p>
           </div>
           <button className="clip-modal-close" onClick={onClose} disabled={uploading}>✕</button>
         </div>
@@ -3634,14 +3555,14 @@ function UploadModal({ onClose, onUploaded, onError }) {
             onClick={() => fileInputRef.current?.click()}
           >
             <div className="dropzone-icon">📹</div>
-            <p className="dropzone-title">클릭하여 영상 파일 선택 (복수 선택 가능)</p>
-            <p className="dropzone-sub">또는 여기에 영상 파일들을 드래그 앤 드롭하세요</p>
+            <p className="dropzone-title">クリックして動画ファイルを選択 (複数選択可能)</p>
+            <p className="dropzone-sub">またはここに動画ファイルをドラッグ＆ドロップしてください</p>
           </div>
         ) : (
           <div className="upload-file-list-container">
             <div className="upload-file-list-toolbar">
-              <span className="file-count-badge">선택된 영상: <strong>{filesList.length}개</strong></span>
-              {/* 파일 추가는 목록 아래 끌어다 놓기 칸(클릭해도 선택)으로 한다 */}
+              <span className="file-count-badge">選択された動画: <strong>{filesList.length}件</strong></span>
+              {/* ファイル追加はリスト下のドロップエリアで行う */}
               <div className="file-toolbar-actions">
                 <button
                   type="button"
@@ -3649,13 +3570,13 @@ function UploadModal({ onClose, onUploaded, onError }) {
                   onClick={() => setFilesList([])}
                   disabled={uploading}
                 >
-                  전체 삭제
+                  一括削除
                 </button>
               </div>
             </div>
 
             <div className="bulk-date-bar">
-              <span>일괄 녹화일자 지정:</span>
+              <span>一括録画日指定:</span>
               <input
                 type="date"
                 max={formatDate(new Date())}
@@ -3664,7 +3585,7 @@ function UploadModal({ onClose, onUploaded, onError }) {
                 }}
                 disabled={uploading}
               />
-              <span className="bulk-date-tip">(각 파일별 개별 일자 설정 가능)</span>
+              <span className="bulk-date-tip">(ファイルごとの個別設定も可能)</span>
             </div>
 
             <div className="upload-file-scroll-list">
@@ -3679,7 +3600,7 @@ function UploadModal({ onClose, onUploaded, onError }) {
                   </div>
 
                   <div className="file-item-date-group">
-                    <label>녹화일자:</label>
+                    <label>録画日:</label>
                     <input
                       type="date"
                       value={item.recordingDate}
@@ -3694,20 +3615,20 @@ function UploadModal({ onClose, onUploaded, onError }) {
                     className="file-item-remove-btn"
                     onClick={() => removeFile(item.id)}
                     disabled={uploading}
-                    title="이 파일을 업로드 목록에서 뺍니다"
+                    title="このファイルをアップロードリストから除外します"
                   >
                     ✕
                   </button>
 
-                  {/* 제목(선택) — 파일 이름·녹화일자 줄 아래 한 줄 */}
+                  {/* タイトル(任意) */}
                   <div className="file-item-title-group">
-                    <label htmlFor={`upload-title-${item.id}`}>제목:</label>
+                    <label htmlFor={`upload-title-${item.id}`}>タイトル:</label>
                     <input
                       id={`upload-title-${item.id}`}
                       type="text"
                       value={item.title}
                       maxLength={100}
-                      placeholder={`입력하지 않으면 '${item.recordingDate || "녹화일"} 녹화본'으로 표시됩니다`}
+                      placeholder={`未入力の場合は「${item.recordingDate || "録画日"} 録画データ」と表示されます`}
                       onChange={(e) => updateFileTitle(item.id, e.target.value)}
                       disabled={uploading}
                     />
@@ -3716,7 +3637,7 @@ function UploadModal({ onClose, onUploaded, onError }) {
               ))}
             </div>
 
-            {/* 파일이 있어도 끌어다 놓아 더 추가할 수 있는 작은 칸 (클릭하면 파일 선택) */}
+            {/* 追加ドロップエリア */}
             <div
               className={`upload-dropzone upload-dropzone-compact ${dragActive ? "drag-active" : ""} ${uploading ? "disabled" : ""}`}
               onDragEnter={uploading ? undefined : handleDrag}
@@ -3728,7 +3649,7 @@ function UploadModal({ onClose, onUploaded, onError }) {
               }}
             >
               <span className="dropzone-compact-icon" aria-hidden="true">＋</span>
-              <span>여기에 영상 파일을 끌어다 놓거나 클릭해서 추가</span>
+              <span>ここに動画ファイルをドラッグ＆ドロップするか、クリックして追加</span>
             </div>
           </div>
         )}
@@ -3736,7 +3657,7 @@ function UploadModal({ onClose, onUploaded, onError }) {
         {uploading && (
           <div className="upload-progress-box">
             <div className="upload-progress-info">
-              <span>업로드 진행 중 ({uploadProgress.current}/{uploadProgress.total})</span>
+              <span>アップロード中 ({uploadProgress.current}/{uploadProgress.total})</span>
               <span className="upload-progress-filename">{uploadProgress.currentName}</span>
             </div>
             <div className="analysis-progress-track">
@@ -3755,11 +3676,11 @@ function UploadModal({ onClose, onUploaded, onError }) {
             disabled={uploading || filesList.length === 0}
           >
             {uploading
-              ? `업로드 중 (${uploadProgress.current}/${uploadProgress.total})...`
-              : `${filesList.length > 0 ? `${filesList.length}개 ` : ""}영상 업로드`}
+              ? `アップロード中 (${uploadProgress.current}/${uploadProgress.total})...`
+              : `${filesList.length > 0 ? `${filesList.length}件の` : ""}動画をアップロード`}
           </button>
           <button className="upload-cancel-btn" onClick={onClose} disabled={uploading}>
-            취소
+            キャンセル
           </button>
         </div>
       </div>
@@ -3775,9 +3696,9 @@ function DateVideosModal({ dateText, videos, onClose, onSelectVideo }) {
       <div className="date-videos-modal" onClick={(e) => e.stopPropagation()}>
         <div className="date-videos-header">
           <div>
-            <h2>📅 {dateText} 영상 목록 ({videos.length}개)</h2>
+            <h2>📅 {dateText} 動画リスト ({videos.length}件)</h2>
             <p className="tab-description">
-              해당 날짜에 총 {videos.length}개의 영상이 존재합니다. 시청할 영상을 선택해 주세요.
+              該当する日付に合計 {videos.length}件の動画があります。再生する動画を選択してください。
             </p>
           </div>
           <button className="clip-modal-close" onClick={onClose}>✕</button>
@@ -3790,19 +3711,19 @@ function DateVideosModal({ dateText, videos, onClose, onSelectVideo }) {
                 <img
                   className="video-thumbnail-img"
                   src={api.thumbnailUrl(v.id)}
-                  alt={`${v.date} 썸네일`}
+                  alt={`${v.date} サムネイル`}
                   onError={(e) => { e.currentTarget.style.display = "none"; }}
                 />
-                <span className="event-count-badge">의심 구간 {v.events.length}건</span>
+                <span className="event-count-badge">疑い区間 {v.events.length}件</span>
               </div>
               <div className="date-video-card-info">
                 <h3>{getVideoDisplayTitle(v, videos)}</h3>
                 <div className="date-video-card-meta">
-                  <span>⏱ 영상 길이: {formatTime(v.duration)}</span>
+                  <span>⏱ 動画の長さ: {formatTime(v.duration)}</span>
                 </div>
               </div>
               <button className="date-video-play-btn">
-                ▶ 시청하기
+                ▶ 再生する
               </button>
             </div>
           ))}
@@ -3819,8 +3740,8 @@ function RequireAuth({ children }) {
 export default function App() {
   const [currentUser, setCurrentUser] = useState(() => getStoredUser());
   const [user, setUser] = useState(() => !!getToken());
-  // 로그인돼 있으면 화면을 그리기 전에 세션부터 연다 — 영상·썸네일·클립은 이때 받는
-  // 쿠키로 열리므로(헤더를 못 싣는 <video>·<img>), 먼저 그리면 첫 썸네일이 막힌다
+  // ログイン済みの場合は描画前にセッションを開始 — 動画・サムネイル・クリップはこの時点で取得する
+  // クッキーを介して開かれるため(ヘッダーを付与できない<video>・<img>)、先に描画するとサムネイル取得がブロックされる
   const [sessionReady, setSessionReady] = useState(() => !getToken());
 
   useEffect(() => {
@@ -3828,7 +3749,7 @@ export default function App() {
     api.startSession().then((u) => {
       setCurrentUser(u);
       saveAuth(getToken(), u);
-    }).catch(() => { })   // 만료(401)면 api.js 가 로그인 화면으로 보낸다
+    }).catch(() => { })   // 期限切れ(401)の場合はapi.jsがログイン画面へリダイレクト
       .finally(() => setSessionReady(true));
   }, []);
 
@@ -3838,7 +3759,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    api.logout().catch(() => { });   // 영상 쿠키도 지운다
+    api.logout().catch(() => { });   // 動画クッキーも削除
     clearAuth();
     setCurrentUser(null);
     setUser(false);

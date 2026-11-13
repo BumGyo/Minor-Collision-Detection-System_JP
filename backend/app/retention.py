@@ -1,8 +1,8 @@
-"""영상 보관 기간 — 업로드한 지 VIDEO_RETENTION_DAYS(기본 90일)가 지난 영상과 딸린 것
-(사고 클립·원본 클립·썸네일·분석 기록·업로드 원본)을 모두 지운다.
+"""動画の保存期間 — アップロード後 VIDEO_RETENTION_DAYS (デフォルト90日) を経過した動画と
+関連データ (事故クリップ・元クリップ・サムネイル・分析ログ・アップロード元ファイル) をすべて削除する。
 
-웹 서버(main.py)가 켜질 때 한 번, 그 뒤 CHECK_INTERVAL_SEC 마다 돈다.
-분석이 대기·진행 중인 영상은 건너뛰고 끝난 뒤 다음 정리 때 지운다.
+Webサーバー (main.py) の起動時に1回、その後 CHECK_INTERVAL_SEC ごとに定期実行する。
+分析が待機中・進行中の動画はスキップし、完了後の次回クリーンアップ時に削除する。
 """
 from datetime import datetime, timedelta
 
@@ -12,11 +12,11 @@ from app.routers.analysis import ACTIVE_STATUSES
 from app.routers.videos import purge_video
 from app.settings import settings
 
-CHECK_INTERVAL_SEC = 60 * 60   # 1시간마다
+CHECK_INTERVAL_SEC = 60 * 60   # 1時間ごと
 
 
 def expired_videos(db):
-    """보관 기간이 지난 영상(업로드 시각 기준). 보관 기간을 끄면 빈 목록."""
+    """保存期間を経過した動画 (アップロード日時基準)。保存期間設定が無効の場合は空リスト。"""
     if settings.VIDEO_RETENTION_DAYS <= 0:
         return []
     cutoff = datetime.utcnow() - timedelta(days=settings.VIDEO_RETENTION_DAYS)
@@ -26,13 +26,13 @@ def expired_videos(db):
 
 
 def delete_expired_videos() -> list[int]:
-    """기간이 지난 영상을 지우고 지운 영상 번호를 돌려준다. 한 개씩 commit — 중간에 실패해도 앞의 것은 지워진다."""
+    """期限切れの動画を削除し、削除された動画IDのリストを返す。1件ずつcommit — 途中で失敗してもそれ以前の変更は保持。"""
     db = SessionLocal()
     deleted = []
     try:
         for video in expired_videos(db):
             if any(t.status in ACTIVE_STATUSES for t in video.analysis_tasks):
-                continue   # 분석이 끝나면 다음 정리 때
+                continue   # 分析完了後の次回クリーンアップ時に処理
             video_id = video.id
             purge_video(video, db)
             db.commit()

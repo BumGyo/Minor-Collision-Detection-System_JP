@@ -1,17 +1,12 @@
-"""학습 곡선 CSV 로 '평가 영상으로 비교해 볼 에포크'를 고른다.
+"""学習曲線 CSV から評価比較対象のエポックを選定するスクリプト。
 
-판단 지표(검증 균형 손실의 3에포크 평균)는 실제 검증 충돌이 적어(약 12개) 흔들리고, 평균이라
-저장이 약 1에포크 늦게 따라간다. 또 손실 기준은 판정(P(A) 0.5)이 바뀌지 않아도 확률만 오르면
-좋아져서, 재현율은 그대로인데 오탐이 는 에포크를 고르기도 한다(2026-10-22 학습: 판단 지표
-1위 44에포크 7/12·오탐 6 vs 38에포크 7/12·오탐 2). 그래서 세 기준의 상위를 합쳐 후보로 낸다.
-  ① 판단 지표(3에포크 평균) ② 그 에포크 균형손실 ③ 그 에포크 F1(서비스와 같은 0.5 판정의 재현율·정밀도)
-구간 재현율(접근~충돌 종료 창 중 하나라도 A)·구분력은 2026-10-29 부터 학습 CSV 에 있고, 보여 주기만 하며 고르는 기준엔
-넣지 않는다(그 전 학습은 '-' — python -m model.val_recheck 로 다시 계산).
-기준마다 상위 k개(config.TRAIN_SUGGEST_TOPK)를 서로 TRAIN_TOPK_MIN_GAP 에포크 이상 떨어진 것만
-고른다(붙은 에포크는 사실상 같은 모델). 검증 충돌이 적어 어느 기준도 흔들리므로 이것은 '후보'일 뿐이고,
-최종 선택은 평가 영상(서비스 판정·정상 영상 오탐)으로 한다. 에포크별 가중치는 회차 폴더 epochs/ 에 있다.
+選定基準:
+  ① 監視指標 (3エポック平均)
+  ② 該当エポックのバランスド損失
+  ③ 該当エポックの F1 スコア
 
-    python -m model.main --mode suggest --run outputs/trainlogs/<회차 폴더>   # 학습 중·중단 후에도
+使用法:
+    python -m model.main --mode suggest --run outputs/trainlogs/<セッションディレクトリ>
 """
 import csv
 from pathlib import Path
@@ -27,7 +22,7 @@ def _f(row, col):
 
 
 def _f1(row, dom):
-    """그 에포크 검증의 F1. 충돌로 판정한 클립이 없으면(정밀도 빈칸) 0."""
+    """該当エポック検証の F1 スコア。"""
     r, p = _f(row, f'val_{dom}_recallA'), _f(row, f'val_{dom}_precA')
     if not r or not p:
         return 0.0
@@ -35,7 +30,7 @@ def _f1(row, dom):
 
 
 def _top(rows, key, k, gap):
-    """key 가 작은 순으로, 이미 고른 에포크와 gap 이상 떨어진 것만 k 개."""
+    """key が最小の順に、既選定エポックと gap 以上離れたものを k 個抽出。"""
     picked = []
     for r in sorted((r for r in rows if key(r) is not None), key=key):
         e = int(r['epoch'])
@@ -47,26 +42,23 @@ def _top(rows, key, k, gap):
 
 
 def suggest(run_dir, k=None, gap=None):
-    """(추천 에포크 목록, 출력 줄들). run_dir 은 회차 폴더(또는 그 안의 trainlog CSV)."""
+    """(推薦エポックリスト, ログ行リスト)。"""
     k = int(k or getattr(config, 'TRAIN_SUGGEST_TOPK', 2))
     gap = int(gap or getattr(config, 'TRAIN_TOPK_MIN_GAP', 3))
     run_dir = Path(run_dir)
     csv_path = run_dir if run_dir.suffix == '.csv' else next(iter(sorted(run_dir.glob('trainlog_*.csv'))), None)
     if csv_path is None or not csv_path.exists():
-        return [], [f"학습 곡선 CSV 가 없습니다: {run_dir}"]
+        return [], [f"学習曲線 CSV が見つかりません: {run_dir}"]
     run_dir = csv_path.parent
     with open(csv_path, encoding='utf-8') as fh:
-        # 유예 기간(grace=1) 에포크는 추천하지 않는다 — best·조기 종료도 세지 않은 구간
         rows = [r for r in csv.DictReader(fh) if r.get('epoch') and r.get('grace') != '1']
     if not rows:
-        return [], ["학습 곡선이 아직 비어 있습니다"]
-    # 실제 영상 검증이 있으면 그쪽, 없으면 RC 검증
+        return [], ["学習ログが空です"]
     dom = 'real' if any(_f(r, 'val_real_bal') is not None for r in rows) else 'rc'
     bal = f'val_{dom}_bal'
     picks = {
-        '판단지표': _top(rows, lambda r: _f(r, 'monitor'), k, gap),
-        '균형손실': _top(rows, lambda r: _f(r, bal), k, gap),
-        # F1 이 같으면 균형손실이 낮은 쪽
+        '監視指標': _top(rows, lambda r: _f(r, 'monitor'), k, gap),
+        'バランス損失': _top(rows, lambda r: _f(r, bal), k, gap),
         'F1': _top(rows, lambda r: (-_f1(r, dom), _f(r, bal) if _f(r, bal) is not None else 9.0), k, gap),
     }
     pick = sorted({e for v in picks.values() for e in v})
@@ -80,10 +72,9 @@ def suggest(run_dir, k=None, gap=None):
     def _n(v):
         return '-' if v is None else f'{v:.2f}'
 
-    lines = [f"[평가 추천] 기준마다 상위 {k}개(서로 {gap}에포크 이상 떨어진 것) — ① 판단 지표 ② 그 에포크 {dom} "
-             f"균형손실 ③ 그 에포크 {dom} F1. 후보일 뿐이고 최종 선택은 평가 영상으로",
-             f"  {'에포크':>6}{'판단지표':>10}{dom + ' 균형':>10}{dom + ' 재현율':>11}{dom + ' 정밀도':>11}"
-             f"{dom + ' F1':>8}{'구간 재현율':>9}{'구분력':>7}{'rc 균형':>9}  {'뽑힌 기준':<16}가중치"]
+    lines = [f"[評価推奨] 各基準の上位 {k}件 (間隔 {gap}エポック以上) — ① 監視指標 ② {dom}バランス損失 ③ {dom} F1",
+             f"  {'エポック':>6}{'監視指標':>10}{dom + ' バランス':>10}{dom + ' 再現率':>11}{dom + ' 適合率':>11}"
+             f"{dom + ' F1':>8}{'区間再現率':>9}{'判別力':>7}{'rc バランス':>9}  {'選定基準':<16}重み"]
     files = []
     for e in pick:
         r = by_ep[e]
@@ -94,16 +85,14 @@ def suggest(run_dir, k=None, gap=None):
                      f"{_n(_f(r, f'val_{dom}_recallA')):>11}{_n(_f(r, f'val_{dom}_precA')):>11}"
                      f"{_n(_f1(r, dom)):>8}{_n(_f(r, f'val_{dom}_spanRecA')):>9}{_n(_f(r, f'val_{dom}_auc')):>7}"
                      f"{_n(_f(r, 'val_rc_bal')):>9}  {why:<16}"
-                     f"{fp.name if fp else '(없음 — 에포크별 저장 전 학습)'}")
+                     f"{fp.name if fp else '(重みファイルなし)'}")
     have = [p for p in files if p]
     if have:
-        # 224 아닌 입력 크기로 학습한 회차(_s256 등)는 평가도 같은 크기로 — 다르면 가중치를 읽을 때 멈춘다
         from hitandrun_model import weights_head_pool, weights_input_size
         size = weights_input_size(have[0].name)
-        pool = weights_head_pool(have[0].name)      # avg 아닌 헤드 풀링(_top3 등)도 같은 값으로
+        pool = weights_head_pool(have[0].name)
         env = (f"INPUT_SIZE={size} " if size else "") + (f"HEAD_TEMPORAL_POOL={pool} " if pool != 'avg' else "")
-        # 화면 로그도 남긴다 — tee 는 폴더가 없으면 말없이 실패해서 먼저 만든다(프로젝트 루트에서 실행)
-        lines.append("  평가 명령(하나씩 차례로 · 화면 로그는 outputs/console/):")
+        lines.append("  評価実行コマンド (outputs/console/ にログ出力):")
         lines.append("    mkdir -p outputs/console && for w in \\")
         lines += [f"      {p} \\" for p in have[:-1]] + [f"      {have[-1]}; do"]
         lines.append(f"      {env}python -u -m model.main --mode eval --weights \"$w\"; done 2>&1 "

@@ -1,5 +1,5 @@
-// FastAPI 백엔드 연동 클라이언트.
-// vite 프록시(/api → http://localhost:8000)를 통해 호출한다.
+// FastAPIバックエンド連携クライアント。
+// Viteプロキシ(/api → http://localhost:8000)経由で呼び出す。
 
 const TOKEN_KEY = "psd_token";
 const USER_KEY = "psd_user";
@@ -30,17 +30,17 @@ async function request(path, { method = "GET", body, isForm = false, signal } = 
     payload = JSON.stringify(body);
   }
   const res = await fetch(`/api${path}`, { method, headers, body: payload, signal });
-  // 로그인이 만료됐거나 토큰이 유효하지 않으면 저장된 로그인 정보를 지우고 로그인 화면으로.
-  // (로그인·회원가입 자체의 401 — 아이디/비밀번호 오류 — 는 화면에 그대로 보여 준다)
+  // ログインの有効期限が切れたかトークンが無効な場合、保存されたログイン情報を消去してログイン画面へ。
+  // (ログイン・会員登録自体の401 — ID/パスワード誤り — は画面にそのまま表示する)
   if (res.status === 401 && !path.startsWith("/auth/login") && !path.startsWith("/auth/signup")) {
     clearAuth();
     if (!window.location.pathname.startsWith("/login")) {
       window.location.replace("/login?expired=1");
     }
-    throw new Error("로그인이 만료되었습니다. 다시 로그인해 주세요.");
+    throw new Error("ログインの有効期限が切れました。再度ログインしてください。");
   }
   if (!res.ok) {
-    let detail = `요청 실패 (${res.status})`;
+    let detail = `リクエスト失敗 (${res.status})`;
     try {
       const data = await res.json();
       detail = data.detail || detail;
@@ -53,26 +53,26 @@ async function request(path, { method = "GET", body, isForm = false, signal } = 
   return res.json();
 }
 
-// ---------- 데이터 정규화 (API → UI 형태) ----------
+// ---------- データ正規化 (API → UI形式) ----------
 function normalizeEvent(e) {
   return {
     id: e.id,
     timestamp: Math.round(e.timestamp_sec || 0),
     endTimestamp:
       e.end_timestamp_sec != null ? Math.round(e.end_timestamp_sec) : null,
-    // 반올림 전 값 — 재생바의 사고 구간 위치·이동처럼 1초보다 정확해야 하는 곳에 쓴다
+    // 四捨五入前の値 — 再生バーの事故区間位置・移動など1秒より高い精度が必要な箇所で使用
     startSec: e.timestamp_sec || 0,
     endSec: e.end_timestamp_sec ?? null,
-    analyzedAt: e.analyzed_at || null, // 분석이 끝나 클립이 만들어진 시각(ISO, UTC)
-    analysisNo: e.analysis_no ?? null, // 이 영상의 몇 번째 분석에서 나온 클립인지 (한 번의 분석 = 같은 번호)
+    analyzedAt: e.analyzed_at || null, // 分析が完了してクリップが生成された時刻(ISO, UTC)
+    analysisNo: e.analysis_no ?? null, // この動画の何回目の分析から抽出されたクリップか (1回の分析 = 同一番号)
     prob: e.crash_prob,
     hasClip: !!e.has_clip,
-    hasRawClip: !!e.has_raw_clip, // 합성 없는 원본 사고 클립을 내려받을 수 있는지
-    // 클립이 원본 영상의 몇 초부터인지 — 재생 화면이 빨간 구간에 CAM 클립을 원본 시각에 맞춰 겹칠 때 쓴다(예전 분석은 null)
+    hasRawClip: !!e.has_raw_clip, // オーバーレイなしの原本事故クリップをダウンロード可能か
+    // クリップが原本動画の何秒からか — 再生画面が赤色区間にCAMクリップを原本時刻に合わせてオーバーレイ表示する際に使用(古い分析はnull)
     clipStartSec: e.clip_start_sec ?? null,
-    title: "사고 의심 구간",
+    title: "事故疑い区間",
     status:
-      e.crash_prob != null && e.crash_prob >= 0.5 ? "확인 필요" : "분석 완료",
+      e.crash_prob != null && e.crash_prob >= 0.5 ? "要確認" : "分析完了",
   };
 }
 
@@ -80,10 +80,10 @@ export function normalizeVideo(v) {
   const created = v.created_at || "";
   return {
     id: v.id,
-    title: v.title || "", // 업로드할 때 넣은 제목 (없으면 화면이 '녹화일 녹화본 #N')
-    fileName: v.video_name || "", // 업로드한 원본 파일 이름
-    uploadedAt: v.created_at || null, // 업로드 시각(ISO, UTC)
-    // 보관 기간이 끝나 영상·클립이 지워질 때까지 남은 날(서버 시계 기준). 보관 기간을 끄면 null
+    title: v.title || "", // アップロード時に入力されたタイトル (指定がない場合は画面側で '録画日 録画データ #N')
+    fileName: v.video_name || "", // アップロードされた原本ファイル名
+    uploadedAt: v.created_at || null, // アップロード時刻(ISO, UTC)
+    // 保存期間が終了して動画・クリップが削除されるまでの残り日数(サーバー時計基準)。保存期間無効時はnull
     expiresInDays: v.expires_in_days ?? null,
     date: v.recording_date || (created ? created.slice(0, 10) : ""),
     duration: Math.round(v.duration_sec || 0),
@@ -91,13 +91,13 @@ export function normalizeVideo(v) {
     height: v.height,
     fps: v.fps,
     events: (v.events || []).map(normalizeEvent),
-    // 분석을 한 번이라도 완료했는지 — 다시 분석할 때 확인 문구를 바꾼다
+    // 分析を一度でも完了したか — 再分析時の確認メッセージを切り替える
     analyzedBefore: !!v.analysis_done,
-    // 가장 최근 분석 작업 — 실패·중단이면 화면이 '다시 실행'을 안내한다
+    // 直近の分析タスク — 失敗・中断時は画面に「再実行」を案内
     lastTask: v.last_task
       ? { id: v.last_task.task_id, status: v.last_task.status, errorMessage: v.last_task.error_message }
       : null,
-    // 분석 이력(요청 순) — 영상 상세에서만 온다. 시각은 ISO(UTC)
+    // 分析履歴(リクエスト順) — 動画詳細のみで取得。時刻はISO(UTC)
     analysisHistory: (v.analysis_history || []).map((h) => ({
       no: h.analysis_no,
       taskId: h.task_id,
@@ -105,22 +105,22 @@ export function normalizeVideo(v) {
       errorMessage: h.error_message,
       requestedAt: h.requested_at,
       finishedAt: h.finished_at,
-      eventCount: h.event_count, // 찾은 클립 수 (이력 기능 전 분석은 null)
+      eventCount: h.event_count, // 検出されたクリップ数 (履歴機能実装前の分析はnull)
     })),
   };
 }
 
-// ---------- 인증 ----------
+// ---------- 認証 ----------
 export const api = {
   signup: (data) => request("/auth/signup", { method: "POST", body: data }),
   login: (data) => request("/auth/login", { method: "POST", body: data }),
-  // 화면을 새로 열 때 — 최신 사용자 정보 + 영상·썸네일·클립용 쿠키(로그인 때도 받는다)
+  // 画面リフレッシュ時 — 最新のユーザー情報 + 動画・サムネイル・クリップ用Cookie(ログイン時にも受領)
   startSession: () => request("/auth/session", { method: "POST" }),
   logout: () => request("/auth/logout", { method: "POST" }),
   updateMe: (data) => request("/auth/me", { method: "PUT", body: data }),
   changePassword: (data) => request("/auth/change-password", { method: "POST", body: data }),
 
-  // ---------- 영상 ----------
+  // ---------- 動画 ----------
   listVideos: async (days) => {
     const q = days ? `?days=${days}` : "";
     const list = await request(`/videos${q}`);
@@ -142,7 +142,7 @@ export const api = {
   clearEvents: (videoId) =>
     request(`/videos/${videoId}/events`, { method: "DELETE" }),
 
-  // ---------- 분석 ----------
+  // ---------- 分析 ----------
   detectVehicles: (videoId, timestampSec = 0, signal) =>
     request(`/videos/${videoId}/detect-vehicles?timestamp_sec=${timestampSec}`, {
       method: "POST",
@@ -152,14 +152,11 @@ export const api = {
     request(`/videos/${videoId}/analyze`, { method: "POST", body: bbox, signal }),
   getTaskStatus: (taskId) => request(`/tasks/${taskId}`),
   cancelTask: (taskId) => request(`/tasks/${taskId}/cancel`, { method: "POST" }),
-  // 로그인한 사용자의 대기·진행 중 분석(창을 다시 열 때 진행 상황 복원용)
+  // ログイン中のユーザーの待機・進行中タスク(画面再表示時の進捗復元用)
   listActiveTasks: () => request("/tasks/active"),
-  // 실패·취소된 분석을 같은 영상·같은 차량 박스로 다시 실행
+  // 失敗・キャンセルされた分析を同じ動画・同じ車両ボックスで再実行
   retryTask: (taskId) => request(`/tasks/${taskId}/retry`, { method: "POST" }),
   clipUrl: (eventId) => `/api/events/${eventId}/clip`,
-  // 박스·상태 띠 없이 사고 구간만 자른 원본 클립(다운로드)
+  // ボックス・ステータスバーなしで事故区間のみ切り出した原本クリップ(ダウンロード用)
   rawClipUrl: (eventId) => `/api/events/${eventId}/clip/raw`,
 };
-
-
-

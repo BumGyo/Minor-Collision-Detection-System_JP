@@ -2,24 +2,24 @@ services:
   db:
     image: mysql:8.0
     environment:
-      # 비밀번호는 프로젝트 루트 .env 의 MYSQL_ROOT_PASSWORD (없으면 개발용 기본값)
-      # ⚠️ DB 를 처음 만들 때만 적용된다 — 이미 만든 볼륨(mysql_data)의 비밀번호는 바뀌지 않는다
+      # パスワードはプロジェクトルート .env の MYSQL_ROOT_PASSWORD (未設定時は開発用デフォルト)
+      # ⚠️ 初回DB作成時のみ適用 — 既存ボリューム (mysql_data) のパスワードは変更されない
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
       MYSQL_DATABASE: capstone_db
     ports:
-      # 이 컴퓨터 안(127.0.0.1)에서만 접속 — 서버에서 DB 포트가 인터넷에 열리지 않게
+      # ローカル (127.0.0.1) のみバインド — 外部公開を防止
       - "127.0.0.1:3306:3306"
-    # 데이터 영구 보존: named volume을 MySQL 데이터 디렉터리에 마운트
-    # (컨테이너를 삭제·재생성해도 mysql_data 볼륨에 데이터가 유지됨)
+    # データ永続化: named volume を MySQL データディレクトリにマウント
+    # (コンテナ削除・再作成時も mysql_data ボリュームのデータは保持)
     volumes:
       - mysql_data:/var/lib/mysql
-    # Docker(데몬/Desktop) 시작 시 자동 기동 — 재부팅 후에도 수동 실행 불필요
+    # Docker 起動時に自動起動
     restart: unless-stopped
 
   redis:
     image: redis:alpine
-    # AOF 영속화 활성화 + 볼륨 (Celery 작업 큐/결과 보존용)
-    # 비밀번호는 .env 의 REDIS_PASSWORD — 비어 있으면 비밀번호 없이 동작(개발용)
+    # AOF 永続化の有効化 + ボリューム (Celeryタスクキュー/結果保持用)
+    # パスワードは .env の REDIS_PASSWORD — 未設定時はパスワードなしで稼働 (開発用)
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-}"]
     ports:
       - "127.0.0.1:6379:6379"

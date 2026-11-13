@@ -1,13 +1,8 @@
-"""실제 화면 갱신이 10fps 미만인 영상(config.LOW_FPS_VIDEOS)을 학습·평가에 안 쓰는 폴더로 옮긴다 (2026-11-04).
+"""実効フレームレートが 10fps 未満の動画 (config.LOW_FPS_VIDEOS) を学習・評価対象外ディレクトリへ退避 (2026-11-04)。
 
-    python -m model.lowfps_move            # 무엇을 옮길지 보기만
-    python -m model.lowfps_move --apply    # 옮기기 (mp4 + txt)
-    python -m model.lowfps_move --restore --apply   # 원래 자리로 되돌리기
-
-학습 폴더(config.DATA_DIR) → config.LOW_FPS_EXCLUDED_DIR/train/<같은 상대경로>,
-평가 폴더(config.EVAL_FOLDER_PATH) → config.LOW_FPS_EXCLUDED_DIR/eval/<같은 상대경로>.
-지우지 않고 옮기기만 한다. 같은 이름 파일이 옮길 곳에 이미 있으면 그 영상은 건너뛴다.
-검증은 config.TRAIN_SPLIT_LOCK 으로 고정돼 있어 옮겨도 다른 영상의 분할은 바뀌지 않는다.
+    python -m model.lowfps_move            # 移動対象の確認 (Dry-run)
+    python -m model.lowfps_move --apply    # 実際に移動 (mp4 + txt)
+    python -m model.lowfps_move --restore --apply   # 元の位置へ復帰
 """
 import argparse
 import shutil
@@ -36,24 +31,24 @@ def _plan(restore):
 
 
 def main():
-    ap = argparse.ArgumentParser(description='10fps 미만 영상을 학습·평가 밖 폴더로 옮기기')
-    ap.add_argument('--apply', action='store_true', help='실제로 옮긴다(없으면 보기만)')
-    ap.add_argument('--restore', action='store_true', help='원래 자리로 되돌린다')
+    ap = argparse.ArgumentParser(description='10fps未満の動画を学習・評価対象外ディレクトリへ移動')
+    ap.add_argument('--apply', action='store_true', help='実際に移動を実行 (未指定時は確認のみ)')
+    ap.add_argument('--restore', action='store_true', help='元の位置へ復帰')
     args = ap.parse_args()
 
     moves = _plan(args.restore)
     found = {stem for _, stem, _, _ in moves}
     absent = sorted(set(config.LOW_FPS_VIDEOS) - found)
-    print(f"[10fps 미만 영상 {'되돌리기' if args.restore else '옮기기'}] 목록 {len(config.LOW_FPS_VIDEOS)}개 · "
-          f"옮길 영상 {len(found)}개(파일 {len(moves)}개) · 옮길 곳 "
-          f"{config.LOW_FPS_EXCLUDED_DIR if not args.restore else '원래 폴더'}")
+    print(f"[10fps未満動画 {'復帰' if args.restore else '退避'}] リスト {len(config.LOW_FPS_VIDEOS)}件 · "
+          f"移動対象動画 {len(found)}件 (ファイル {len(moves)}件) · 移動先 "
+          f"{config.LOW_FPS_EXCLUDED_DIR if not args.restore else '元のディレクトリ'}")
     clash = [d for _, _, _, d in moves if d.exists()]
     for part, stem, src, dst in moves:
-        print(f"  {part:5s} {src} -> {dst}" + ('  ⚠️ 이미 있음 — 건너뜀' if dst in clash else ''))
+        print(f"  {part:5s} {src} -> {dst}" + ('  ⚠️ 既に存在 — スキップ' if dst in clash else ''))
     if absent:
-        print(f"  (이미 옮겼거나 이 컴퓨터에 없음: {', '.join(absent)})")
+        print(f"  (移動済みまたはローカルに存在しない: {', '.join(absent)})")
     if not args.apply:
-        print('보기만 했습니다. 옮기려면 --apply')
+        print('確認のみ完了しました。実際に実行するには --apply を指定してください。')
         return 0
     done = 0
     for part, stem, src, dst in moves:
@@ -62,7 +57,7 @@ def main():
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(src), str(dst))
         done += 1
-    print(f'옮김: 파일 {done}개' + (f' · 건너뜀 {len(clash)}개' if clash else ''))
+    print(f'完了: ファイル {done}件' + (f' · スキップ {len(clash)}件' if clash else ''))
     return 0
 
 

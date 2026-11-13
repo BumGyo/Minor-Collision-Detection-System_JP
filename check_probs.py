@@ -1,17 +1,14 @@
-"""학습 중 저장된 best 가중치로 '검증셋 A 확률 분포'를 직접 확인한다.
+"""学習中に保存された最良重みを用いて「検証セットのA確率分布」を直接確認するスクリプト。
 
-recall/acc 는 argmax(임계값 0.5) 기준이라, 모델이 A 확률을 0.1 → 0.45 로
-올리는 동안 계속 0 으로 찍힌다. "배우고 있는 중"인지 "아무것도 못 배웠는지"
-구분이 안 되므로 확률을 직접 본다.
+recall/acc は argmax (閾値0.5) 基準のため、モデルが A 確率を 0.1 → 0.45 へ
+向上させている最中も評価値上は 0 のままとなる。「学習進行中」なのか「全く学習できていない」のか
+判別できないため、確率値を直接確認する。
 
-  · A 샘플의 평균 A확률 vs S 샘플의 평균 A확률 → 둘이 벌어지면 판별 중
-  · AUC → 임계값과 무관한 판별력 (0.5 = 무작위, 1.0 = 완벽)
-  · 임계값별 recall/precision → 0.5 가 아닌 값에서 잡히는지
+  · Aサンプルの平均A確率 vs Sサンプルの平均A確率 → 差が広がっていれば判別能力を獲得中
+  · AUC → 閾値に依存しない判別力 (0.5 = ランダム、1.0 = 完全判別)
+  · 閾値別 recall/precision → 0.5 以外の閾値での検出感度
 
-학습과 동시에 실행 가능(GPU 메모리 여유가 있으면). 분할은 train.py 와 같은
-seed 42 를 쓰므로 검증셋이 정확히 일치한다.
-
-사용:
+使用法:
     cd model && python3 ../check_probs.py ../weights/hitandrun_x3d_260922_33ep_earlyY_ptY_0.1999.pth
 """
 from __future__ import annotations
@@ -22,7 +19,7 @@ import sys
 import torch
 from torch.utils.data import DataLoader, Subset
 
-sys.path.insert(0, os.getcwd())          # 모델 폴더 안에서 실행하는 것을 전제
+sys.path.insert(0, os.getcwd())          # モデルディレクトリ内での実行を前提
 
 import config                             # noqa: E402
 from dataset import HitAndRunDataset      # noqa: E402
@@ -31,7 +28,7 @@ from hitandrun_model import HitAndRun3DCNN  # noqa: E402
 
 
 def _split_val(dataset, ratio=config.TRAIN_SPLIT_RATIO):
-    """train.py 와 동일한 계층적 영상단위 분할 (seed 42) → (val_rc, val_real) 인덱스."""
+    """train.py と同一の階層的動画単位分割 (seed 42) → (val_rc, val_real) インデックス。"""
     groups: dict = {}
     for i, s in enumerate(dataset.samples):
         parts = os.path.normpath(s['mp4_path']).split(os.sep)
@@ -60,11 +57,11 @@ def _split_val(dataset, ratio=config.TRAIN_SPLIT_RATIO):
 
 
 def _auc(pos, neg):
-    """Mann-Whitney U 로 AUC. pos/neg = A·S 샘플의 A확률 리스트."""
+    """Mann-Whitney U 検定による AUC 計算。pos/neg = A・SサンプルのA確率リスト。"""
     if not pos or not neg:
         return None
     ranked = sorted([(p, 1) for p in pos] + [(n, 0) for n in neg])
-    # 동점은 평균 순위로
+    # 同点は平均順位で処理
     r, i, s_pos = 0.0, 0, 0.0
     while i < len(ranked):
         j = i
@@ -86,14 +83,14 @@ def main() -> int:
     weights = sys.argv[1]
     device = get_device(config.INFER_DEVICE_TYPE)
 
-    ds_eval = HitAndRunDataset(augment=False)      # 검증은 증강 없음
+    ds_eval = HitAndRunDataset(augment=False)      # 検証時はデータ拡張なし
     val_rc, val_real = _split_val(ds_eval)
-    print(f"[분할] val_rc {len(val_rc)}클립 / val_real {len(val_real)}클립 (seed 42)")
+    print(f"[分割] val_rc {len(val_rc)}クリップ / val_real {len(val_real)}クリップ (seed 42)")
 
     model = HitAndRun3DCNN(num_classes=config.MODEL_NUM_CLASSES).to(device)
     model.load_state_dict(torch.load(weights, map_location='cpu', weights_only=True))
     model.eval()
-    print(f"[가중치] {weights}\n")
+    print(f"[重み] {weights}\n")
 
     for name, idxs in [("val_rc", val_rc), ("val_real", val_real)]:
         if not idxs:
@@ -109,22 +106,22 @@ def main() -> int:
 
         print(f"══ {name}  (A {len(a_sample_probs)} / S {len(s_sample_probs)})")
         if a_sample_probs:
-            print(f"   A 샘플의 A확률 : 평균 {sum(a_sample_probs)/len(a_sample_probs):.4f}  "
-                  f"최소 {min(a_sample_probs):.4f}  최대 {max(a_sample_probs):.4f}")
-        print(f"   S 샘플의 A확률 : 평균 {sum(s_sample_probs)/len(s_sample_probs):.4f}  "
-              f"최소 {min(s_sample_probs):.4f}  최대 {max(s_sample_probs):.4f}")
+            print(f"   AサンプルのA確率 : 平均 {sum(a_sample_probs)/len(a_sample_probs):.4f}  "
+                  f"最小 {min(a_sample_probs):.4f}  最大 {max(a_sample_probs):.4f}")
+        print(f"   SサンプルのA確率 : 平均 {sum(s_sample_probs)/len(s_sample_probs):.4f}  "
+              f"最小 {min(s_sample_probs):.4f}  最大 {max(s_sample_probs):.4f}")
         if a_sample_probs:
             gap = sum(a_sample_probs)/len(a_sample_probs) - sum(s_sample_probs)/len(s_sample_probs)
             auc = _auc(a_sample_probs, s_sample_probs)
-            print(f"   판별력         : 평균차 {gap:+.4f}   AUC {auc:.4f}"
-                  f"   {'← 판별 중' if auc and auc > 0.6 else '← 거의 무작위'}")
-            print(f"   {'임계값':>8} {'recall':>8} {'precision':>10} {'예측A수':>8}")
+            print(f"   判別力         : 平均差 {gap:+.4f}   AUC {auc:.4f}"
+                  f"   {'← 判別中' if auc and auc > 0.6 else '← ほぼランダム'}")
+            print(f"   {'閾値':>8} {'recall':>8} {'precision':>10} {'予測A数':>8}")
             for th in (0.5, 0.4, 0.3, 0.2, 0.1):
                 tp = sum(1 for p in a_sample_probs if p >= th)
                 fp = sum(1 for p in s_sample_probs if p >= th)
                 rec = tp / len(a_sample_probs)
                 prec = tp / (tp + fp) if (tp + fp) else 0.0
-                mark = "  ← 현재 추론 기준" if th == 0.5 else ""
+                mark = "  ← 現在の推論基準" if th == 0.5 else ""
                 print(f"   {th:>8.1f} {rec:>8.3f} {prec:>10.3f} {tp+fp:>8}{mark}")
         print()
     return 0

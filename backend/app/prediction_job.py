@@ -1,7 +1,7 @@
-"""Celery 태스크 — AI 추론 + 사고구간 CAM 클립 생성.
+"""Celery タスク — AI 推論 + 事故区間 CAM クリップ生成。
 
-torch/opencv/모델 임포트는 모두 **태스크 내부에서 지연 로딩**한다.
-→ FastAPI 웹 프로세스는 ML 의존성 없이도 이 모듈을 임포트(.delay 호출)할 수 있다.
+torch/opencv/モデルのインポートはすべて**タスク内部で遅延ロード**。
+→ FastAPI Web プロセスは ML 依存関係なしでもこのモジュールをインポート (.delay 呼び出し) 可能。
 """
 from datetime import datetime
 from pathlib import Path
@@ -11,7 +11,7 @@ from app.settings import settings
 from app.db_connection import SessionLocal
 from app import db_models
 
-# 워커 프로세스당 모델 1회 로드 후 재사용
+# ワーカープロセスごとにモデルを1回ロードして再利用
 _model = None
 
 
@@ -21,8 +21,6 @@ def _get_model():
         return _model
 
     import sys
-    # 선택된 백본 폴더를 path에 추가 — 내부 절대 임포트(import config 등) 지원.
-    # 폴더는 settings.MODEL_VARIANT(환경변수)가 고른다.
     sys.path.insert(0, str(settings.MODEL_DIR))
 
     import torch
@@ -30,50 +28,43 @@ def _get_model():
     from hitandrun_model import HitAndRun3DCNN
     from device_utils import get_device, is_channels_last_3d_supported
 
-    # 추론 디바이스(config.INFER_DEVICE_TYPE="cuda") — GPU 가 없으면 get_device 가
-    # 경고를 찍고 CPU 로 자동 전환한다. 실제 디바이스는 아래 '모델 로드 완료' 로그로 확인.
     device = get_device(model_config.INFER_DEVICE_TYPE)
     model = HitAndRun3DCNN(num_classes=model_config.MODEL_NUM_CLASSES).to(device)
     if is_channels_last_3d_supported(device) and model_config.USE_CHANNELS_LAST:
         model = model.to(memory_format=torch.channels_last_3d)
-    # 배포 가중치 경로는 model/config.py 에서 관리 (SERVICE_WEIGHTS_PATH)
-    # 224 아닌 입력 크기(_s256)·avg 아닌 헤드 풀링(_top3 등)으로 학습한 가중치면 서버 .env 에 INPUT_SIZE·
-    # HEAD_TEMPORAL_POOL 을 같이 맞춰야 한다 — 다르면 여기서 멈춘다
+
     from hitandrun_model import check_weights
     check_weights(model_config.SERVICE_WEIGHTS_PATH)
     state_dict = torch.load(
         str(model_config.SERVICE_WEIGHTS_PATH), map_location="cpu", weights_only=True)
     model.load_state_dict(state_dict)
     model.eval()
-    print(f"[worker] 모델 로드 완료 — {getattr(model_config, 'MODEL_NAME', '?')} "
+    print(f"[worker] モデルロード完了 — {getattr(model_config, 'MODEL_NAME', '?')} "
           f"(device={device}, weights={model_config.SERVICE_WEIGHTS_PATH.name})")
-    # 추론 실행 방식을 모델 로드 때 정해 둔다(이 컴퓨터에서 처음이면 자가 검사, 이후엔 저장된 결과).
-    # 실패해도 분석은 PyTorch 로 돌아야 하므로 여기서 예외를 막는다.
+
     try:
         from infer_runtime import get_runner
         get_runner(model)
     except Exception as exc:  # noqa: BLE001
-        print(f"[worker] 추론 실행 방식 선택 실패 — PyTorch 로 진행: {exc}")
+        print(f"[worker] 推論実行方式の選定失敗 — PyTorch で継続: {exc}")
     _model = model
     return _model
 
 
 @celery_app.task(bind=True)
 def run_prediction_task(self, task_id: int):
-    """AnalysisTask를 받아 추론 → 사고구간 클립 생성 → CrashEvent 저장."""
+    """AnalysisTask を受信して推論 → 事故区間クリップ生成 → CrashEvent 保存。"""
     db = SessionLocal()
     try:
         task = db.get(db_models.AnalysisTask, task_id)
         if task is None:
             return {"error": f"task {task_id} not found"}
-        # 취소 표시는 워커 메모리(revoke)에만 있어서 워커가 재시작되면 사라지고,
-        # 대기 중이던 메시지가 다시 배달될 수 있다 → DB 상태로 한 번 더 거른다.
+
         if task.status != "PENDING":
             return {"task_id": task_id, "skipped": task.status}
 
         task.status = "PROCESSING"
         db.commit()
-        # 화면 단계 표시: 모델 불러오기(처음이면 추론 실행 방식 자가 검사 포함)
         self.update_state(state="PROGRESS", meta={"percent": 0, "stage": "loading"})
 
         video = db.get(db_models.Video, task.video_id)
@@ -82,19 +73,12 @@ def run_prediction_task(self, task_id: int):
         try:
             from inference import predict_events_and_clips
         except ImportError:
-            # 이전 백본 폴더("s3d model" 등, MODEL_VARIANT)는 옛 파일명 그대로다
             from predict_cam import predict_events_and_clips
 
-        # 진행률(%)과 남은 시간(초)을 Celery 상태(Redis)에 기록 → /tasks 가 읽어 화면에 전달.
-        # 진행률은 0~99 — 100%는 작업 완료(SUCCESS)로만 표시한다. 남은 시간은 분석 함수가
-        # 실제로 잰 속도로 계산해 주며, 진행률이 그대로여도 1.5초마다 갱신해 준다.
         import time as _time
         _last = {"pct": -1, "t": 0.0}
 
         def _on_progress(frac, eta=None, eta_min=False, stage=None, count=None, index=None):
-            # stage·count·index: 지금 단계와 그 단계의 개수/순번(model/inference.py _report 참고).
-            # 진행률은 소수 첫째 자리까지 — 긴 영상에서 1%가 오래 걸려도 막대가 조금씩 움직이게.
-            # 단계가 바뀌면 바로, 진행률만 바뀌면 0.4초에 한 번, 그대로여도 1.5초마다 기록한다.
             pct = round(min(99.0, frac * 100), 1)
             now = _time.time()
             key = (stage, count, index)
@@ -112,11 +96,9 @@ def run_prediction_task(self, task_id: int):
             bbox=(task.bbox_xmin, task.bbox_ymin, task.bbox_xmax, task.bbox_ymax),
             output_dir=settings.CLIP_DIR,
             progress_callback=_on_progress,
-            # 분석마다 다른 클립 이름 — 같은 영상을 다시 분석해도 이전 분석의 클립을 덮어쓰지 않게
             clip_name=f"{Path(video.video_path).stem}_t{task.id}",
         )
 
-        # 분석 도중 취소됐는데(revoke 실패 등) 끝까지 돌았다면 결과를 버린다
         db.refresh(task)
         if task.status == "CANCELLED":
             for r in results:

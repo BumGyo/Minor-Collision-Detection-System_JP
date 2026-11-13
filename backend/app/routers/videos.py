@@ -1,4 +1,4 @@
-"""영상 업로드 / 목록 / 상세 / 스트리밍 라우터."""
+"""動画アップロード / 一覧 / 詳細 / ストリーミングルーター。"""
 import math
 import shutil
 from datetime import date, datetime, timedelta, timezone
@@ -19,10 +19,9 @@ from app.settings import settings
 router = APIRouter(prefix="/api/videos", tags=["videos"])
 
 
-# ---------- 직렬화 헬퍼 ----------
+# ---------- シリアライズヘルパー ----------
 def raw_clip_path(ev: db_models.CrashEvent):
-    """합성 없는 원본 사고 클립 경로 — 분석 때 표시 클립 옆에 '<이름>_raw.mp4' 로 만든다.
-    (DB 컬럼을 늘리지 않으려고 이름 규칙으로 찾는다. 예전 분석 결과엔 없을 수 있다)"""
+    """オーバーレイなしの元事故クリップパス — 分析時にクリップと同じディレクトリに '<名前>_raw.mp4' として生成。"""
     if not ev.clip_path:
         return None
     p = settings.abs_path(ev.clip_path)
@@ -30,9 +29,8 @@ def raw_clip_path(ev: db_models.CrashEvent):
 
 
 def _unlink_event_clips(events, db: Session):
-    """지우려는 이벤트들의 표시 클립과 원본 클립 파일을 지운다.
-    예전엔 같은 영상을 다시 분석하면 클립 이름이 같아 여러 이벤트가 한 파일을 함께 썼다
-    → 지우지 않는 다른 이벤트가 아직 쓰는 파일은 남긴다."""
+    """削除対象イベントの表示クリップおよび元クリップファイルを削除。
+    同一ファイルを他のイベントが参照している場合はファイルを保持する。"""
     ids = {ev.id for ev in events}
     for path in {ev.clip_path for ev in events if ev.clip_path}:
         still_used = db.query(db_models.CrashEvent).filter(
@@ -46,12 +44,7 @@ def _unlink_event_clips(events, db: Session):
 
 
 def analysis_no(ev: db_models.CrashEvent):
-    """이 클립을 만든 분석이 그 영상의 몇 번째 분석인지(1부터).
-
-    실패·취소된 분석도 한 번으로 센다(6번째로 돌린 분석이면 6). 한 번의 분석에서 나온 클립들은
-    같은 번호다. 분석 작업 기록은 클립을 지워도 남고 영상을 지울 때만 지워져서, 이전 클립을
-    지워도 번호가 바뀌지 않는다. '다시 실행'도 새 분석 작업이라 한 번으로 센다.
-    """
+    """このクリップを生成した分析がその動画の何回目の分析か (1開始)。"""
     ids = sorted(t.id for t in ev.video.analysis_tasks)
     return ids.index(ev.task_id) + 1 if ev.task_id in ids else None
 
@@ -73,13 +66,13 @@ def to_event_out(ev: db_models.CrashEvent) -> api_schemas.EventOut:
 
 
 def _utc(dt):
-    """DB 엔 UTC 를 시간대 없이 저장하므로 UTC 라고 붙인다 → 브라우저가 자기 시간대로 바꿔 보여준다."""
+    """DBはUTC時刻をタイムゾーン情報なしで保持しているため、UTCタイムゾーンを付与してクライアントに送信。"""
     return dt.replace(tzinfo=timezone.utc) if dt else None
 
 
 def analysis_history(v: db_models.Video) -> list[api_schemas.AnalysisHistoryOut]:
-    """영상의 분석 이력(요청 순). 번호는 analysis_no 와 같은 기준이다."""
-    first_clip_at = {}   # 이력 기능 전 성공 분석의 끝난 시각 대신 — 그 분석 클립이 만들어진 시각
+    """動画の分析履歴 (リクエスト順)。"""
+    first_clip_at = {}
     for ev in v.crash_events:
         if ev.created_at and (ev.task_id not in first_clip_at or ev.created_at < first_clip_at[ev.task_id]):
             first_clip_at[ev.task_id] = ev.created_at
@@ -98,7 +91,7 @@ def analysis_history(v: db_models.Video) -> list[api_schemas.AnalysisHistoryOut]
 
 
 def video_expires_at(v: db_models.Video):
-    """보관 기간이 끝나는 시각(UTC, 시간대 없음 — DB 와 같은 형식). 보관 기간을 끄면 None."""
+    """保存期間満了日時 (UTC)。保存期間無効時は None。"""
     if settings.VIDEO_RETENTION_DAYS <= 0 or v.created_at is None:
         return None
     return v.created_at + timedelta(days=settings.VIDEO_RETENTION_DAYS)
@@ -114,14 +107,14 @@ def to_video_out(v: db_models.Video, with_history: bool = False) -> api_schemas.
         video_name=v.video_name,
         title=v.title,
         recording_date=v.recording_date,
-        camera_location=v.camera_location or "주차장",
+        camera_location=v.camera_location or "駐車場",
         width=v.width,
         height=v.height,
         fps=v.fps,
         total_frames=v.total_frames,
         duration_sec=duration,
         detected_vehicles=v.detected_vehicles,
-        created_at=_utc(v.created_at),   # 업로드 시각 — UTC 라고 붙여 보내 브라우저 시간대로 표시
+        created_at=_utc(v.created_at),
         expires_at=_utc(expires_at),
         expires_in_days=expires_in_days,
         events=[to_event_out(e) for e in v.crash_events],
@@ -132,7 +125,7 @@ def to_video_out(v: db_models.Video, with_history: bool = False) -> api_schemas.
 
 
 def _last_task_out(v: db_models.Video):
-    """가장 최근 분석 작업(없으면 None)."""
+    """最新の分析タスク (存在しない場合は None)。"""
     if not v.analysis_tasks:
         return None
     t = max(v.analysis_tasks, key=lambda x: x.id)
@@ -140,10 +133,9 @@ def _last_task_out(v: db_models.Video):
                                    error_message=t.error_message, created_at=t.created_at)
 
 
-
 def _extract_metadata(path: Path):
-    """cv2로 영상 메타데이터(가로/세로/fps/총프레임) 추출."""
-    import cv2  # 지연 임포트 (웹 프로세스에 opencv 필요)
+    """cv2で動画メタデータ (幅/高さ/fps/総フレーム数) を抽出。"""
+    import cv2
     cap = cv2.VideoCapture(str(path))
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -157,13 +149,13 @@ def _extract_metadata(path: Path):
 def upload_video(
     file: UploadFile = File(...),
     recording_date: str | None = Form(None),
-    title: str | None = Form(None),   # 선택 — 비우면 화면이 '녹화일 녹화본 #N' 으로 보여 준다
+    title: str | None = Form(None),   # 任意 — 空欄の場合は画面が「録画日 録画データ #N」と表示
     db: Session = Depends(get_db),
     user: db_models.User = Depends(get_current_user),
 ):
-    title = (title or "").strip()   # 파일을 저장하기 전에 먼저 확인
+    title = (title or "").strip()
     if len(title) > 100:
-        raise HTTPException(status_code=400, detail="제목은 100자까지 입력할 수 있습니다.")
+        raise HTTPException(status_code=400, detail="タイトルは100文字以内で入力してください。")
 
     ext = Path(file.filename).suffix or ".mp4"
     stored_name = f"{uuid4().hex}{ext}"
@@ -174,14 +166,14 @@ def upload_video(
     width, height, fps, total_frames = _extract_metadata(dest)
     if total_frames <= 0:
         dest.unlink(missing_ok=True)
-        raise HTTPException(status_code=400, detail="영상을 읽을 수 없습니다.")
+        raise HTTPException(status_code=400, detail="動画を読み込めません。")
 
     rec_date: date | None = None
     if recording_date:
         try:
             rec_date = date.fromisoformat(recording_date)
         except ValueError:
-            raise HTTPException(status_code=400, detail="녹화일자 형식이 잘못되었습니다.")
+            raise HTTPException(status_code=400, detail="録画日の形式が正しくありません。")
 
     video = db_models.Video(
         user_id=user.id,
@@ -217,7 +209,7 @@ def list_videos(
 def _get_owned_video(video_id: int, db: Session, user: db_models.User):
     video = db.get(db_models.Video, video_id)
     if video is None or video.user_id != user.id:
-        raise HTTPException(status_code=404, detail="영상을 찾을 수 없습니다.")
+        raise HTTPException(status_code=404, detail="動画が見つかりません。")
     return video
 
 
@@ -236,7 +228,7 @@ def delete_video(
     db: Session = Depends(get_db),
     user: db_models.User = Depends(get_current_user),
 ):
-    """영상 삭제 — 관련 파일(원본·썸네일·CAM 클립)과 DB(이벤트·태스크·영상) 모두 제거."""
+    """動画削除 — 関連ファイル (元動画・サムネイル・CAMクリップ) および DB (イベント・タスク・動画レコード) をすべて削除。"""
     video = _get_owned_video(video_id, db, user)
     purge_video(video, db)
     db.commit()
@@ -244,25 +236,24 @@ def delete_video(
 
 
 def purge_video(video: db_models.Video, db: Session) -> None:
-    """영상과 딸린 것을 모두 지운다 — 사용자가 지울 때와 보관 기간이 지났을 때(app/retention.py) 같이 쓴다.
-    commit 은 부르는 쪽이 한다."""
-    # 1) 관련 CAM 클립·원본 클립 파일 삭제 + crash_events 행 삭제
+    """動画と関連データをすべて削除 — ユーザー削除時および保存期間経過時 (app/retention.py) に共通使用。"""
+    # 1) 関連CAMクリップ・元クリップファイル削除 + crash_events 行削除
     events = db.query(db_models.CrashEvent).filter(
         db_models.CrashEvent.video_id == video.id).all()
     _unlink_event_clips(events, db)
     for ev in events:
         db.delete(ev)
 
-    # 2) analysis_tasks 행 삭제
+    # 2) analysis_tasks 行削除
     for task in db.query(db_models.AnalysisTask).filter(
             db_models.AnalysisTask.video_id == video.id).all():
         db.delete(task)
 
-    # 3) 원본 영상 + 썸네일 파일 삭제
+    # 3) 元動画 + サムネイルファイル削除
     settings.abs_path(video.video_path).unlink(missing_ok=True)
     (settings.THUMBNAIL_DIR / f"{Path(video.video_path).stem}.jpg").unlink(missing_ok=True)
 
-    # 4) 영상 행 삭제
+    # 4) 動画レコード削除
     db.delete(video)
 
 
@@ -273,14 +264,14 @@ def delete_crash_event(
     db: Session = Depends(get_db),
     user: db_models.User = Depends(get_current_user),
 ):
-    """특정 사고 감지 이벤트 1건 삭제."""
+    """特定の事故検出イベント1件を削除。"""
     video = _get_owned_video(video_id, db, user)
     event = db.query(db_models.CrashEvent).filter(
         db_models.CrashEvent.id == event_id,
         db_models.CrashEvent.video_id == video.id,
     ).first()
     if event is None:
-        raise HTTPException(status_code=404, detail="이벤트를 찾을 수 없습니다.")
+        raise HTTPException(status_code=404, detail="イベントが見つかりません。")
 
     _unlink_event_clips([event], db)
 
@@ -295,7 +286,7 @@ def clear_all_crash_events(
     db: Session = Depends(get_db),
     user: db_models.User = Depends(get_current_user),
 ):
-    """해당 영상의 모든 사고 감지 이벤트 삭제."""
+    """該当動画のすべての事故検出イベントを削除。"""
     video = _get_owned_video(video_id, db, user)
     events = db.query(db_models.CrashEvent).filter(
         db_models.CrashEvent.video_id == video.id
@@ -308,19 +299,16 @@ def clear_all_crash_events(
     return {"deleted_count": count}
 
 
-
 @router.get("/{video_id}/stream")
 def stream_video(
     video_id: int,
     db: Session = Depends(get_db),
     user: db_models.User = Depends(get_media_user),
 ):
-    # <video src> 태그는 헤더를 못 실어서 로그인 때 받은 영상 쿠키로 확인한다(auth_guard)
     video = _get_owned_video(video_id, db, user)
     path = settings.abs_path(video.video_path)
     if not path.exists():
-        raise HTTPException(status_code=404, detail="영상 파일이 없습니다.")
-    # FileResponse는 HTTP Range 요청(영상 탐색)을 지원한다.
+        raise HTTPException(status_code=404, detail="動画ファイルが見つかりません。")
     return FileResponse(str(path), media_type="video/mp4")
 
 
@@ -330,20 +318,19 @@ def get_video_thumbnail(
     db: Session = Depends(get_db),
     user: db_models.User = Depends(get_media_user),
 ):
-    # <img src> 태그용 — 영상 쿠키로 확인. 영상 첫 프레임을 jpg로 캐시 생성.
     video = _get_owned_video(video_id, db, user)
 
     thumb = settings.THUMBNAIL_DIR / f"{Path(video.video_path).stem}.jpg"
     if not thumb.exists():
         src = settings.abs_path(video.video_path)
         if not src.exists():
-            raise HTTPException(status_code=404, detail="영상 파일이 없습니다.")
-        import cv2  # 지연 임포트
+            raise HTTPException(status_code=404, detail="動画ファイルが見つかりません。")
+        import cv2
         cap = cv2.VideoCapture(str(src))
-        ok, frame = cap.read()  # 첫 프레임 (BGR)
+        ok, frame = cap.read()
         cap.release()
         if not ok:
-            raise HTTPException(status_code=404, detail="썸네일을 생성할 수 없습니다.")
+            raise HTTPException(status_code=404, detail="サムネイルを生成できません。")
         cv2.imwrite(str(thumb), frame)
 
     return FileResponse(str(thumb), media_type="image/jpeg")
@@ -356,19 +343,18 @@ def detect_vehicles_in_video(
     db: Session = Depends(get_db),
     user: db_models.User = Depends(get_current_user),
 ):
-    """YOLO 모델로 지정 시각 프레임의 차량을 탐지하여 BBOX JSON을 DB에 저장하고 반환합니다."""
+    """YOLOモデルで指定時刻のフレームから車両を検出し、BBOX JSONをDBに保存して返します。"""
     import json
 
     video = _get_owned_video(video_id, db, user)
     src_path = settings.abs_path(video.video_path)
     if not src_path.exists():
-        raise HTTPException(status_code=404, detail="영상 파일이 없습니다.")
+        raise HTTPException(status_code=404, detail="動画ファイルが見つかりません。")
 
-    # 차량 탐지 모듈은 지연 임포트 — ultralytics/torch를 웹 프로세스 시작 시 로드하지 않도록.
     try:
         from app.vehicle_detector import get_detector, read_source_frame
     except Exception as err:
-        raise HTTPException(status_code=500, detail=f"차량 탐지 모듈 로드 실패: {err}")
+        raise HTTPException(status_code=500, detail=f"車両検出モジュールのロードに失敗しました: {err}")
 
     frame_index = int((timestamp_sec or 0.0) * (video.fps or 30.0))
     frame_index = max(0, min(frame_index, max(0, video.total_frames - 1)))
@@ -376,16 +362,11 @@ def detect_vehicles_in_video(
     try:
         frame = read_source_frame(src_path, frame_index=frame_index)
     except Exception as err:
-        raise HTTPException(status_code=500, detail=f"프레임 추출 실패: {err}")
+        raise HTTPException(status_code=500, detail=f"フレームの抽出に失敗しました: {err}")
 
-    # YOLO11x(detection) + 동적 imgsz(상한 1536) + 낮은 conf + 야간 전처리
-    # → 원거리/야간/부분가림 회수율 강화. detection 모델이라 마스크 없이
-    #   YOLO detection bbox를 그대로 사용한다. 동적 imgsz는 프레임 해상도에
-    #   맞춰 입력 크기를 정해 고해상도 정보손실/저해상도 낭비를 함께 줄인다.
-    # 탐지기는 get_detector로 프로세스당 1회만 로드·재사용(매 요청 재로드 오버헤드 제거).
     model_path = str(settings.BASE_DIR / "yolo11x.pt")
     if not Path(model_path).exists():
-        model_path = "yolo11x.pt"  # 파일 없으면 ultralytics가 자동 다운로드
+        model_path = "yolo11x.pt"
 
     try:
         detector = get_detector(
@@ -393,7 +374,7 @@ def detect_vehicles_in_video(
             enhance_night=True, dynamic_imgsz=True, imgsz_min=640)
         detections = detector.detect_frame(frame)
     except Exception as err:
-        raise HTTPException(status_code=500, detail=f"YOLO 차량 탐지 중 오류: {err}")
+        raise HTTPException(status_code=500, detail=f"YOLO車両検出処理エラー: {err}")
 
     detected_list = []
     for idx, det in enumerate(detections):
@@ -405,9 +386,6 @@ def detect_vehicles_in_video(
             "bbox": [x1, y1, x2, y2],
         })
 
-    # [디버그] 서비스가 실제로 탐지한 결과를 이미지로 저장 (outputs/) — 눈으로 확인용.
-    #   탐지에 쓴 원본 프레임에 bbox(#번호·클래스·신뢰도)를 그려 저장한다.
-    #   CCTV 화면이 영상을 지워도 남으므로 DETECT_DEBUG_IMAGES=1 일 때만(settings).
     if settings.DETECT_DEBUG_IMAGES:
         try:
             import cv2
@@ -423,9 +401,9 @@ def detect_vehicles_in_video(
             base = Path(video.video_name).stem
             out_img = out_dir / f"detect_{base}_f{frame_index}.jpg"
             cv2.imwrite(str(out_img), dbg)
-            print(f"[detect] 결과 이미지 저장: {out_img}  (탐지 {len(detected_list)}대, 프레임 {frame.shape[1]}x{frame.shape[0]})")
-        except Exception as _dbg_err:  # 디버그 저장 실패는 탐지 응답에 영향 없음
-            print(f"[detect] 결과 이미지 저장 실패(무시): {_dbg_err}")
+            print(f"[detect] デバッグ画像保存: {out_img}  (検出 {len(detected_list)}台, フレーム {frame.shape[1]}x{frame.shape[0]})")
+        except Exception as _dbg_err:
+            print(f"[detect] デバッグ画像保存失敗 (無視): {_dbg_err}")
 
     json_str = json.dumps(detected_list, ensure_ascii=False)
     video.detected_vehicles = json_str
@@ -438,4 +416,3 @@ def detect_vehicles_in_video(
             api_schemas.DetectedVehicleBox(**item) for item in detected_list
         ],
     )
-

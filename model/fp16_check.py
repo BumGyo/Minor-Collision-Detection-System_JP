@@ -1,16 +1,16 @@
-"""GPU FP16 추론 확인 (학습 서버용) — FP32 와 비교해 속도와 결과 차이를 잰다.
+"""GPU FP16 推論確認 (学習サーバー用) — FP32 と比較して速度と結果の差異を測定する。
 
-    CUDA_VISIBLE_DEVICES=0 python -u -m model.fp16_check               # 속도 + 실제 창 확률 비교
-    CUDA_VISIBLE_DEVICES=0 python -u -m model.fp16_check --full-eval   # + 평가 세트를 FP32·FP16 으로 각각 평가
+    CUDA_VISIBLE_DEVICES=0 python -u -m model.fp16_check               # 速度 + 実際のウィンドウ確率の比較
+    CUDA_VISIBLE_DEVICES=0 python -u -m model.fp16_check --full-eval   # + 評価セットを FP32・FP16 でそれぞれ評価
 
-결과는 화면과 outputs/fp16_check/<시각>/report.txt 에 남는다. --full-eval 의 평가 로그는
-평소처럼 outputs/evallogs 에 두 회차로 남는다.
+結果は画面および outputs/fp16_check/<日時>/report.txt に出力される。--full-eval の評価ログは
+通常通り outputs/evallogs に2つの実行回として記録される。
 
-FP16 을 켜도 되는 기준 (셋 다):
-  ① 실제 창에서 판정 기준(A_THRESHOLD)·거친 탐색 기준(PREDICT_COARSE_PROB)이 바뀐 창이 없다
-  ② --full-eval 에서 기존 판정·서비스 판정 지표가 FP32 와 같다
-  ③ 속도 이득이 있다
-config.INFER_FP16 은 기본 켬(2026-10-28 RTX 3080 확인). 다른 GPU 에서 결과가 다르면 서비스 환경에 INFER_FP16=0
+FP16 を有効化できる基準 (3項目すべて):
+  ① 実際のウィンドウで判定閾値 (A_THRESHOLD)・粗探索閾値 (PREDICT_COARSE_PROB) の判定が反転したウィンドウがないこと
+  ② --full-eval で従来の判定・サービス判定の指標が FP32 と一致すること
+  ③ 速度向上が確認できること
+config.INFER_FP16 はデフォルト有効 (2026-10-28 RTX 3080 で検証済み)。他の GPU で結果が異なる場合は本番サービス環境で INFER_FP16=0 を指定。
 """
 import argparse
 import os
@@ -31,7 +31,7 @@ from main import _load_model
 
 
 def _windows_of(video, txt, n, clip_length, resize):
-    """영상 하나에서 고르게 n 개 창(정규화 전 uint8) — 0번 차량 박스 r=1 정사각 크롭(서비스와 같음)."""
+    """1つの動画から均等に n 個のウィンドウ (正規化前 uint8) — 0番車両ボックス r=1 正方形クロップ (サービスと同様)。"""
     box = None
     for line in open(txt, encoding='utf-8', errors='ignore'):
         p = [t.strip() for t in line.split(',')]
@@ -62,14 +62,14 @@ def _windows_of(video, txt, n, clip_length, resize):
 
 
 def main():
-    ap = argparse.ArgumentParser(description='GPU FP16 추론 확인')
-    ap.add_argument('--weights', default=str(config.EVAL_WEIGHTS_PATH), help='확인할 가중치(기본 평가 가중치)')
-    ap.add_argument('--per-video', type=int, default=24, help='영상마다 비교할 창 수')
-    ap.add_argument('--full-eval', action='store_true', help='평가 세트를 FP32·FP16 으로 각각 평가해 지표 비교')
+    ap = argparse.ArgumentParser(description='GPU FP16 推論確認')
+    ap.add_argument('--weights', default=str(config.EVAL_WEIGHTS_PATH), help='確認対象の重み (デフォルト: 評価用重み)')
+    ap.add_argument('--per-video', type=int, default=24, help='動画ごとに比較するウィンドウ数')
+    ap.add_argument('--full-eval', action='store_true', help='評価セットを FP32・FP16 でそれぞれ評価して指標を比較')
     args = ap.parse_args()
 
     if not torch.cuda.is_available():
-        print('GPU(CUDA)가 없어 FP16 을 확인할 수 없습니다. GPU 서버에서 실행하세요.')
+        print('GPU(CUDA)が利用できないため FP16 を確認できません。GPU サーバーで実行してください。')
         sys.exit(1)
 
     out_dir = Path(config._ROOT) / 'outputs' / 'fp16_check' / datetime.now().strftime('%y%m%d_%H%M')
@@ -81,25 +81,25 @@ def main():
     finally:
         sys.stdout = tee.stdout
         tee.close()
-    print(f'\n[로그] {out_dir / "report.txt"}')
+    print(f'\n[ログ] {out_dir / "report.txt"}')
 
 
 def _run(args):
     config.INFER_DEVICE_TYPE = 'cuda'
-    config.EVAL_WEIGHTS_PATH = Path(args.weights)   # --full-eval 평가 로그에 이 가중치 이름이 남게
+    config.EVAL_WEIGHTS_PATH = Path(args.weights)   # --full-eval の評価ログにこの重み名が残るように設定
     model, device = _load_model(args.weights)
     model.eval()
     cap = torch.cuda.get_device_capability(device)
-    print(f'GPU: {torch.cuda.get_device_name(device)} (연산능력 {cap[0]}.{cap[1]}) | torch {torch.__version__} | '
+    print(f'GPU: {torch.cuda.get_device_name(device)} (演算能力 {cap[0]}.{cap[1]}) | torch {torch.__version__} | '
           f'CUDA {torch.version.cuda} | cuDNN {torch.backends.cudnn.version()}')
-    print(f'가중치: {args.weights}')
+    print(f'重み: {args.weights}')
     if cap < (7, 0):
-        print('⚠️ 연산능력 7.0 미만(Tensor Core 없음) — FP16 이 빠르지 않을 수 있고 서비스는 이 GPU 에서 FP16 을 켜지 않습니다.')
+        print('⚠️ 演算能力 7.0 未満 (Tensor Core なし) — FP16 による高速化が見込めないため、サービスはこの GPU では FP16 を有効化しません。')
     cl = is_channels_last_3d_supported(device) and config.USE_CHANNELS_LAST
-    # 서비스·평가처럼 cuDNN 이 가장 빠른 방식을 재서 고르게 한다. 꺼진 채 속도표를 먼저 돌리면 그때 정한
-    # (느릴 수 있는) 방식이 입력 모양마다 기억돼, 뒤의 --full-eval 이 benchmark 를 켜도 그대로 쓰인다.
+    # 本番サービス・評価と同様に cuDNN の最速アルゴリズムをベンチマーク探索させる。
+    # 無効のまま速度測定を先行させると、その時点で決定された低速な方式が記憶され、以降の --full-eval に影響する。
     torch.backends.cudnn.benchmark = True
-    print(f'cuDNN benchmark 켬 · channels_last {"켬" if cl else "끔"}')
+    print(f'cuDNN benchmark 有効 ・ channels_last {"有効" if cl else "無効"}')
 
     def run(x, fp16, tf32=True):
         old = torch.backends.cudnn.allow_tf32
@@ -112,10 +112,10 @@ def _run(args):
 
     shape = (3, config.CLIP_LENGTH, config.RESIZE[1], config.RESIZE[0])
 
-    # ── ① 속도 ──
-    print('\n[속도] 초당 처리 창 수 (서비스 배치 = '
-          f'{config.PREDICT_INFER_BATCH_SIZE_GPU}, 평가 배치 = {config.EVAL_INFER_BATCH_SIZE})')
-    print(f"{'배치':>4} {'FP32':>9} {'FP16':>9} {'FP16/FP32':>10}")
+    # ── ① 速度 ──
+    print('\n[速度] 秒あたり処理ウィンドウ数 (サービスバッチ = '
+          f'{config.PREDICT_INFER_BATCH_SIZE_GPU}, 評価バッチ = {config.EVAL_INFER_BATCH_SIZE})')
+    print(f"{'バッチ':>6} {'FP32':>9} {'FP16':>9} {'FP16/FP32':>10}")
     for bs in (1, 2, 4, 8, 16):
         x = torch.randn((bs, *shape), device=device)
         if cl:
@@ -131,15 +131,15 @@ def _run(args):
                 n += 1
             torch.cuda.synchronize()
             res[fp16] = n * bs / (time.perf_counter() - t0)
-        print(f'{bs:>4} {res[False]:>9.1f} {res[True]:>9.1f} {res[True] / res[False]:>9.2f}x')
+        print(f'{bs:>6} {res[False]:>9.1f} {res[True]:>9.1f} {res[True] / res[False]:>9.2f}x')
 
-    # ── ② 실제 창 결과 비교 ──
+    # ── ② 実際のウィンドウ結果比較 ──
     mean = torch.tensor(config.NORM_MEAN, device=device).view(1, 3, 1, 1, 1)
     std = torch.tensor(config.NORM_STD, device=device).view(1, 3, 1, 1, 1)
     folder = Path(config.EVAL_FOLDER_PATH)
     vids = sorted(p for p in folder.glob('*.mp4') if p.with_suffix('.txt').exists()
-                  and p.stem not in (getattr(config, 'EXCLUDE_VIDEOS', ()) or ()))   # 10fps 미만 영상은 뺀다
-    print(f'\n[결과 비교] {folder} 영상 {len(vids)}개 × 최대 {args.per_video}창, FP32 기준')
+                  and p.stem not in (getattr(config, 'EXCLUDE_VIDEOS', ()) or ()))   # 10fps 未満の動画は除外
+    print(f'\n[結果比較] {folder} 動画 {len(vids)}本 × 最大 {args.per_video}ウィンドウ, FP32 基準')
     all32, all16, allstrict, flips, per_video = [], [], [], [], []
     for v in vids:
         frames, starts = _windows_of(str(v), str(v.with_suffix('.txt')), args.per_video,
@@ -166,52 +166,52 @@ def _run(args):
                     flips.append((v.name, int(s), th, float(p32[k]), float(p16[k])))
     p32, p16, pst = torch.cat(all32), torch.cat(all16), torch.cat(allstrict)
     d16, dtf = (p16 - p32).abs(), (pst - p32).abs()
-    print(f'  창 {len(p32)}개')
-    print(f'  FP16 vs FP32       : P(A) 차이 최대 {d16.max():.2e} / 평균 {d16.mean():.2e}')
-    print(f'  (참고) TF32 끈 FP32 vs 지금 FP32 : 최대 {dtf.max():.2e} / 평균 {dtf.mean():.2e}  '
-          f'← GPU FP32 도 기본 TF32 라 이미 이 정도 차이가 있다')
-    print('  차이가 큰 영상: ' + ', '.join(f'{n}({m:.1e})' for m, n in sorted(per_video, reverse=True)[:5]))
+    print(f'  ウィンドウ数: {len(p32)}個')
+    print(f'  FP16 vs FP32       : P(A) 差分 最大 {d16.max():.2e} / 平均 {d16.mean():.2e}')
+    print(f'  (参考) TF32無効 FP32 vs 現行 FP32 : 最大 {dtf.max():.2e} / 平均 {dtf.mean():.2e}  '
+          f'← GPU FP32 もデフォルトで TF32 のため既に同程度の誤差が存在する')
+    print('  差分が大きい動画: ' + ', '.join(f'{n}({m:.1e})' for m, n in sorted(per_video, reverse=True)[:5]))
     f05 = [f for f in flips if f[2] == config.A_THRESHOLD]
     f03 = [f for f in flips if f[2] == config.PREDICT_COARSE_PROB]
-    print(f'  판정이 바뀐 창: 판정 기준 {config.A_THRESHOLD:g} → {len(f05)}개 / '
-          f'거친 탐색 기준 {config.PREDICT_COARSE_PROB:g} → {len(f03)}개')
+    print(f'  判定が反転したウィンドウ: 判定閾値 {config.A_THRESHOLD:g} → {len(f05)}個 / '
+          f'粗探索閾値 {config.PREDICT_COARSE_PROB:g} → {len(f03)}個')
     for name, s, th, a, b in flips[:20]:
-        print(f'    {name} 창 시작 {s}f: 기준 {th}  FP32 {a:.4f} → FP16 {b:.4f}')
+        print(f'    {name} ウィンドウ開始 {s}f: 基準 {th}  FP32 {a:.4f} → FP16 {b:.4f}')
 
-    # ── ③ 평가 세트 전체 (선택) ──
+    # ── ③ 評価セット全体 (任意) ──
     same = None
     if args.full_eval:
-        keys = [('base_recall', '① 기존 판정 재현율'), ('base_false_alarm', '① 기존 판정 오탐율'),
-                ('base_f1', '① 기존 판정 F1'), ('svc_video_recall', '② 서비스 판정 재현율'),
-                ('svc_video_false_alarm', '② 서비스 판정 오탐율'), ('svc_f1', '② 서비스 판정 F1'),
-                ('svc_hit_recall', '② 위치 기준 재현율'), ('svc_false_events', '② 오탐 이벤트'),
-                ('svc_err_median_f', '② 시작 오차 중앙값(f)'), ('speed_proc_fps', '처리 속도(fps)')]
+        keys = [('base_recall', '① 従来判定 再現率'), ('base_false_alarm', '① 従来判定 誤検知率'),
+                ('base_f1', '① 従来判定 F1'), ('svc_video_recall', '② サービス判定 再現率'),
+                ('svc_video_false_alarm', '② サービス判定 誤検知率'), ('svc_f1', '② サービス判定 F1'),
+                ('svc_hit_recall', '② 位置基準 再現率'), ('svc_false_events', '② 誤検知イベント数'),
+                ('svc_err_median_f', '② 開始誤差 中央値(f)'), ('speed_proc_fps', '処理速度 (fps)')]
         got = {}
         for fp16 in (False, True):
             config.INFER_FP16 = fp16
-            print(f"\n{'=' * 60}\n[평가 세트] {'FP16' if fp16 else 'FP32'}\n{'=' * 60}")
+            print(f"\n{'=' * 60}\n[評価セット] {'FP16' if fp16 else 'FP32'}\n{'=' * 60}")
             got[fp16] = evaluate_folder_accuracy(model, folder_path=config.EVAL_FOLDER_PATH) or {}
         config.INFER_FP16 = False
-        print(f"\n[평가 지표 비교]\n{'지표':<24}{'FP32':>10}{'FP16':>10}")
+        print(f"\n[評価指標の比較]\n{'指標':<24}{'FP32':>10}{'FP16':>10}")
         for k, label in keys:
             a, b = got[False].get(k), got[True].get(k)
-            mark = '' if a == b or k == 'speed_proc_fps' else '  ← 다름'
+            mark = '' if a == b or k == 'speed_proc_fps' else '  ← 相違'
             print(f'{label:<24}{str(a):>10}{str(b):>10}{mark}')
         same = all(got[False].get(k) == got[True].get(k) for k, _ in keys if k != 'speed_proc_fps')
 
-    # ── 판단 ──
-    print('\n[판단]')
+    # ── 判定 ──
+    print('\n[判定結果]')
     ok1 = not flips
-    print(f"  ① 판정이 바뀐 창 없음: {'예' if ok1 else f'아니오({len(flips)}건)'}")
+    print(f"  ① 判定反転ウィンドウなし: {'合格' if ok1 else f'不合格 ({len(flips)}件)'}")
     if same is not None:
-        print(f"  ② 평가 지표 같음: {'예' if same else '아니오'}")
+        print(f"  ② 評価指標の一致: {'合格' if same else '不合格'}")
     else:
-        print('  ② 평가 지표: --full-eval 로 확인하세요')
-    print('  ③ 속도 이득: 위 [속도] 표의 서비스 배치 줄을 보세요')
+        print('  ② 評価指標: --full-eval で確認してください')
+    print('  ③ 速度向上: 上記の [速度] 表のサービスバッチ行を参照してください')
     if ok1 and same:
-        print('  → FP16 을 켜도 됩니다(속도 이득이 있다면). 기본 켬이라 그대로 두면 됩니다(INFER_FP16=0 이면 끔)')
+        print('  → FP16 を有効化可能です (速度向上がある場合)。デフォルト有効のためそのままで問題ありません (INFER_FP16=0 で無効化可能)')
     elif not ok1 or same is False:
-        print('  → FP16 은 보류하세요(결과가 달라지는 경우가 있음).')
+        print('  → FP16 の適用を保留してください (結果に差異が生じるケースがあります)。')
 
 
 if __name__ == '__main__':

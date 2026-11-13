@@ -1,16 +1,7 @@
-"""비충돌(S) 학습 클립의 '움직임 양'을 재서, 움직임 없는 S(빈 장면)를 솎았을 때의 A:S 비율을 미리 본다.
+"""非衝突 (S) 学習クリップの動き量を計測し、静止正常クリップを間引いた際の A:S 比率を分析するスクリプト。
 
-    python -u -m model.s_motion_check                       # data/train 전체
-    python -u -m model.s_motion_check --workers 8 --montage # 클립 예시 그림까지
-
-학습과 같은 클립 목록을 쓴다(HitAndRunDataset — A 는 pre 방식 창 1개, S 는 30프레임 간격,
-실제 영상 S 는 0·1번 차량). 클립마다 학습 입력과 같은 크롭(r=1, 224×224)에서 이웃 프레임
-차이를 구해 '움직인 화소 비율'을 잰다. GPU 는 쓰지 않는다(CPU 영상 디코딩, 영상 단위 병렬).
-
-움직임 값(move) = 클립 안 프레임별 '움직인 화소 비율(%)' 중 3번째로 큰 값
-    (5×5 블러 후 밝기 차이가 PIX_T 를 넘는 화소. 압축 튐 1~2프레임은 무시된다)
-
-결과: outputs/s_motion/<시각>/clips.csv(클립별 값) · report.txt(요약) · montage_*.jpg(--montage)
+    python -u -m model.s_motion_check
+    python -u -m model.s_motion_check --workers 8 --montage
 """
 import argparse
 import csv
@@ -27,14 +18,13 @@ import numpy as np
 import config
 from dataset import HitAndRunDataset
 
-PIX_T = 15                                  # 이 밝기 차이(0~255)를 넘으면 '움직인 화소'
-THRESHOLDS = (0.05, 0.1, 0.25, 0.5, 1.0, 2.0)   # '빈 장면' 기준 후보(움직인 화소 %)
-KEEP_FRACS = (0.0, 0.2, 1 / 3, 0.5)         # 빈 장면 S 를 이 비율만 남길 때
-BATCH = 15                                  # 충돌 없는 묶음 비율 계산용(config.TRAIN_BATCH_SIZE)
+PIX_T = 15                                  # 動体画素判定の輝度差閾値 (0〜255)
+THRESHOLDS = (0.05, 0.1, 0.25, 0.5, 1.0, 2.0)   # 静止判定候補閾値 (動体画素 %)
+KEEP_FRACS = (0.0, 0.2, 1 / 3, 0.5)         # 静止 S クリップの残存比率
+BATCH = 15                                  # バッチサイズ
 
 
 class _Crop:
-    """HitAndRunDataset._crop_and_pad 를 그대로 쓰기 위한 최소 객체(resize 만 필요)."""
     def __init__(self, resize):
         self.resize = resize
 
@@ -47,12 +37,11 @@ def _gray(crop):
 
 
 def _video_task(args):
-    """영상 하나를 처음부터 한 번 읽어, 필요한 박스별로 프레임 차이 시계열을 만들고 클립 값으로 묶는다."""
-    mp4, items, clip_len, resize = args       # items: [(sample_idx, start_f, bbox)]
+    mp4, items, clip_len, resize = args
     crop = _Crop(resize)
     boxes = sorted({tuple(b) for _, _, b in items})
     need = max(s for _, s, _ in items) + clip_len
-    frac = {b: [] for b in boxes}             # frac[b][k] = 프레임 k → k+1 움직인 화소 비율
+    frac = {b: [] for b in boxes}
     dmean = {b: [] for b in boxes}
     prev = dict.fromkeys(boxes)
     cap = cv2.VideoCapture(mp4)
@@ -89,7 +78,6 @@ def _scenario(file_name, domain):
 
 
 def _tile(mp4, s, bbox, clip_len, resize, text):
-    """클립 가운데 프레임 | 클립 전체 최대 프레임 차이(히트맵 겹침) — 가로 2칸."""
     crop = _Crop(resize)
     cap = cv2.VideoCapture(mp4)
     cap.set(cv2.CAP_PROP_POS_FRAMES, s)
@@ -130,15 +118,15 @@ def _montage(rows, path, clip_len, resize, cols=3):
 
 
 def main():
-    ap = argparse.ArgumentParser(description='비충돌 학습 클립의 움직임 양 측정')
-    ap.add_argument('--data-dir', default=str(config.DATA_DIR), help='학습 데이터 폴더(기본 data/train)')
+    ap = argparse.ArgumentParser(description='非衝突学習クリップの動き量測定')
+    ap.add_argument('--data-dir', default=str(config.DATA_DIR), help='学習データディレクトリ')
     ap.add_argument('--workers', type=int, default=min(8, os.cpu_count() or 2),
-                    help='동시에 읽을 영상 수(1080p 영상 하나당 약 0.2GB)')
-    ap.add_argument('--limit', type=int, default=0, help='영상 N개만 목록 전체에서 고르게 골라 측정(시험용)')
-    ap.add_argument('--montage', action='store_true', help='움직임 단계별 S 클립·움직임 적은 A 클립 예시 그림 저장')
+                    help='並行読み込み動画数')
+    ap.add_argument('--limit', type=int, default=0, help='指定動画数のみ測定 (テスト用)')
+    ap.add_argument('--montage', action='store_true', help='モンタージュ画像保存')
     args = ap.parse_args()
 
-    config.TRAIN_A_MODE = 'pre'          # 비율은 '충돌 1건 = 창 1개' 기준(span 이어도 무게 합 1)
+    config.TRAIN_A_MODE = 'pre'
     ds = HitAndRunDataset(data_dir=args.data_dir, augment=False)
     clip_len, resize = ds.clip_length, ds.resize
     rows = []
@@ -157,8 +145,8 @@ def main():
         videos = [videos[i] for i in sorted(set(pick))]
         keep = set(videos)
         rows = [r for r in rows if r['mp4'] in keep]
-    print(f"[대상] 영상 {len(videos)}개 · 클립 {len(rows)}개 (A {sum(r['label'] for r in rows)}) "
-          f"· 동시 처리 {args.workers}개 · 데이터 {args.data_dir}", flush=True)
+    print(f"[対象] 動画 {len(videos)}件 · クリップ {len(rows)}件 (A {sum(r['label'] for r in rows)}) "
+          f"· 並行数 {args.workers} · データパス {args.data_dir}", flush=True)
 
     out_dir = Path(config._ROOT) / 'outputs' / 's_motion' / datetime.now().strftime('%y%m%d_%H%M')
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -174,8 +162,8 @@ def main():
             if done % 20 == 0 or done == len(tasks):
                 el = time.time() - t0
                 eta = el / done * (len(tasks) - done)
-                print(f"  {done}/{len(tasks)} 영상 · {frames / max(el, 1e-6):.0f} 프레임/초 · "
-                      f"경과 {el / 60:.1f}분 · 남은 약 {eta / 60:.1f}분", flush=True)
+                print(f"  {done}/{len(tasks)} 動画 · {frames / max(el, 1e-6):.0f} フレーム/秒 · "
+                      f"経過 {el / 60:.1f}分 · 残り約 {eta / 60:.1f}分", flush=True)
     for r in rows:
         r['move'], r['move_max'], r['diff_mean'], r['n_diffs'] = res.get(r['idx'], (np.nan,) * 3 + (0,))
 
@@ -203,21 +191,21 @@ def main():
     def no_a(na, ns):
         return (ns / (na + ns)) ** BATCH if na + ns else float('nan')
 
-    say(f"측정 {datetime.now():%Y-%m-%d %H:%M} · 영상 {len(videos)}개 · {time.time() - t0:.0f}초 · "
-        f"움직인 화소 기준 밝기차 > {PIX_T} · 움직임 값 = 클립 안 3번째로 큰 프레임 값")
+    say(f"測定日時 {datetime.now():%Y-%m-%d %H:%M} · 動画 {len(videos)}件 · 処理時間 {time.time() - t0:.0f}秒 · "
+        f"動体画素輝度差閾値 > {PIX_T} · 動き量 = クリップ内上位3番目のフレーム値")
     if bad:
-        say(f"⚠️ 읽지 못한 클립 {bad}개(영상 끝·디코딩 실패) — 계산에서 뺌")
-    say(f"\n[지금] A {nA} : S {nS} = 1:{nS / max(nA, 1):.1f} · 묶음 {BATCH}개 중 충돌 없는 묶음 약 {no_a(nA, nS) * 100:.0f}%")
+        say(f"⚠️ 読み込み失敗クリップ {bad}件 (スキップ)")
+    say(f"\n[現状] A {nA} : S {nS} = 1:{nS / max(nA, 1):.1f} · バッチ {BATCH}個中 衝突なしバッチ約 {no_a(nA, nS) * 100:.0f}%")
     for dom in ('rc', 'real'):
         a = sum(r['domain'] == dom for r in A)
         s = sum(r['domain'] == dom for r in S)
         if a or s:
             say(f"  {dom:<4}: A {a} : S {s} = 1:{s / max(a, 1):.1f}")
 
-    say("\n[움직임 분포] 움직인 화소 % (p = 백분위)")
-    say(f"  {'그룹':<12}{'클립':>7}{'p5':>8}{'p10':>8}{'p25':>8}{'p50':>8}{'p75':>8}{'p90':>8}")
+    say("\n[動き量分布] 動体画素 % (p = パーセンタイル)")
+    say(f"  {'グループ':<12}{'クリップ':>7}{'p5':>8}{'p10':>8}{'p25':>8}{'p50':>8}{'p75':>8}{'p90':>8}")
     groups = [('A-rc', [r for r in A if r['domain'] == 'rc']), ('A-real', [r for r in A if r['domain'] == 'real'])]
-    for sc, name in (('V', '주차'), ('S', '직진'), ('W', '배회')):
+    for sc, name in (('V', '駐車'), ('S', '直進'), ('W', '徘徊')):
         groups.append((f'S-rc-{sc}({name})', [r for r in S if r['domain'] == 'rc' and r['scenario'] == sc]))
     groups.append(('S-real', [r for r in S if r['domain'] == 'real']))
     for name, g in groups:
@@ -227,9 +215,9 @@ def main():
         q = np.percentile(v, [5, 10, 25, 50, 75, 90])
         say(f"  {name:<12}{len(g):>7}" + "".join(f"{x:>8.2f}" for x in q))
 
-    say("\n[기준별] 움직임 값이 기준 미만인 S = '빈 장면'. 빈 장면 S 를 일부만 남겼을 때 A:S")
-    head = "".join(f"{'남김 ' + (f'{k:.0%}' if k else '0'):>12}" for k in KEEP_FRACS)
-    say(f"  {'기준%':>6}{'빈 S':>14}{'빈 S(rc/real)':>16}{head}{'A 중 기준 미만':>16}")
+    say("\n[閾値別] 動き量が閾値未満の S = 「静止」。静止 S を間引いた場合の A:S 比率")
+    head = "".join(f"{'残存 ' + (f'{k:.0%}' if k else '0'):>12}" for k in KEEP_FRACS)
+    say(f"  {'閾値%':>6}{'静止 S':>14}{'静止 S(rc/real)':>16}{head}{'A中閾値未満':>16}")
     for th in THRESHOLDS:
         empty = [r for r in S if r['move'] < th]
         e_rc = sum(r['domain'] == 'rc' for r in empty)
@@ -241,10 +229,6 @@ def main():
         a_low = sum(r['move'] < th for r in A)
         say(f"  {th:>6.2f}{f'{len(empty)} ({len(empty) / max(nS, 1):.0%})':>14}{f'{e_rc}/{e_real}':>16}"
             f"{cells}{f'{a_low} ({a_low / max(nA, 1):.0%})':>16}")
-    say("  (괄호 안 % = 묶음 15개 중 충돌 없는 묶음 비율)")
-    say("\n읽는 법: 'A 중 기준 미만'이 0에 가까운 기준까지만 쓴다 — 그보다 높이면 미세한 충돌과 비슷한")
-    say("움직임의 S 까지 '빈 장면'으로 버리게 된다. 빈 장면 S 를 전부 버리면(남김 0) 서비스의 긴 정지")
-    say("구간을 학습하지 못하니 일부는 남긴다.")
     (out_dir / 'report.txt').write_text("\n".join(lines) + "\n", encoding='utf-8')
 
     if args.montage:
@@ -252,8 +236,8 @@ def main():
         qs = np.linspace(0, len(s_sorted) - 1, 24).round().astype(int) if s_sorted else []
         _montage([s_sorted[i] for i in qs], out_dir / 'montage_S_by_motion.jpg', clip_len, resize)
         _montage(sorted(A, key=lambda r: r['move'])[:12], out_dir / 'montage_A_lowest.jpg', clip_len, resize)
-        print("[그림] S 클립 움직임 낮은 순 24개 · 움직임 가장 적은 A 클립 12개 (왼쪽 가운데 프레임 | 오른쪽 움직인 곳)")
-    print(f"\n[저장] {out_dir}")
+        print("[画像保存] S クリップ動き量昇順 24件 · 動き量が最小の A クリップ 12件")
+    print(f"\n[出力ディレクトリ] {out_dir}")
 
 
 if __name__ == '__main__':
